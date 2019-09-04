@@ -17,23 +17,24 @@
 #include "Debug.h"
 #include "Util.h"
 #include "FileUtil.h"
+#include "itoa.h"
 
 template <typename T>
 DBReader<T>::DBReader(const char* dataFileName_, const char* indexFileName_, int threads, int dataMode) :
 threads(threads), dataMode(dataMode), dataFileName(strdup(dataFileName_)),
         indexFileName(strdup(indexFileName_)), size(0), dataFiles(NULL), dataSizeOffset(NULL), dataFileCnt(0),
         totalDataSize(0), dataSize(0), lastKey(T()), closed(1), dbtype(Parameters::DBTYPE_GENERIC_DB),
-        compressedBuffers(NULL), compressedBufferSizes(NULL), index(NULL), seqLens(NULL), id2local(NULL), local2id(NULL),
+        compressedBuffers(NULL), compressedBufferSizes(NULL), index(NULL), id2local(NULL), local2id(NULL),
         dataMapped(false), accessType(0), externalData(false), didMlock(false)
 {}
 
 template <typename T>
-DBReader<T>::DBReader(DBReader<T>::Index *index, unsigned int *seqLens, size_t size, size_t dataSize, T lastKey,
+DBReader<T>::DBReader(DBReader<T>::Index *index, size_t size, size_t dataSize, T lastKey,
         int dbType, unsigned int maxSeqLen, int threads) :
         threads(threads), dataMode(USE_INDEX), dataFileName(NULL), indexFileName(NULL),
         size(size), dataFiles(NULL), dataSizeOffset(NULL), dataFileCnt(0), totalDataSize(0), dataSize(dataSize), lastKey(lastKey),
         maxSeqLen(maxSeqLen), closed(1), dbtype(dbType), compressedBuffers(NULL), compressedBufferSizes(NULL), index(index), sortedByOffset(true),
-        seqLens(seqLens), id2local(NULL), local2id(NULL), dataMapped(false), accessType(NOSORT), externalData(true), didMlock(false)
+        id2local(NULL), local2id(NULL), dataMapped(false), accessType(NOSORT), externalData(true), didMlock(false)
 {}
 
 template <typename T>
@@ -130,7 +131,7 @@ template <typename T> bool DBReader<T>::open(int accessType){
             setSequentialAdvice();
         }
     }
-    if (dataMode & USE_LOOKUP) {
+    if (dataMode & USE_LOOKUP || dataMode & USE_LOOKUP_REV) {
         std::string lookupFilename = (std::string(dataFileName) + ".lookup");
         if(FileUtil::fileExists(lookupFilename.c_str()) == false){
             Debug(Debug::ERROR) << "Can not open index file " << lookupFilename << "!\n";
@@ -142,6 +143,11 @@ template <typename T> bool DBReader<T>::open(int accessType){
         lookupSize = Util::ompCountLines(lookupDataChar, lookupDataSize, threads);
         lookup = new(std::nothrow) LookupEntry[this->lookupSize];
         readLookup(lookupDataChar, lookupDataSize, lookup);
+        if (dataMode & USE_LOOKUP) {
+            omptl::sort(lookup, lookup + lookupSize, LookupEntry::compareById);
+        } else {
+            omptl::sort(lookup, lookup + lookupSize, LookupEntry::compareByAccession);
+        }
         indexData.close();
     }
     bool isSortedById = false;
@@ -162,15 +168,7 @@ template <typename T> bool DBReader<T>::open(int accessType){
         index = new(std::nothrow) Index[this->size];
         Util::checkAllocation(index, "Can not allocate index memory in DBReader");
 
-        seqLens = NULL;
-        // SORT_BY_OFFSET keeps only the index and if a sequence length is required, it is computed from consecutive offests
-        // TODO probably makes sense to avoid allocation also if HARDNOSORT
-        if (accessType != SORT_BY_OFFSET) {
-            seqLens = new(std::nothrow) unsigned int[this->size];
-            Util::checkAllocation(seqLens, "Can not allocate seqLens memory in DBReader");
-        }
-
-        bool isSortedById = readIndex(indexDataChar, indexDataSize, index, seqLens, dataSize);
+        bool isSortedById = readIndex(indexDataChar, indexDataSize, index, dataSize);
         indexData.close();
 
         // sortIndex also handles access modes that don't require sorting
@@ -224,17 +222,7 @@ void DBReader<std::string>::sortIndex(bool isSortedById) {
         if (isSortedById) {
             return;
         }
-        std::pair<Index, unsigned int> *sortArray = new std::pair<Index, unsigned int>[size];
-        for (size_t i = 0; i < size; i++) {
-            sortArray[i] = std::make_pair(index[i], seqLens[i]);
-        }
-        omptl::sort(sortArray, sortArray + size, compareIndexLengthPairById());
-        for (size_t i = 0; i < size; ++i) {
-            index[i].id = sortArray[i].first.id;
-            index[i].offset = sortArray[i].first.offset;
-            seqLens[i] = sortArray[i].second;
-        }
-        delete[] sortArray;
+        omptl::sort(index, index + size, Index::compareById);
     } else {
         if(accessType != NOSORT && accessType != HARDNOSORT){
             Debug(Debug::ERROR) << "DBReader<std::string> can not be opened in sort mode\n";
@@ -270,14 +258,13 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
 
         // re-order in-place according to sortedIndices (ruined in the process)
         // based on: https://stackoverflow.com/questions/7365814/in-place-array-reordering
-        unsigned int lengthBuff;
         Index indexAndOffsetBuff;
 
         for (unsigned int i = 0; i < size; i++) {
             // fill buffers with what will be overwritten:
-            lengthBuff = seqLens[i];
             indexAndOffsetBuff.id = index[i].id;
             indexAndOffsetBuff.offset = index[i].offset;
+            indexAndOffsetBuff.length = index[i].length;
 
             unsigned int j = i;
             while (1) {
@@ -288,14 +275,14 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
                     break;
                 }
                 // overwite at destination place:
-                seqLens[j] = seqLens[k];
                 index[j].id = index[k].id;
                 index[j].offset = index[k].offset;
+                index[j].length = index[k].length;
                 // re-write what was overwritten at its destination: 
                 j = k;
-                seqLens[j] = lengthBuff;
                 index[j].id = indexAndOffsetBuff.id;
                 index[j].offset = indexAndOffsetBuff.offset;
+                index[j].length = indexAndOffsetBuff.length;
             }
         }
         delete[] sortedIndices;
@@ -313,14 +300,13 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
         for (size_t i = 0; i < size; i++) {
             id2local[i] = i;
             local2id[i] = i;
-            sortForMapping[i] = std::make_pair(i, seqLens[i]);
+            sortForMapping[i] = std::make_pair(i, index[i].length);
         }
         //this sort has to be stable to assure same clustering results
         omptl::sort(sortForMapping, sortForMapping + size, comparePairBySeqLength());
         for (size_t i = 0; i < size; i++) {
             id2local[sortForMapping[i].first] = i;
             local2id[i] = sortForMapping[i].first;
-            seqLens[i] = sortForMapping[i].second;
         }
         delete[] sortForMapping;
     } else if (accessType == SHUFFLE) {
@@ -340,13 +326,19 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
         }
         delete[] tmpIndex;
 
-        unsigned int *tmpSize = new unsigned int[size];
-        memcpy(tmpSize, seqLens, size * sizeof(unsigned int));
-        for (size_t i = 0; i < size; i++) {
-            seqLens[i] = tmpSize[local2id[i]];
-        }
-        delete[] tmpSize;
     } else if (accessType == LINEAR_ACCCESS) {
+        // do not sort if its already in correct order
+        bool isSortedByOffset = true;
+        size_t prevOffset = index[0].offset;
+        for (size_t i = 0; i < size; i++) {
+            isSortedByOffset &= (prevOffset <= index[i].offset);
+            prevOffset = index[i].offset;
+        }
+        if(isSortedByOffset == true && isSortedById == true){
+            accessType = NOSORT;
+            return;
+        }
+
         // sort the entries by the offset of the sequences
         std::pair<unsigned int, size_t> *sortForMapping = new std::pair<unsigned int, size_t>[size];
         id2local = new unsigned int[size];
@@ -362,12 +354,6 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
             local2id[i] = sortForMapping[i].first;
         }
         delete[] sortForMapping;
-        unsigned int *tmpSizeArray = new unsigned int[size];
-        memcpy(tmpSizeArray, seqLens, size * sizeof(unsigned int));
-        for (size_t i = 0; i < size; i++) {
-            seqLens[i] = tmpSizeArray[local2id[i]];
-        }
-        delete[] tmpSizeArray;
     } else if (accessType == SORT_BY_ID_OFFSET) {
         // sort the entries by the offset of the sequences
         std::pair<unsigned int, Index> *sortForMapping = new std::pair<unsigned int, Index>[size];
@@ -384,12 +370,6 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
             local2id[i] = sortForMapping[i].first;
         }
         delete[] sortForMapping;
-        unsigned int *tmpSizeArray = new unsigned int[size];
-        memcpy(tmpSizeArray, seqLens, size * sizeof(unsigned int));
-        for (size_t i = 0; i < size; i++) {
-            seqLens[i] = tmpSizeArray[local2id[i]];
-        }
-        delete[] tmpSizeArray;
     } else if (accessType == SORT_BY_LINE) {
         // sort the entries by the original line number in the index file
         id2local = new unsigned int[size];
@@ -398,12 +378,6 @@ void DBReader<unsigned int>::sortIndex(bool isSortedById) {
             id2local[i] = mappingToOriginalIndex[i];
             local2id[mappingToOriginalIndex[i]] = i;
         }
-        unsigned int *tmpSizeArray = new unsigned int[size];
-        memcpy(tmpSizeArray, seqLens, size * sizeof(unsigned int));
-        for (size_t i = 0; i < size; i++) {
-            seqLens[i] = tmpSizeArray[local2id[i]];
-        }
-        delete[] tmpSizeArray;
     } else if (accessType == SORT_BY_OFFSET) {
         // sort index based on index.offset (no id sorting):
         omptl::sort(index, index + size, Index::compareByOffset);
@@ -469,8 +443,8 @@ template <typename T> void DBReader<T>::remapData(){
 }
 
 template <typename T> void DBReader<T>::close(){
-    if(dataMode & USE_LOOKUP){
-        delete [] lookup;
+    if (dataMode & USE_LOOKUP || dataMode & USE_LOOKUP_REV) {
+        delete[] lookup;
     }
 
     if(dataMode & USE_DATA){
@@ -496,7 +470,6 @@ template <typename T> void DBReader<T>::close(){
 
     if(externalData == false) {
         delete[] index;
-        delete[] seqLens;
     }
     closed = 1;
 }
@@ -569,7 +542,7 @@ template <typename T> char* DBReader<T>::getDataUncompressed(size_t id){
     }
 
 
-    if(accessType == SORT_BY_LENGTH || accessType == LINEAR_ACCCESS || accessType == SORT_BY_LINE || accessType == SHUFFLE){
+    if (local2id != NULL) {
         return getDataByOffset(index[local2id[id]].offset);
     }else{
         return getDataByOffset(index[id].offset);
@@ -628,13 +601,13 @@ template <typename T> T DBReader<T>::getDbKey (size_t id){
         Debug(Debug::ERROR) << "getDbKey: local id (" << id << ") >= db size (" << size << ")\n";
         EXIT(EXIT_FAILURE);
     }
-    if(accessType == SORT_BY_LENGTH || accessType == LINEAR_ACCCESS || accessType == SORT_BY_LINE || accessType == SHUFFLE){
+    if (local2id != NULL) {
         id = local2id[id];
     }
     return index[id].id;
 }
 
-template <typename T> size_t DBReader<T>::getLookupId (T dbKey){
+template <typename T> size_t DBReader<T>::getLookupIdByKey(T dbKey) {
     if ((dataMode & USE_LOOKUP) == 0) {
         Debug(Debug::ERROR) << "DBReader for datafile=" << dataFileName << ".lookup was not opened with lookup mode\n";
         EXIT(EXIT_FAILURE);
@@ -643,7 +616,28 @@ template <typename T> size_t DBReader<T>::getLookupId (T dbKey){
     val.id = dbKey;
     size_t id = std::upper_bound(lookup, lookup + lookupSize, val, LookupEntry::compareById) - lookup;
 
-    return (id < size && index[id].id == dbKey ) ? id : UINT_MAX;
+    return (id < lookupSize && lookup[id].id == dbKey) ? id : SIZE_MAX;
+}
+
+template <typename T> size_t DBReader<T>::getLookupIdByAccession(const std::string& accession) {
+    if ((dataMode & USE_LOOKUP_REV) == 0) {
+        Debug(Debug::ERROR) << "DBReader for datafile=" << dataFileName << ".lookup was not opened with lookup mode\n";
+        EXIT(EXIT_FAILURE);
+    }
+    LookupEntry val;
+    val.entryName = accession;
+    size_t id = std::upper_bound(lookup, lookup + lookupSize, val, LookupEntry::compareByAccession) - lookup;
+
+    return (id < lookupSize && lookup[id].entryName == accession) ? id : SIZE_MAX;
+}
+
+template <typename T> T DBReader<T>::getLookupKey(size_t id){
+    if (id >= lookupSize){
+        Debug(Debug::ERROR) << "Invalid database read for id=" << id << ", database index=" << dataFileName << ".lookup\n";
+        Debug(Debug::ERROR) << "getLookupFileNumber: local id (" << id << ") >= db size (" << lookupSize << ")\n";
+        EXIT(EXIT_FAILURE);
+    }
+    return lookup[id].id;
 }
 
 template <typename T> std::string DBReader<T>::getLookupEntryName (size_t id){
@@ -664,6 +658,38 @@ template <typename T> unsigned int DBReader<T>::getLookupFileNumber(size_t id){
     return lookup[id].fileNumber;
 }
 
+template<>
+size_t DBReader<unsigned int>::lookupEntryToBuffer(char* buffer, const LookupEntry& entry) {
+    char *basePos = buffer;
+    char *tmpBuff = Itoa::u32toa_sse2(entry.id, buffer);
+    *(tmpBuff - 1) = '\t';
+    memcpy(tmpBuff, entry.entryName.c_str(), entry.entryName.size());
+    tmpBuff += entry.entryName.size();
+    *tmpBuff = '\t';
+    tmpBuff++;
+    tmpBuff = Itoa::u32toa_sse2(entry.fileNumber, tmpBuff);
+    *(tmpBuff - 1) = '\n';
+    *tmpBuff = '\0';
+    return tmpBuff - basePos;
+}
+
+template<>
+size_t DBReader<std::string>::lookupEntryToBuffer(char* buffer, const LookupEntry& entry) {
+    char *basePos = buffer;
+    char *tmpBuff = basePos;
+    memcpy(tmpBuff, entry.id.c_str(), entry.id.size());
+    tmpBuff += entry.entryName.size();
+    *tmpBuff = '\t';
+    tmpBuff++;
+    memcpy(tmpBuff, entry.entryName.c_str(), entry.entryName.size());
+    tmpBuff += entry.entryName.size();
+    *tmpBuff = '\t';
+    tmpBuff++;
+    tmpBuff = Itoa::u32toa_sse2(entry.fileNumber, tmpBuff);
+    *(tmpBuff - 1) = '\n';
+    *tmpBuff = '\0';
+    return tmpBuff - basePos;
+}
 
 template <typename T> size_t DBReader<T>::getId (T dbKey){
     size_t id = bsearch(index, size, dbKey);
@@ -671,19 +697,6 @@ template <typename T> size_t DBReader<T>::getId (T dbKey){
         return (id < size && index[id].id == dbKey) ? id2local[id] : UINT_MAX;
     }
     return (id < size && index[id].id == dbKey ) ? id : UINT_MAX;
-}
-
-template <typename T> unsigned int* DBReader<T>::getSeqLens(){
-    return seqLens;
-}
-
-template <typename T> size_t DBReader<T>::getSeqLens(size_t id){
-    if (id >= size){
-        Debug(Debug::ERROR) << "Invalid database read for id=" << id << ", database index=" << indexFileName << "\n";
-        Debug(Debug::ERROR) << "getSeqLens: local id (" << id << ") >= db size (" << size << ")\n";
-        EXIT(EXIT_FAILURE);
-    }
-    return seqLens[id];
 }
 
 template <typename T> size_t DBReader<T>::maxCount(char c) {
@@ -705,7 +718,7 @@ template <typename T> size_t DBReader<T>::maxCount(char c) {
             for (size_t id = 0; id < entries; id++) {
                 char *data = getData(id, thread_idx);
                 size_t count = 0;
-                for (size_t i = 0; i < seqLens[id]; ++i) {
+                for (size_t i = 0; i < getEntryLen(id); ++i) {
                     if (data[i] == c) {
                         count++;
                     }
@@ -743,7 +756,7 @@ template <typename T> void DBReader<T>::checkClosed(){
 }
 
 template<typename T>
-bool DBReader<T>::readIndex(char *data, size_t indexDataSize, Index *index, unsigned int *entryLength, size_t & dataSize) {
+bool DBReader<T>::readIndex(char *data, size_t indexDataSize, Index *index, size_t & dataSize) {
     size_t i = 0;
     size_t currPos = 0;
     char* indexDataChar = (char *) data;
@@ -763,9 +776,7 @@ bool DBReader<T>::readIndex(char *data, size_t indexDataSize, Index *index, unsi
         size_t length = Util::fast_atoi<size_t>(cols[2]);
         dataSize += length;
         index[i].offset = offset;
-        if (entryLength != NULL) {
-            entryLength[i] = length;
-        }
+        index[i].length = length;
         maxSeqLen = std::max(static_cast<unsigned int>(length), maxSeqLen);
         indexDataChar = Util::skipLine(indexDataChar);
         currPos = indexDataChar - (char *) data;
@@ -850,8 +861,6 @@ char* DBReader<unsigned int>::serialize(const DBReader<unsigned int> &idx) {
     p += sizeof(unsigned int);
     memcpy(p, idx.index, idx.size * sizeof(DBReader<unsigned int>::Index));
     p += idx.size * sizeof(DBReader<unsigned int>::Index);
-    memcpy(p, idx.seqLens, idx.size * sizeof(unsigned int));
-
     return data;
 }
 
@@ -870,9 +879,8 @@ DBReader<unsigned int> *DBReader<unsigned int>::unserialize(const char* data, in
     p += sizeof(unsigned int);
     DBReader<unsigned int>::Index *idx = (DBReader<unsigned int>::Index *)p;
     p += size * sizeof(DBReader<unsigned int>::Index);
-    unsigned int *seqLens = (unsigned int *)p;
 
-    return new DBReader<unsigned int>(idx, seqLens, size, dataSize, lastKey, dbType, maxSeqLen, threads);
+    return new DBReader<unsigned int>(idx, size, dataSize, lastKey, dbType, maxSeqLen, threads);
 }
 
 template<typename T>
@@ -1022,24 +1030,103 @@ void DBReader<T>::removeDb(const std::string &databaseName){
 }
 
 template<typename T>
-void DBReader<T>::softLink(DBReader<unsigned int> &reader, std::string &outDb) {
-    std::vector<std::string> names = reader.getDataFileNames();
-    if(names.size() == 1){
-        FileUtil::symlinkAbs(names[0], outDb);
-    }else{
-        for(size_t i = 0; i < names.size(); i++){
-            std::string::size_type idx = names[i].rfind('.');
-            std::string ext;
-            if(idx != std::string::npos){
-                ext = names[i].substr(idx);
-            }else{
-                Debug(Debug::ERROR) << "File extention was not found but it is expected to be there!\n"
-                                    << "Filename: " << names[i] << ".\n";
-                EXIT(EXIT_FAILURE);
+void DBReader<T>::softlinkDb(const std::string &databaseName, const std::string &outDb, DBFiles::Files dbFilesFlags) {
+    if (dbFilesFlags & DBFiles::DATA) {
+        std::vector<std::string> names = FileUtil::findDatafiles(databaseName.c_str());
+        if (names.size() == 1) {
+            FileUtil::symlinkAbs(names[0], outDb);
+        } else {
+            for (size_t i = 0; i < names.size(); i++) {
+                std::string::size_type idx = names[i].rfind('.');
+                std::string ext;
+                if (idx != std::string::npos) {
+                    ext = names[i].substr(idx);
+                } else {
+                    Debug(Debug::ERROR) << "File extention was not found but it is expected to be there!\n"
+                                        << "Filename: " << names[i] << ".\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                FileUtil::symlinkAbs(names[i], outDb + ext);
             }
-            FileUtil::symlinkAbs(names[i], outDb + ext);
         }
     }
+
+    struct DBSuffix {
+        DBFiles::Files flag;
+        const char* suffix;
+    };
+
+    const DBSuffix suffices[] = {
+        { DBFiles::DATA_INDEX,    ".index"            },
+        { DBFiles::DATA_DBTYPE,   ".dbtype"           },
+        { DBFiles::HEADER,        "_h"                },
+        { DBFiles::HEADER_INDEX,  "_h.index"          },
+        { DBFiles::HEADER_DBTYPE, "_h.dbtype"         },
+        { DBFiles::LOOKUP,        ".lookup"           },
+        { DBFiles::SOURCE,        ".source"           },
+        { DBFiles::TAX_MAPPING,   "_mapping"          },
+        { DBFiles::TAX_NAMES,     "_names.dmp"        },
+        { DBFiles::TAX_NODES,     "_nodes.dmp"        },
+        { DBFiles::TAX_MERGED,    "_merged.dmp"       },
+        { DBFiles::CA3M_DATA,     "_ca3m.ffdata"      },
+        { DBFiles::CA3M_INDEX,    "_ca3m.ffindex"     },
+        { DBFiles::CA3M_SEQ,      "_sequence.ffdata"  },
+        { DBFiles::CA3M_SEQ_IDX,  "_sequence.ffindex" },
+        { DBFiles::CA3M_HDR,      "_header.ffdata"    },
+        { DBFiles::CA3M_HDR_IDX,  "_header.ffindex"   },
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(suffices); ++i) {
+        std::string file = databaseName + suffices[i].suffix;
+        if (dbFilesFlags & suffices[i].flag && FileUtil::fileExists(file.c_str())) {
+            FileUtil::symlinkAbs(file, outDb + suffices[i].suffix);
+        }
+    }
+}
+
+template<typename T>
+void DBReader<T>::decomposeDomainByAminoAcid(size_t worldRank, size_t worldSize, size_t *startEntry, size_t *numEntries){
+    const size_t dataSize = getDataSize();
+    const size_t dbEntries = getSize();
+    if (worldSize > dataSize) {
+        // Assume the domain numEntries is greater than the world numEntries.
+        Debug(Debug::ERROR) << "World Size: " << worldSize << " dbSize: " << dataSize << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+
+    if (worldSize == 1) {
+        *startEntry = 0;
+        *numEntries = dbEntries;
+        return;
+    }
+
+    if (dbEntries <= worldSize) {
+        *startEntry = worldRank < dbEntries ? worldRank : 0;
+        *numEntries = worldRank < dbEntries ? 1 : 0;
+        return;
+    }
+
+    size_t chunkSize = ceil(static_cast<double>(dataSize) / static_cast<double>(worldSize));
+
+    size_t *entriesPerWorker = (size_t*)calloc(worldSize, sizeof(size_t));
+
+    size_t currentRank = 0;
+    size_t sumCharsAssignedToCurrRank = 0;
+    for (size_t i = 0; i < dbEntries; ++i) {
+        if (sumCharsAssignedToCurrRank >= chunkSize) {
+            sumCharsAssignedToCurrRank = 0;
+            currentRank++;
+        }
+        sumCharsAssignedToCurrRank += index[i].length;
+        entriesPerWorker[currentRank] += 1;
+    }
+
+    *startEntry = 0;
+    *numEntries = entriesPerWorker[worldRank];
+    for (size_t j = 0; j < worldRank; ++j) {
+        *startEntry += entriesPerWorker[j];
+    }
+    free(entriesPerWorker);
 }
 
 template class DBReader<unsigned int>;

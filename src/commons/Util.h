@@ -84,9 +84,7 @@ public:
     static void rankedDescSort8(short *val, unsigned int *index);
     static void rankedDescSort32(short *val, unsigned int *index);
     static void rankedDescSort20(short *val, unsigned int *index);
-    template <typename T>
-    static void decomposeDomainByAminoAcid(size_t aaSize, T seqSizes, size_t count,
-                                           size_t worldRank, size_t worldSize, size_t *start, size_t *end);
+
     static size_t getTotalSystemMemory();
     static size_t getPageSize();
     static size_t getTotalMemoryPages();
@@ -270,14 +268,6 @@ public:
         typename std::string::size_type const p(filename.find_last_of('.'));
         return p > 0 && p != std::string::npos ? filename.substr(0, p) : filename;
     }
-
-    static std::map<std::string, size_t> readMapping(const char *fastaFile);
-
-    static std::map<unsigned int, std::string> readLookup(const std::string& lookupFile,
-                                                          const bool removeSplit = false);
-
-    static std::map<std::string, unsigned int> readLookupReverse(const std::string& lookupFile,
-                                                                 const bool removeSplit = false);
 
     static void checkAllocation(void *pointer, std::string message);
 

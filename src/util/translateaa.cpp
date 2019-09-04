@@ -63,13 +63,13 @@ int translateaa(int argc, const char **argv, const Command &command) {
         char *aa = new char[(par.maxSeqLen + 1) / 3 + 3 + 1];
         std::string nucSeq;
         nucSeq.reserve(10000);
-        Sequence aaSequence(par.maxSeqLen, Parameters::DBTYPE_AMINO_ACIDS, &subMat, 0, false, par.compBiasCorrection);
+        Sequence aaSequence(par.maxSeqLen + 1, Parameters::DBTYPE_AMINO_ACIDS, &subMat, 0, false, par.compBiasCorrection);
 
 #pragma omp for schedule(dynamic, 5)
         for (size_t i = 0; i < reader.getSize(); ++i) {
             unsigned int key = reader.getDbKey(i);
             char *data = reader.getData(i, thread_idx);
-            aaSequence.mapSequence(0, key, data);
+            aaSequence.mapSequence(0, key, data, reader.getSeqLen(i));
 
             // ignore null char at the end
             for (int pos = 0; pos < aaSequence.L; ++pos) {
@@ -84,6 +84,7 @@ int translateaa(int argc, const char **argv, const Command &command) {
     }
     writer.close(true);
     reader.close();
+    DBReader<unsigned int>::softlinkDb(par.db1, par.db2, DBFiles::SEQUENCE_ANCILLARY);
 
     return EXIT_SUCCESS;
 }

@@ -63,7 +63,7 @@ int translatenucs(int argc, const char **argv, const Command& command) {
             //190344_chr1_1_129837240_129837389_3126_JFOA01000125.1 Prochlorococcus sp. scB245a_521M10 contig_244, whole genome shotgun sequence  [Orf: 1, 202, -1, 1, 0]
             // ignore null char at the end
             // needs to be int in order to be able to check
-            size_t length = reader.getSeqLens(i) - 1;
+            size_t length = reader.getEntryLen(i) - 1;
             if ((data[length] != '\n' && length % 3 != 0) && (data[length - 1] == '\n' && (length - 1) % 3 != 0)) {
                 Debug(Debug::WARNING) << "Nucleotide sequence entry " << key << " length (" << length << ") is not divisible by three. Adjust length to (lenght=" <<  length - (length % 3) << ").\n";
                 length = length - (length % 3);
@@ -101,10 +101,7 @@ int translatenucs(int argc, const char **argv, const Command& command) {
         delete[] aa;
     }
     writer.close(true);
-
-    FileUtil::symlinkAbs(par.hdr1, par.hdr2);
-    FileUtil::symlinkAbs(par.hdr1Index, par.hdr2Index);
-    FileUtil::symlinkAbs(par.hdr1 + ".dbtype", par.hdr2 + ".dbtype");
+    DBReader<unsigned int>::softlinkDb(par.db1, par.db2, DBFiles::SEQUENCE_ANCILLARY);
 
     if (addOrfStop == true) {
         header->close();

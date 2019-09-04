@@ -1,6 +1,5 @@
 #include "Util.h"
 #include "Debug.h"
-#include "kseq.h"
 #include "FileUtil.h"
 #include "BaseMatrix.h"
 #include "SubstitutionMatrix.h"
@@ -18,15 +17,12 @@
 #include "simd.h"
 #include "MemoryMapped.h"
 
-#include <fstream>
 #include <algorithm>
 #include <sys/mman.h>
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
-
-KSEQ_INIT(int, read)
 
 int Util::readMapping(std::string mappingFilename, std::vector<std::pair<unsigned int, unsigned int>> & mapping){
     MemoryMapped indexData(mappingFilename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
@@ -82,84 +78,6 @@ void Util::decomposeDomain(size_t domain_size, size_t world_rank,
         *subdomain_size += domain_size % world_size;
     }
 }
-
-std::map<std::string, size_t> Util::readMapping(const char *fastaFile) {
-    std::map<std::string, size_t> map;
-    FILE *fasta_file = FileUtil::openFileOrDie(fastaFile, "r", true);
-    kseq_t *seq = kseq_init(fileno(fasta_file));
-    size_t i = 0;
-    while (kseq_read(seq) >= 0) {
-        std::string key = Util::parseFastaHeader(seq->name.s);
-        if (map.find(key) == map.end()) {
-            map[key] = i;
-            i++;
-        } else {
-            Debug(Debug::ERROR) << "Duplicated key " << key << " in function readMapping.\n";
-            EXIT(EXIT_FAILURE);
-        }
-    }
-    kseq_destroy(seq);
-    fclose(fasta_file);
-    return map;
-}
-
-
-
-template <typename T>
-void Util::decomposeDomainByAminoAcid(size_t dbSize, T entrySizes, size_t dbEntries,
-                                      size_t worldRank, size_t worldSize, size_t *startEntry, size_t *numEntries){
-    if (worldSize > dbSize) {
-        // Assume the domain numEntries is greater than the world numEntries.
-        Debug(Debug::ERROR) << "World Size: " << worldSize << " dbSize: " << dbSize << "\n";
-        EXIT(EXIT_FAILURE);
-    }
-
-    if (worldSize == 1) {
-        *startEntry = 0;
-        *numEntries = dbEntries;
-        return;
-    }
-
-    if (dbEntries <= worldSize) {
-        *startEntry = worldRank < dbEntries ? worldRank : 0;
-        *numEntries = worldRank < dbEntries ? 1 : 0;
-        return;
-    }
-
-    size_t chunkSize = ceil(static_cast<double>(dbSize) / static_cast<double>(worldSize));
-
-    size_t *entriesPerWorker = (size_t*)calloc(worldSize, sizeof(size_t));
-
-    size_t currentRank = 0;
-    size_t sumCharsAssignedToCurrRank = 0;
-    for (size_t i = 0; i < dbEntries; ++i) {
-        if (sumCharsAssignedToCurrRank >= chunkSize) {
-            sumCharsAssignedToCurrRank = 0;
-            currentRank++;
-        }
-        sumCharsAssignedToCurrRank += entrySizes[i];
-        entriesPerWorker[currentRank] += 1;
-    }
-
-    *startEntry = 0;
-    *numEntries = entriesPerWorker[worldRank];
-    for (size_t j = 0; j < worldRank; ++j) {
-        *startEntry += entriesPerWorker[j];
-    }
-
-    free(entriesPerWorker);
-}
-
-template
-void Util::decomposeDomainByAminoAcid<unsigned int*>(size_t aaSize, unsigned int *seqSizes,
-                                                     size_t count, size_t worldRank, size_t worldSize,
-                                                     size_t *start, size_t *size);
-
-template
-void Util::decomposeDomainByAminoAcid<size_t*>(size_t aaSize, size_t *seqSizes,
-                                               size_t count, size_t worldRank, size_t worldSize,
-                                               size_t *start, size_t *size);
-
 
 
 // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=batcher&output=svg
@@ -441,6 +359,10 @@ char Util::touchMemory(const char *memory, size_t size) {
         Debug(Debug::ERROR) << "posix_madvise returned an error (touchMemory)\n";
     }
 #endif
+    if(size > Util::getTotalSystemMemory()){
+        Debug(Debug::WARNING) << "Can not touch " << size << " into main memory\n";
+        return 0;
+    }
     size_t pageSize = getPageSize();
 //    Debug::Progress progress(size/pageSize);
     size_t fourTimesPageSize = 4*pageSize;
@@ -532,62 +454,6 @@ size_t Util::ompCountLines(const char* data, size_t dataSize, unsigned int MAYBE
 //                4.02,3.05,2.87,2.71,1.88,2.63,3.46,3.45,1.79,3.19,
 //                3.77,3.64,1.71,2.62,3.00,3.63,2.83,1.32,2.18,2.92
 //        };
-
-
-std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const bool removeSplit) {
-    std::map<unsigned int, std::string> mapping;
-    if (file.length() > 0) {
-        std::ifstream mappingStream(file);
-        if (mappingStream.fail()) {
-            Debug(Debug::ERROR) << "File " << file << " not found!\n";
-            EXIT(EXIT_FAILURE);
-        }
-
-        std::string line;
-        while (std::getline(mappingStream, line)) {
-            std::vector<std::string> split = Util::split(line, "\t");
-            unsigned int id = strtoul(split[0].c_str(), NULL, 10);
-
-            std::string& name = split[1];
-
-            size_t pos;
-            if (removeSplit && (pos = name.find_last_of('_')) != std::string::npos) {
-                name = name.substr(0, pos);
-            }
-
-            mapping.emplace(id, name);
-        }
-    }
-
-    return mapping;
-}
-
-std::map<std::string, unsigned int> Util::readLookupReverse(const std::string& file, const bool removeSplit) {
-    std::map<std::string, unsigned int> mapping;
-    if (file.length() > 0) {
-        std::ifstream mappingStream(file);
-        if (mappingStream.fail()) {
-            Debug(Debug::ERROR) << "File " << file << " not found!\n";
-            EXIT(EXIT_FAILURE);
-        }
-
-        std::string line;
-        while (std::getline(mappingStream, line)) {
-            std::vector<std::string> split = Util::split(line, "\t");
-            unsigned int id = strtoul(split[0].c_str(), NULL, 10);
-            std::string& name = split[1];
-
-            size_t pos;
-            if (removeSplit && (pos = name.find_last_of('_')) != std::string::npos) {
-                name = name.substr(0, pos);
-            }
-
-            mapping.emplace(name, id);
-        }
-    }
-
-    return mapping;
-}
 
 int Util::omp_thread_count() {
     int n = 0;

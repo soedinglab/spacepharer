@@ -213,7 +213,7 @@ int ffindexFilter::runFilter(){
 
 			char *data = dataDb->getData(id,  thread_idx);
             unsigned int queryKey = dataDb->getDbKey(id);
-			size_t dataLength = dataDb->getSeqLens(id);
+			size_t dataLength = dataDb->getEntryLen(id);
 			int counter = 0;
             
             std::vector<std::pair<double, std::string>> toSort;
@@ -296,12 +296,13 @@ int ffindexFilter::runFilter(){
                 } else if (mode == JOIN_DB){
                     size_t newId = joinDB->getId(static_cast<unsigned int>(strtoul(columnValue, NULL, 10)));
                     size_t originalLength = strlen(lineBuffer);
-                    // Replace the last \n
-                    lineBuffer[originalLength - 1] = '\t';
+                    // add tab
+                    lineBuffer[originalLength] = '\t';
+                    originalLength++;
                     char* fullLine = joinDB->getData(newId, thread_idx);
                     // either append the full line (default mode):
                     if (columnToTake == -1) {
-                        size_t fullLineLength = joinDB->getSeqLens(newId);
+                        size_t fullLineLength = joinDB->getEntryLen(newId);
                         // Appending join database entry to query database entry
                         memcpy(lineBuffer + originalLength, fullLine, fullLineLength);
                     }
@@ -310,7 +311,7 @@ int ffindexFilter::runFilter(){
                         if(*fullLine != '\0'){
                             std::vector<std::string> splittedLine = Util::split(fullLine, "\t") ;
                             char* newValue = const_cast<char *>(splittedLine[columnToTake].c_str());
-                            size_t valueLength = joinDB->getSeqLens(newId);
+                            size_t valueLength = joinDB->getEntryLen(newId);
                             // Appending join database entry to query database entry
                             memcpy(lineBuffer + originalLength, newValue, valueLength);
                         }
