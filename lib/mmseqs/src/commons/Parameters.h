@@ -131,7 +131,12 @@ public:
     static const int OUTFMT_QCOV = 25;
     static const int OUTFMT_TCOV = 26;
     static const int OUTFMT_EMPTY = 27;
-    static std::vector<int> getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders);
+    static const int OUTFMT_QSET = 28;
+    static const int OUTFMT_QSETID = 29;
+    static const int OUTFMT_TSET = 30;
+    static const int OUTFMT_TSETID = 31;
+
+    static std::vector<int> getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders, bool &needLookup, bool &needSource);
 
     // convertprofiledb
     static const int PROFILE_MODE_HMM = 0;
@@ -208,6 +213,9 @@ public:
     static const int SEQ_ID_SHORT = 1;
     static const int SEQ_ID_LONG = 2;
 
+    // seq. split mode
+    static const int SEQUENCE_SPLIT_MODE_SOFT = 0;
+    static const int SEQUENCE_SPLIT_MODE_HARD = 1;
 
     // rescorediagonal
     static const int RESCORE_MODE_HAMMING = 0;
@@ -215,6 +223,12 @@ public:
     static const int RESCORE_MODE_ALIGNMENT = 2;
     static const int RESCORE_MODE_GLOBAL_ALIGNMENT = 3;
     static const int RESCORE_MODE_WINDOW_QUALITY_ALIGNMENT = 4;
+
+    // combinepvalperset
+    static const int AGGREGATION_MODE_MULTIHIT = 0;
+    static const int AGGREGATION_MODE_MIN_PVAL = 1;
+    static const int AGGREGATION_MODE_PRODUCT = 2;
+    static const int AGGREGATION_MODE_TRUNCATED_PRODUCT = 3;
 
     // header type
     static const int HEADER_TYPE_UNICLUST = 1;
@@ -370,6 +384,7 @@ public:
     std::string reverseFrames;
     bool useAllTableStarts;
     int translate;
+    int createLookup;
 
     // convertprofiledb
     int profileMode;
@@ -448,7 +463,7 @@ public:
 
     // splitsequence
     int sequenceOverlap;
-
+    int sequenceSplitMode;
     // convert2fasta
     bool useHeaderFile;
 
@@ -489,6 +504,7 @@ public:
     bool simpleBestHit;
     float alpha;
     bool shortOutput;
+    int aggregationMode;
 
     // mergedbs
     std::string mergePrefixes;
@@ -529,7 +545,6 @@ public:
 
     // filtertaxdb
     std::string taxonList;
-    bool invertSelection;
 
     // view
     std::string idList;
@@ -731,6 +746,7 @@ public:
     PARAMETER(PARAM_ORF_REVERSE_FRAMES)
     PARAMETER(PARAM_USE_ALL_TABLE_STARTS)
     PARAMETER(PARAM_TRANSLATE)
+    PARAMETER(PARAM_CREATE_LOOKUP)
 
     // indexdb
     PARAMETER(PARAM_CHECK_COMPATIBLE)
@@ -748,6 +764,7 @@ public:
 
     // split sequence
     PARAMETER(PARAM_SEQUENCE_OVERLAP)
+    PARAMETER(PARAM_SEQUENCE_SPLIT_MODE)
 
     // gff2db
     PARAMETER(PARAM_GFF_TYPE)
@@ -783,6 +800,7 @@ public:
     PARAMETER(PARAM_SIMPLE_BEST_HIT)
     PARAMETER(PARAM_ALPHA)
     PARAMETER(PARAM_SHORT_OUTPUT)
+    PARAMETER(PARAM_AGGREGATION_MODE)
 
     // concatdb
     PARAMETER(PARAM_PRESERVEKEYS)
@@ -826,7 +844,6 @@ public:
 
     // filtertaxdb
     PARAMETER(PARAM_TAXON_LIST)
-    PARAMETER(PARAM_INVERT_SELECTION)
 
     // view
     PARAMETER(PARAM_ID_LIST)
@@ -928,10 +945,10 @@ public:
     std::vector<MMseqsParameter*> createsubdb;
     std::vector<MMseqsParameter*> createtaxdb;
     std::vector<MMseqsParameter*> profile2pssm;
+    std::vector<MMseqsParameter*> profile2seq;
     std::vector<MMseqsParameter*> profile2cs;
     std::vector<MMseqsParameter*> besthitbyset;
     std::vector<MMseqsParameter*> combinepvalbyset;
-    std::vector<MMseqsParameter*> summerizeresultsbyset;
     std::vector<MMseqsParameter*> multihitdb;
     std::vector<MMseqsParameter*> multihitsearch;
     std::vector<MMseqsParameter*> expandaln;

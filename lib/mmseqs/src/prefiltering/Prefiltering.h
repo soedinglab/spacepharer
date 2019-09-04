@@ -49,8 +49,6 @@ public:
     static int getKmerThreshold(const float sensitivity, const bool isProfile, const int kmerScore, const int kmerSize);
 
 private:
-    static const size_t BUFFER_SIZE = 1000000;
-
     const std::string queryDB;
     const std::string queryDBIndex;
     const std::string targetDB;
@@ -89,7 +87,7 @@ private:
     const float sensitivity;
     size_t maxSeqLen;
     int querySeqType;
-    const bool diagonalScoring;
+    const unsigned int diagonalScoring;
     const unsigned int minDiagScoreThr;
     bool aaBiasCorrection;
     const float covThr;
@@ -97,7 +95,7 @@ private:
     const bool includeIdentical;
     int preloadMode;
     const unsigned int threads;
-    const int compressed;
+    int compressed;
 
     bool runSplit(const std::string &resultDB, const std::string &resultDBIndex, size_t split, bool merge);
 
@@ -118,9 +116,6 @@ private:
 
     // needed for index lookup
     void getIndexTable(int split, size_t dbFrom, size_t dbSize);
-
-    void writePrefilterOutput(DBWriter *dbWriter, unsigned int thread_idx, size_t id,
-                              const std::pair<hit_t *, size_t> &prefResults, size_t seqIdOffset);
 
     void printStatistics(const statistics_t &stats, std::list<int> **reslens,
                          unsigned int resLensSize, size_t empty, size_t maxResults);
