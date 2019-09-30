@@ -4,15 +4,15 @@
 #include "FileUtil.h"
 #include "DBReader.h"
 #include "LocalParameters.h"
-#include "createsetdb.sh.h"
+#include "downloadgbphage.sh.h"
 
-void setcreatesetdbDefaults(Parameters *p) {
-    p->orfMinLength = 30;  
+void setdownloadgbphageDefaults(Parameters *p) {
+
 }
 
-int createsetdb(int argc, const char **argv, const Command& command) {
+int downloadgbphage(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    setcreatesetdbDefaults(&par);
+    setdownloadgbphageDefaults(&par);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // check if temp dir exists and if not, try to create it:
@@ -29,7 +29,7 @@ int createsetdb(int argc, const char **argv, const Command& command) {
         }
     }
 
-    std::string hash = SSTR(par.hashParameter(par.filenames, par.createsetdbworkflow));
+    std::string hash = SSTR(par.hashParameter(par.filenames, par.downloadgbphageworkflow));
     if(par.reuseLatest){
         hash = FileUtil::getHashFromSymLink(tmpDir+"/latest");
     }
@@ -51,9 +51,8 @@ int createsetdb(int argc, const char **argv, const Command& command) {
     cmd.addVariable("OUTDB", outDb.c_str());
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
     par.splitSeqByLen = false;
-    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    cmd.addVariable("CREATE_REVERSE_SETDB", par.reverseSetDb == 1 ? "TRUE" : NULL);
     cmd.addVariable("REVERSE_FRAGMENTS", par.reverseFragments == 1 ? "TRUE" : NULL);
-    cmd.addVariable("EXTRACTORFS_SPACER", par.extractorfsSpacer == 1 ? "TRUE" : NULL);
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
     cmd.addVariable("EXTRACTORFS_PAR", par.createParameterString(par.extractorfs).c_str());
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
@@ -63,8 +62,8 @@ int createsetdb(int argc, const char **argv, const Command& command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
 
-    FileUtil::writeFile(tmpDir + "/createsetdb.sh", createsetdb_sh, createsetdb_sh_len);
-    std::string program(tmpDir + "/createsetdb.sh");
+    FileUtil::writeFile(tmpDir + "/downloadgbphage.sh", downloadgbphage_sh, downloadgbphage_sh_len);
+    std::string program(tmpDir + "/downloadgbphage.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;

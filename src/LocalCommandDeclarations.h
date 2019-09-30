@@ -5,6 +5,9 @@
 
 extern int predictmatch(int argc, const char **argv, const Command& command);
 extern int createsetdb(int argc, const char **argv, const Command& command);
-extern int spacerparser(int argc, const char **argv, const Command& command);
+extern int parsespacer(int argc, const char **argv, const Command& command);
+extern int filtermatchbyfdr(int argc, const char **argv, const Command& command);
+extern int truncatebesthits(int argc, const char **argv, const Command& command);
+extern int downloadgbphage(int argc, const char **argv, const Command& command);
 
 #endif

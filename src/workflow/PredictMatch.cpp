@@ -7,13 +7,27 @@
 #include "predictmatch.sh.h"
 
 void setpredictmatchDefaults(Parameters *p) {
+    //multihitsearch par
     p->orfStartMode = 1;
     p->sensitivity = 5.7;
     p->orfMinLength = 9;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV; 
     p->evalThr = 200;
     p->maxSequences = 1500;
+
+    p->kmerSize = 6;
+    p->spacedKmer = true;
+    p->spacedKmerPattern = "11011101";
+    //TODO: change path for VTML40
+    p->scoringMatrixFile = ScoreMatrixFile("/home/rosy/metaeuk/lib/mmseqs/data/VTML40.out", "nucleotide.out");
+    p->gapExtend = 2;
+    p->gapOpen = 11;
+
+    //besthitpar
     p->simpleBestHit = true;
+    //combinepval par
+    p->aggregationMode = 3;
+    p->printCodon = true;
 }
 
 int predictmatch(int argc, const char **argv, const Command& command) {
@@ -67,11 +81,12 @@ int predictmatch(int argc, const char **argv, const Command& command) {
             return EXIT_FAILURE;
         }
     }
+    std::string outDb = par.filenames.back();
+    par.filenames.push_back(tmpDir);
 
     FileUtil::symlinkAlias(tmpDir, "latest");
 
-    std::string outDb = par.filenames.back();
-    par.filenames.pop_back();
+
 
 
     CommandCaller cmd;
@@ -91,8 +106,8 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
 
-    FileUtil::writeFile(par.db4 + "/predictmatch.sh", predictmatch_sh, predictmatch_sh_len);
-    std::string program(par.db4 + "/predictmatch.sh");
+    FileUtil::writeFile(tmpDir + "/predictmatch.sh", predictmatch_sh, predictmatch_sh_len);
+    std::string program(tmpDir + "/predictmatch.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;

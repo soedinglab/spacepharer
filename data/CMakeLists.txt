@@ -3,6 +3,7 @@ include(MMseqsResourceCompiler)
 set(COMPILED_RESOURCES
         predictmatch.sh
         createsetdb.sh
+        downloadgbphage.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
