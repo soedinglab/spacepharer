@@ -48,17 +48,17 @@ jobs:
           fi
 
           make -j $(nproc --all)
-        displayName: Build MetaEuk
+        displayName: Build SpacePHARER
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}/tests
-          ./run.sh "${BUILD_SOURCESDIRECTORY}/build/src/whisper"
+          ./run.sh "${BUILD_SOURCESDIRECTORY}/build/src/spacepharer"
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         condition: eq(variables['STATIC'], 1)
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/src/whisper
-          artifactName: whisper-linux-$(SIMD)
+          targetPath: $(Build.SourcesDirectory)/build/src/spacepharer
+          artifactName: spacepharer-linux-$(SIMD)
 
   - job: build_macos_1014
     displayName: macOS 1014
@@ -72,21 +72,21 @@ jobs:
         displayName: Install Dependencies
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          CC=gcc-9 CXX=g++-9 ./lib/mmseqs/util/build_osx.sh . build whisper
-        displayName: Build MetaEuk
+          CC=gcc-9 CXX=g++-9 ./lib/mmseqs/util/build_osx.sh . build spacepharer
+        displayName: Build SpacePHARER
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}/tests
-          ./run.sh "${BUILD_SOURCESDIRECTORY}/build/build_sse41/src/whisper"
+          ./run.sh "${BUILD_SOURCESDIRECTORY}/build/build_sse41/src/spacepharer"
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/build_sse41/src/whisper
-          artifactName: whisper-darwin-sse41
+          targetPath: $(Build.SourcesDirectory)/build/build_sse41/src/spacepharer
+          artifactName: spacepharer-darwin-sse41
       - task: PublishPipelineArtifact@0
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/build_avx2/src/whisper
-          artifactName: whisper-darwin-avx2
+          targetPath: $(Build.SourcesDirectory)/build/build_avx2/src/spacepharer
+          artifactName: spacepharer-darwin-avx2
 
   # - job: build_windows_2019
   #   displayName: Windows 2019
@@ -121,23 +121,23 @@ jobs:
   #         perl
   #       displayName: Install Dependencies
   #     - script: |
-  #         %CYGWIN_ROOT%\bin\bash.exe -cl "${BUILD_SOURCESDIRECTORY}/lib/mmseqs/util/build_windows.sh $(cygpath ${BUILD_SOURCESDIRECTORY}) $(cygpath ${BUILD_SOURCESDIRECTORY}/build) whisper"
-  #       displayName: Build MetaEuk
+  #         %CYGWIN_ROOT%\bin\bash.exe -cl "${BUILD_SOURCESDIRECTORY}/lib/mmseqs/util/build_windows.sh $(cygpath ${BUILD_SOURCESDIRECTORY}) $(cygpath ${BUILD_SOURCESDIRECTORY}/build) spacepharer"
+  #       displayName: Build SpacePHARER
   #     - task: "ArchiveFiles@2"
   #       inputs:
-  #         rootFolderOrFile: $(Build.SourcesDirectory)\build\whisper
-  #         archiveFile: $(Build.SourcesDirectory)\whisper-win64.zip
+  #         rootFolderOrFile: $(Build.SourcesDirectory)\build\spacepharer
+  #         archiveFile: $(Build.SourcesDirectory)\spacepharer-win64.zip
   #         includeRootFolder: true
   #         archiveType: zip
   #     - task: PublishPipelineArtifact@0
   #       inputs:
-  #         targetPath: $(Build.SourcesDirectory)\whisper-win64.zip
-  #         artifactName: whisper-win64
+  #         targetPath: $(Build.SourcesDirectory)\spacepharer-win64.zip
+  #         artifactName: spacepharer-win64
   #     - script: |
-  #         %BUILD_SOURCESDIRECTORY%\build\whisper\whisper.bat version
+  #         %BUILD_SOURCESDIRECTORY%\build\spacepharer\spacepharer.bat version
   #       displayName: Setup Busybox
   #     - script: |
-  #         %CYGWIN_ROOT%\bin\bash.exe -cl "cd ${BUILD_SOURCESDIRECTORY}/tests && ./run.sh $(cygpath ${BUILD_SOURCESDIRECTORY}/build/whisper/bin/whisper.exe)"
+  #         %CYGWIN_ROOT%\bin\bash.exe -cl "cd ${BUILD_SOURCESDIRECTORY}/tests && ./run.sh $(cygpath ${BUILD_SOURCESDIRECTORY}/build/spacepharer/bin/spacepharer.exe)"
   #       displayName: Run Regression Suite
   #       condition: eq(variables['regression'], 1)
 
@@ -153,75 +153,75 @@ jobs:
     steps:
       - script: |
           cd "${BUILD_SOURCESDIRECTORY}"
-          mkdir whisper
-          cp -f README.md LICENCE.md whisper
-          mkdir whisper/bin
+          mkdir spacepharer
+          cp -f README.md LICENCE.md spacepharer
+          mkdir spacepharer/bin
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: whisper-darwin-sse41
-          targetPath: $(Build.SourcesDirectory)/whisper/bin
+          artifactName: spacepharer-darwin-sse41
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/whisper/bin/whisper"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/whisper
-          archiveFile: $(Build.SourcesDirectory)/whisper-osx-sse41.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-osx-sse41.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: whisper-darwin-avx2
-          targetPath: $(Build.SourcesDirectory)/whisper/bin
+          artifactName: spacepharer-darwin-avx2
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/whisper/bin/whisper"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/whisper
-          archiveFile: $(Build.SourcesDirectory)/whisper-osx-avx2.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-osx-avx2.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: whisper-linux-SSE4_1
-          targetPath: $(Build.SourcesDirectory)/whisper/bin
+          artifactName: spacepharer-linux-SSE4_1
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/whisper/bin/whisper"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/whisper
-          archiveFile: $(Build.SourcesDirectory)/whisper-linux-sse41.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-sse41.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: whisper-linux-AVX2
-          targetPath: $(Build.SourcesDirectory)/whisper/bin
+          artifactName: spacepharer-linux-AVX2
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/whisper/bin/whisper"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/whisper
-          archiveFile: $(Build.SourcesDirectory)/whisper-linux-avx2.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-avx2.tar.gz
           includeRootFolder: true
           archiveType: tar
       - script:
-          rm "${BUILD_SOURCESDIRECTORY}/whisper/bin/whisper"
+          rm "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       # - task: DownloadPipelineArtifact@1
       #   inputs:
-      #     artifactName: whisper-win64
+      #     artifactName: spacepharer-win64
       #     targetPath: $(Build.SourcesDirectory)
       # - script: |
-      #     unzip "${BUILD_SOURCESDIRECTORY}/whisper-win64.zip"
-      #     chmod +x whisper/whisper.bat whisper/bin/*
+      #     unzip "${BUILD_SOURCESDIRECTORY}/spacepharer-win64.zip"
+      #     chmod +x spacepharer/spacepharer.bat spacepharer/bin/*
       # - task: ArchiveFiles@2
       #   inputs:
-      #     rootFolderOrFile: $(Build.SourcesDirectory)/whisper
-      #     archiveFile: $(Build.SourcesDirectory)/whisper-win64.zip
+      #     rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+      #     archiveFile: $(Build.SourcesDirectory)/spacepharer-win64.zip
       #     includeRootFolder: true
       #     archiveType: zip
       - task: DownloadSecureFile@1
         inputs:
-          secureFile: azure_upload_whisper
+          secureFile: azure_upload_spacepharer
         displayName: Get Deployment Key
       - script: |
           mkdir ~/.ssh && mv $DOWNLOADSECUREFILE_SECUREFILEPATH ~/.ssh/id_rsa
@@ -229,5 +229,5 @@ jobs:
           ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
           cd "${BUILD_SOURCESDIRECTORY}"
           ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
-          scp whisper-osx-avx2.tar.gz whisper-linux-sse41.tar.gz whisper-linux-avx2.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
-          ssh codeship@uniclust.mmseqs.com "update-latest-whisper.sh \"${BUILD_SOURCEVERSION}\""
+          scp spacepharer-osx-avx2.tar.gz spacepharer-linux-sse41.tar.gz spacepharer-linux-avx2.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
+          ssh codeship@uniclust.mmseqs.com "update-latest-spacepharer.sh \"${BUILD_SOURCEVERSION}\""

@@ -1,8 +1,8 @@
-FROM alpine:latest AS whisper-builder
+FROM alpine:latest AS spacepharer-builder
 
 RUN apk add --no-cache gcc g++ cmake musl-dev git ninja 
 
-WORKDIR /opt/whisper
+WORKDIR /opt/spacepharer
 ADD . .
 
 RUN git submodule init && git submodule update
