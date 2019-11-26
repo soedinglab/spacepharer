@@ -1,6 +1,6 @@
 set(workflow_source_files
         workflow/PredictMatch.cpp
         workflow/CreateSetDb.cpp
-        workflow/DownloadGbPhage.cpp
+        workflow/DownloadGenome.cpp
         PARENT_SCOPE
         )
