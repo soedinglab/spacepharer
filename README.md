@@ -1,1 +1,112 @@
-# We have no name yet
+# SpacePHARER: CRISPR Spacer Phage-Host pAiRs findER
+
+SpacePHARER is a modular toolkit for sensitive phage-host interaction identification via CRISPR spacers. SpacePHARER combines the fast and sensitive homology search capabilities of [MMseqs2](https://github.com/soedinglab/MMseqs2) with a novel approach of searching sets of sequences. SpacePHARER is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS. The software is designed to run on multiple cores.
+
+
+## Installation
+<!-- SpacePHARER can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux or `sysctl -a | grep machdep.cpu.features | grep SSE4.1` on MacOS).
+     
+     # static build sse4.1
+     wget https://mmseqs.com/metaeuk/metaeuk-linux-sse41.tar.gz; tar xvfz metaeuk-linux-sse41.tar.gz; export PATH=$(pwd)/metaeuk/bin/:$PATH
+     # static build AVX2
+     wget https://mmseqs.com/metaeuk/metaeuk-linux-avx2.tar.gz; tar xvfz metaeuk-linux-avx2.tar.gz; export PATH=$(pwd)/metaeuk/bin/:$PATH -->
+
+## Input 
+SpacePHARER will search with 6-frame translated CRISPR spacer sequences to sets of phage **ORFs** (open reading frames) based on similarity, combining multiple evidences (**hits**) found between two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are Fasta files of nucleotide sequences (.fasta or .tar.gz). Spacers should be provided in multi-Fasta files each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
+
+## Running SpacePHARER 
+
+### Main Modules:
+
+      createsetdb       Extract and translate ORFs and create sequence database and associated metadata
+      predictmatch      Predict host-phage matches based on sets of protein-sequence-level similarity
+      parsespacer       Parse a file containing CRISPR array in supported formats (CRT,PILER-CR and CRISPRDetect)
+      downloadgenome    Download GenBank (phage) genomes from NCBI ftp site and create setDB
+
+
+### Important parameters: 
+
+     --reverse-fragments      reverse AA fragments (ORFs) to generate control setDB
+     --fdr                    false discovery rate cutoff to determine E_comb threshold of predictions
+     --fmt                    output format for predictmatch. (0: short (only matches); 1: long (matches and hits); 2: long with nucleotide alignment)
+     
+
+### Downlading phage genomes:
+
+This module will download all available phage genomes from NCBI GenBank ftp site, and create target SetDB in the provided path, and ```--reverse-setDB``` to additionaly create control target setDB with the name targetSetDB_rev in the same path. 
+
+      spacepharer downloadgenome pathto/data/phagegenome.txt targetGenomeFolder targetSetDB tmpFolder
+      
+
+### Creating setDB:
+
+Before search, query or target sequences contained in Fasta files will need to be converted by createsetdb: it first creates a sequence DB, then extracts and translates all putative protein fragments (ORFs), and finally generates associated metadata. For spacer sequences, ```--extractorf-spacer 1``` will use a different set of parameters for extracting protein fragments.
+
+      spacepharer createsetdb Query1.fasta [...QueryN.fasta] querySetDB tmpFolder --extractorf-spacer 1
+      spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB tmpFolder
+
+You will also need to generate a control target set DB, one of the options is with reversed protein fragments of target DB using ```--reverse-fragments 1```
+
+      spacepharer createsetdb Target1.fasta [...TargetN.fasta] controlTargetSetDB tmpFolder --reverse-fragments 1
+
+
+### Parsing spacer files:
+
+If you wish to provide spacer files (CRT,PILER-CR or CRISPRDetect) as query, parsespacer will extract spacer sequences from each file and create a MMseqs2 sequence DB. Then use createsetdb to generate associated metadata.
+    
+    spacepharer parsespacer spacerFile1.txt [...spacerFileN.txt] queryDB 
+    spacepharer createsetdb queryDB querySetDB tmpFolder --extractorf-spacer 1
+    
+
+### Searching and predicting matches:
+
+    
+    spacepharer predictmatch querySetDB targetSetDB controlTargetSetDB tmpFolder
+
+
+
+### The SpacePHARER output:
+
+Upon completion, SpacePHARER outputs a tab-separated text file (.tsv). Each prokaryotic-phage match spans two or more lines:
+
+*#prok_acc  phage_acc   E_comb      num_hits*
+*>spacer_acc phage_acc   p_adjust    spacer_start spacer_end   phage_start     phage_end   putative_5'_PAM|putative_3'_PAM*
+*NUCL_SEQ_ALN_SPACER*
+*NUCL_SEQ_ALN_PHAGE*
+
+
+The first line starts with ’#’: prokaryotic accession, phage accession, E comb and number of hits in the match. 
+
+Each following line describes an individual hit: spacer accession, phage accession, p adjust, spacer start and end, phage start and end, putative 5’ PAM|putative 3’ PAM. 
+
+Optionally, the aligned spacer and phage sequences can be printed in two additional lines following each hit line, using ```--fmt 2```
+
+```--fmt 0``` will output a short-format, if you wish to only see the match line.
+
+
+
+### Removing TMP files:
+
+During the workflow execution, SpacePHARER will keep all intermediate outputs in tmpFolder, ```--remove-tmp-files``` will clear out the tmpFolder after workflow has finished.
+
+
+<!-- ## Compile from source
+Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
+
+      git clone git@github.com:soedinglab/whisper.git .
+      <!-- git submodule init
+      git submodule update 
+      <!-- mkdir build
+      cd build
+      cmake -DCMAKE_BUILD_TYPE=Release -DHAVE_MPI=1 -DCMAKE_INSTALL_PREFIX=. ..
+      make -j
+      make install
+      export PATH="$(pwd)/bin/:$PATH"
+        
+:exclamation: If you want to compile SpacePHARER on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and SpacePHARER will not be able to run multithreaded. Use the following cmake call:
+
+      CXX="$(brew --prefix)/bin/g++-8" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..  -->
+
+## Hardware requirements
+SpacePHARER will scale its memory consumption based on the available main memory of the machine. SpacePHARER needs a CPU with at least the SSE4.1 instruction set to run. 
+
