@@ -58,38 +58,51 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
     std::sort(posToSort.begin(), posToSort.end());
 
     std::vector<double> negToSort;
-    for (size_t id = 0; id < negEvalDb.getSize(); id++){
-        char *data = negEvalDb.getData(id, 0);
-        while (*data != '\0'){
-            char *current = data;
-            data = Util::skipLine(data);
-            size_t length = data - current;
-            std::string line(current, length - 1);
-            if (line.empty() == true) {
-                continue;
-            }
-            std::vector<std::string> columns = Util::split(line, "\t");
-            double eval = strtod(columns[1].c_str(), NULL);
-            negToSort.push_back(eval);
-            }        
-    }
-    std::sort(negToSort.begin(), negToSort.end());    
-
-
-    size_t neg_counter = 0;
-    size_t pos_counter = 0;
-    double currentFDR = 0;
-    double expectedFPcoef = (numTargetSets * posEvalDb.getSize() + numControlSets * negEvalDb.getSize()) / (numControlSets * negEvalDb.getSize());
-    //TODO: factorize FDR, default 0.05
-    while (currentFDR <= par.fdrCutoff) {
-        pos_counter++;
-        while (posToSort[pos_counter] >= negToSort[neg_counter]){
-            neg_counter++;
+    double threshold;
+    //check if control cEval list is empty
+    if (negEvalDb.getSize() > 0) {
+        for (size_t id = 0; id < negEvalDb.getSize(); id++){
+            char *data = negEvalDb.getData(id, 0);
+            while (*data != '\0'){
+                char *current = data;
+                data = Util::skipLine(data);
+                size_t length = data - current;
+                std::string line(current, length - 1);
+                if (line.empty() == true) {
+                    continue;
+                }
+                std::vector<std::string> columns = Util::split(line, "\t");
+                double eval = strtod(columns[1].c_str(), NULL);
+                negToSort.push_back(eval);
+                }        
         }
-        currentFDR = neg_counter * expectedFPcoef / (pos_counter + neg_counter);
+        std::sort(negToSort.begin(), negToSort.end());    
+
+
+        size_t neg_counter = 0;
+        size_t pos_counter = 0;
+        double currentFDR = 0;
+        double expectedFPcoef = 1.0 * (numTargetSets * posEvalDb.getSize() + numControlSets * negEvalDb.getSize()) / (numControlSets * negEvalDb.getSize());
+        while (currentFDR <= par.fdrCutoff) {
+            pos_counter++;
+            while (posToSort[pos_counter] >= negToSort[neg_counter]){
+                neg_counter++;
+            }
+            currentFDR = neg_counter * expectedFPcoef / (pos_counter + neg_counter);
+        }
+        threshold = posToSort[pos_counter];
+        //check if pos_counter has run to the end
+        if (pos_counter == posEvalDb.getSize()){
+            std::cout << "cEval threshold cutoff with FDR of " << par.fdrCutoff << "cannot be determined" <<".\n";
+        } else {
+            std::cout << "cEval threshold cutoff is " << threshold << " with FDR of " << par.fdrCutoff << ".\n"; 
+            std::cout << pos_counter << " matches passed cEval threshold .\n";   
+        }
+    } else {
+        std::cout << "control cEval list is empty, will include all entries.\n";    
+        threshold = numTargetSets;
     }
-    double threshold = posToSort[pos_counter];
-    std::cout << "cEval threshold cutoff is " << threshold << " with FDR of " << par.fdrCutoff << ".\n";
+
     negToSort.clear();
     posToSort.clear();
 

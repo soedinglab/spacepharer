@@ -41,18 +41,9 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
 #endif
         std::string buffer;
         buffer.reserve(10 * 1024);
-        char dbKey[255];
 #pragma omp for schedule(static)
         for (size_t i = 0; i < resultReader.getSize(); ++i) {
             char *data = resultReader.getData(i, thread_idx);
-            // char *current = data;
-            // data = Util::skipLine(data);
-            // size_t length = data - current;
-            // std::string line(current, length - 1);
-            // Util::parseKey(data, dbKey);
-            // unsigned int key = Util::fast_atoi<unsigned int>(dbKey);
-            // size_t id = resultReader.getId(key);
-            // go through the results in the cluster and add them to one entry
             while (*data != '\0'){
                 char *current = data;
                 data = Util::skipLine(data);
@@ -63,12 +54,20 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
                 }
                 std::vector<std::string> columns = Util::split(line, "\t");
                 double logPval = strtod(columns[1].c_str(), NULL);
-                size_t id = resultReader.getId(i);
-                size_t key = resultReader.getDbKey(id);
-                size_t setKey = Util::fast_atoi<size_t>(setReader.getDataByDBKey(key, thread_idx));
+                //size_t id = resultReader.getId(i);
+                //size_t key = resultReader.getDbKey(id);
+                size_t setKey = Util::fast_atoi<size_t>(setReader.getDataByDBKey(i, thread_idx));
                 unsigned int setSize = Util::fast_atoi<unsigned int>(sizeReader.getDataByDBKey(setKey, thread_idx));
-                double logPvalThr = log(1.0/(setSize + 1));
-                if(logPval < logPvalThr) {
+                double logPvalThr = 1.0/(setSize + 1);
+                if(exp(logPval) < logPvalThr) {
+                    // buffer.append(SSTR(i));
+                    // buffer.append("\t");
+                    // buffer.append(SSTR(setKey));
+                    // buffer.append("\t");
+                    // buffer.append(SSTR(setSize));
+                    // buffer.append("\t");
+                    // buffer.append(SSTR(logPvalThr));
+                    // buffer.append("\t");
                     buffer.append(line);
                     if (buffer.back() != '\n'){
                         buffer.append("\n");
