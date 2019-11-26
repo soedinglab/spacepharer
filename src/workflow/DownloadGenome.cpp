@@ -4,15 +4,15 @@
 #include "FileUtil.h"
 #include "DBReader.h"
 #include "LocalParameters.h"
-#include "downloadgbphage.sh.h"
+#include "downloadgenome.sh.h"
 
-void setdownloadgbphageDefaults(Parameters *p) {
+void setdownloadgenomeDefaults(Parameters *p) {
 
 }
 
-int downloadgbphage(int argc, const char **argv, const Command& command) {
+int downloadgenome(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    setdownloadgbphageDefaults(&par);
+    setdownloadgenomeDefaults(&par);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // check if temp dir exists and if not, try to create it:
@@ -29,7 +29,7 @@ int downloadgbphage(int argc, const char **argv, const Command& command) {
         }
     }
 
-    std::string hash = SSTR(par.hashParameter(par.filenames, par.downloadgbphageworkflow));
+    std::string hash = SSTR(par.hashParameter(par.filenames, par.downloadgenomeworkflow));
     if(par.reuseLatest){
         hash = FileUtil::getHashFromSymLink(tmpDir+"/latest");
     }
@@ -45,6 +45,8 @@ int downloadgbphage(int argc, const char **argv, const Command& command) {
 
     std::string outDb = par.filenames.back();
     par.filenames.pop_back();
+    par.filenames.push_back(outDb);
+    par.filenames.push_back(tmpDir);
 
 
     CommandCaller cmd;
@@ -62,8 +64,8 @@ int downloadgbphage(int argc, const char **argv, const Command& command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
 
-    FileUtil::writeFile(tmpDir + "/downloadgbphage.sh", downloadgbphage_sh, downloadgbphage_sh_len);
-    std::string program(tmpDir + "/downloadgbphage.sh");
+    FileUtil::writeFile(tmpDir + "/downloadgenome.sh", downloadgenome_sh, downloadgenome_sh_len);
+    std::string program(tmpDir + "/downloadgenome.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;
