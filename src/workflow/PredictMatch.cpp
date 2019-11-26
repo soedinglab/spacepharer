@@ -8,20 +8,19 @@
 
 void setpredictmatchDefaults(Parameters *p) {
     //multihitsearch par
-    p->orfStartMode = 1;
     p->sensitivity = 5.7;
     p->orfMinLength = 9;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV; 
     p->evalThr = 200;
     p->maxSequences = 1500;
-
+    p->addBacktrace = 1;
     p->kmerSize = 6;
     p->spacedKmer = true;
     p->spacedKmerPattern = "11011101";
     //TODO: change path for VTML40
-    p->scoringMatrixFile = ScoreMatrixFile("/home/rosy/metaeuk/lib/mmseqs/data/VTML40.out", "nucleotide.out");
+    p->scoringMatrixFile = ScoreMatrixFile("VTML40.out", "nucleotide.out");
     p->gapExtend = 2;
-    p->gapOpen = 11;
+    p->gapOpen = 16;
 
     //besthitpar
     p->simpleBestHit = true;
@@ -95,6 +94,7 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     par.splitSeqByLen = false;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("REVERSE_FRAGMENTS", par.reverseFragments == 1 ? "TRUE" : NULL);
+    cmd.addVariable("REPORT_PAM", par.reportPam == 1 ? "TRUE" : NULL);
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
     cmd.addVariable("EXTRACTORFS_PAR", par.createParameterString(par.extractorfs).c_str());
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
@@ -103,6 +103,9 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("RESULT2STATS_PAR", par.createParameterString(par.result2stats).c_str());
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow).c_str());
     cmd.addVariable("BESTHITBYSET_PAR", par.createParameterString(par.besthitbyset).c_str());
+    cmd.addVariable("COMBINEPVALPERSET_PAR", par.createParameterString(par.combinepvalbyset).c_str());
+    cmd.addVariable("FILTERMATCHBYFDR_PAR", par.createParameterString(par.filtermatchbyfdr).c_str());
+    cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
 

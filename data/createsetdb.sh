@@ -43,6 +43,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     mv -f "${OUTDB}" "${OUTDB}_nucl"
     mv -f "${OUTDB}.index" "${OUTDB}_nucl.index"
     mv -f "${OUTDB}.lookup" "${OUTDB}_nucl.lookup"
+    mv -f "${OUTDB}.source" "${OUTDB}_nucl.source"
     mv -f "${OUTDB}.dbtype" "${OUTDB}_nucl.dbtype"
 
     mv -f "${OUTDB}_h" "${OUTDB}_nucl_h"
@@ -63,11 +64,13 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
 
     if notExists "${OUTDB}_nucl_orf.index"; then
         # shellcheck disable=SC2086
-        if [ -n "$EXTRACTORFS_SPACER" ]; then
-            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "--min-length" "9" "--orf-start-mode" "1" \
+        if [ -n "${EXTRACTORFS_SPACER}" ]; then
+            echo "Extract ORF using spacer parameters..."
+            #"--reverse-frames" " "
+            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "--min-length" "9" "--orf-start-mode" "1" ${THREADS_PAR}\
                 || fail "extractorfs failed"     
         else   
-            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" ${EXTRACTORFS_PAR}\
+            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "--orf-start-mode" "0" ${THREADS_PAR}\
                 || fail "extractorfs failed"
         fi
     fi
@@ -108,15 +111,16 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
             || fail "result2stats failed"
     fi
 
-    if [ -n "$REVERSE_FRAGMENTS" ]; then
+    if [ -n "${REVERSE_FRAGMENTS}" ]; then
         # shellcheck disable=SC2086
+        echo  "Reversing database..."
         "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" ${THREADS_PAR} \
-        || fail "reverseseq step died"
+        || fail "reverseseq died"
         mv -f "${OUTDB}_reverse" "${OUTDB}"
         mv -f "${OUTDB}_reverse.index" "${OUTDB}.index"
         mv -f "${OUTDB}_reverse.dbtype" "${OUTDB}.dbtype"
         #OUTDB="${OUTDB}_reverse"
-        #echo "Will base search on ${OUTDB}"
+        echo "Will base search on ${OUTDB}"
     fi
 else
     fail "protein mode not implemented"
