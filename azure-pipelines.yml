@@ -3,8 +3,8 @@
 trigger:
   - master
 
-variables:
-    regression: 1
+#variables:
+#    regression: 1
 
 jobs:
   - job: build_ubuntu_1604
@@ -29,7 +29,6 @@ jobs:
 
     steps:
       - checkout: self
-        submodules: true
       - script: |
           sudo apt-get update
           sudo apt-get -y install mpi-default-dev mpi-default-bin
@@ -49,11 +48,11 @@ jobs:
 
           make -j $(nproc --all)
         displayName: Build SpacePHARER
-      - script: |
-          cd ${BUILD_SOURCESDIRECTORY}/tests
-          ./run.sh "${BUILD_SOURCESDIRECTORY}/build/src/spacepharer"
-        displayName: Run Regression Suite
-        condition: eq(variables['regression'], 1)
+        #- script: |
+        #  cd ${BUILD_SOURCESDIRECTORY}/tests
+        #  ./run.sh "${BUILD_SOURCESDIRECTORY}/build/src/spacepharer"
+        #displayName: Run Regression Suite
+        #condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         condition: eq(variables['STATIC'], 1)
         inputs:
@@ -66,7 +65,6 @@ jobs:
       vmImage: 'macOS-10.14'
     steps:
       - checkout: self
-        submodules: true
       - script: |
           brew install cmake libomp zlib bzip2 coreutils
         displayName: Install Dependencies
@@ -74,11 +72,11 @@ jobs:
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build spacepharer
         displayName: Build SpacePHARER
-      - script: |
-          cd ${BUILD_SOURCESDIRECTORY}/tests
-          ./run.sh "${BUILD_SOURCESDIRECTORY}/build/build_sse41/src/spacepharer"
-        displayName: Run Regression Suite
-        condition: eq(variables['regression'], 1)
+      #- script: |
+      #    cd ${BUILD_SOURCESDIRECTORY}/tests
+      #    ./run.sh "${BUILD_SOURCESDIRECTORY}/build/build_sse41/src/spacepharer"
+      #  displayName: Run Regression Suite
+      #  condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         inputs:
           targetPath: $(Build.SourcesDirectory)/build/build_sse41/src/spacepharer
@@ -99,7 +97,6 @@ jobs:
   #   steps:
   #     - powershell: git config --global core.autocrlf false
   #       displayName: core.autocrlf false
-  #     - checkout: self
   #       submodules: true
   #     - script: |
   #         choco install cygwin --params="/InstallDir:%CYGWIN_ROOT%"
