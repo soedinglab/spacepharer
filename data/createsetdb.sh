@@ -18,15 +18,15 @@ if notExists "${OUTDB}"; then
         "${MMSEQS}" createdb "$@" "${OUTDB}" ${CREATEDB_PAR} \
             || fail "createdb failed"
     else
-        cp "$@" "${OUTDB}"
-        cp "$@.index" "${OUTDB}.index"
-        cp "$@.lookup" "${OUTDB}.lookup"
-        cp "$@.source" "${OUTDB}.source"
-        cp "$@.dbtype" "${OUTDB}.dbtype"
+        cp "$1" "${OUTDB}"
+        cp "$1.index" "${OUTDB}.index"
+        cp "$1.lookup" "${OUTDB}.lookup"
+        cp "$1.source" "${OUTDB}.source"
+        cp "$1.dbtype" "${OUTDB}.dbtype"
 
-        cp "$@_h" "${OUTDB}_h"
-        cp "$@_h.index" "${OUTDB}_h.index"
-        cp "$@_h.dbtype" "${OUTDB}_h.dbtype"
+        cp "$1_h" "${OUTDB}_h"
+        cp "$1_h.index" "${OUTDB}_h.index"
+        cp "$1_h.dbtype" "${OUTDB}_h.dbtype"
     fi
 
 fi
@@ -114,8 +114,8 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     if [ -n "${REVERSE_FRAGMENTS}" ]; then
         # shellcheck disable=SC2086
         echo  "Reversing database..."
-        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" ${THREADS_PAR} \
-        || fail "reverseseq died"
+        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" "${THREADS_PAR}"\
+            || fail "reverseseq died"
         mv -f "${OUTDB}_reverse" "${OUTDB}"
         mv -f "${OUTDB}_reverse.index" "${OUTDB}.index"
         mv -f "${OUTDB}_reverse.dbtype" "${OUTDB}.dbtype"

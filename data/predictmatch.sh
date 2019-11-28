@@ -107,7 +107,7 @@ if notExists "${TMP_PATH}/aln_merge.index"; then
         || fail "mergeresultsbyset failed"
 fi
 
-if [ -n "${REPORT_PAM}"]; then 
+if [ -n "$REPORT_PAM" ]; then
 
     if notExists "${TMP_PATH}/aln_merge_pam.index"; then
         # shellcheck disable=SC2086
@@ -154,10 +154,10 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_offset"
     "$MMSEQS" rmdb "${TMP_PATH}/aln"
     "$MMSEQS" rmdb "${TMP_PATH}/aln_merge"
-    if [ -n "${REPORT_PAM}"]; then 
+    if [ -n "$REPORT_PAM" ]; then 
         "$MMSEQS" rmdb "${TMP_PATH}/aln_merge_pam"
     fi
     "$MMSEQS" rmdb "${TMP_PATH}/output"
-    rm ${TMP_PATH}/output.tsv
+    rm "${TMP_PATH}/output.tsv"
     rm -f "${TMP_PATH}/multihitsearch.sh"
 fi

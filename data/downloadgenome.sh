@@ -34,7 +34,7 @@ if notExists "${OUT_PATH}/phage_download.complete"; then
     do
         wget -nv -O "${OUT_PATH}/${NAME}" "${URL}" ;        
         INPUTS="${OUT_PATH}/${NAME} ${INPUTS}";
-    done <  ${GENOME_FTP} 
+    done <  "${GENOME_FTP}"
     touch "${OUT_PATH}/phage_download.complete" \
         || fail "download failed"
     
@@ -42,7 +42,7 @@ else
     while read NAME URL;
     do
         INPUTS="${OUT_PATH}/${NAME} ${INPUTS}";
-    done < ${GENOME_FTP} 
+    done < "${GENOME_FTP}"
 fi
 
 

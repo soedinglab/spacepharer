@@ -6,13 +6,9 @@
 #include "LocalParameters.h"
 #include "downloadgenome.sh.h"
 
-void setdownloadgenomeDefaults(Parameters *p) {
-
-}
 
 int downloadgenome(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    setdownloadgenomeDefaults(&par);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // check if temp dir exists and if not, try to create it:
