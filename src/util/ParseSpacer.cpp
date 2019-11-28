@@ -97,11 +97,11 @@ int parsespacer(int argc, const char **argv, const Command& command) {
         Format type;
 
         size_t entry = 0;
-        size_t arrayEntry;
-        size_t headerEntry;
+        size_t arrayEntry = 0;
+        size_t headerEntry = 0;
         size_t arrayNum = 0;
         size_t spacerNum = 0;
-        bool isArrayReverse;
+        bool isArrayReverse = false;
         while (*data != '\0') {
             // pointer to the beginning of any line
 
@@ -116,7 +116,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                 Debug(Debug::INFO) << "Detected input file "<< file << " is of type " << Format_names[type] << "\n";
                 if(type == CRT){
                     arrayHeader = getCurrentLine(data, 11);
-                    accession = Util::parseFastaHeader(arrayHeader);
+                    accession = Util::parseFastaHeader(arrayHeader.c_str());
                 }                
             }
 
@@ -128,7 +128,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                     }                
                     if (*data == '>' && (entry == arrayEntry + 1)){
                         arrayHeader = getCurrentLine(data, 1);
-                        accession = Util::parseFastaHeader(arrayHeader);
+                        accession = Util::parseFastaHeader(arrayHeader.c_str());
                         headerEntry = entry;
                     }
                     if(*data == ' ' && (entry == headerEntry + 4)){   
@@ -209,7 +209,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                         arrayHeader = getCurrentLine(data, 1);
                         std::vector<std::string> headerValues = Util::split(arrayHeader, "\t");
                         isArrayReverse = ((headerValues[1].find("Reverse") != std::string::npos) ? true:false);
-                        accession = Util::parseFastaHeader(arrayHeader);
+                        accession = Util::parseFastaHeader(arrayHeader.c_str());
                         headerEntry = entry;
                     }
                     if(*data == ' ' && (entry == headerEntry + 4)){   
