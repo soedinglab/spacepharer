@@ -134,7 +134,7 @@ template <typename T> bool DBReader<T>::open(int accessType){
     if (dataMode & USE_LOOKUP || dataMode & USE_LOOKUP_REV) {
         std::string lookupFilename = (std::string(dataFileName) + ".lookup");
         if(FileUtil::fileExists(lookupFilename.c_str()) == false){
-            Debug(Debug::ERROR) << "Can not open index file " << lookupFilename << "!\n";
+            Debug(Debug::ERROR) << "Can not open lookup file " << lookupFilename << "!\n";
             EXIT(EXIT_FAILURE);
         }
         MemoryMapped indexData(lookupFilename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
@@ -158,7 +158,7 @@ template <typename T> bool DBReader<T>::open(int accessType){
         }
         MemoryMapped indexData(indexFileName, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
         if (!indexData.isValid()){
-            Debug(Debug::ERROR) << "Can not open index file " << indexFileName << "\n";
+            Debug(Debug::ERROR) << "Can map open index file " << indexFileName << "\n";
             EXIT(EXIT_FAILURE);
         }
         char* indexDataChar = (char *) indexData.getData();
@@ -478,7 +478,7 @@ template <typename T> size_t DBReader<T>::bsearch(const Index * index, size_t N,
 {
     Index val;
     val.id = value;
-    return std::upper_bound(index, index + N, val, Index::compareById) - index;
+    return std::upper_bound(index, index + N, val, Index::compareByIdOnly) - index;
 }
 
 template <typename T> char* DBReader<T>::getDataCompressed(size_t id, int thrIdx) {
@@ -614,7 +614,7 @@ template <typename T> size_t DBReader<T>::getLookupIdByKey(T dbKey) {
     }
     LookupEntry val;
     val.id = dbKey;
-    size_t id = std::upper_bound(lookup, lookup + lookupSize, val, LookupEntry::compareById) - lookup;
+    size_t id = std::upper_bound(lookup, lookup + lookupSize, val, LookupEntry::compareByIdOnly) - lookup;
 
     return (id < lookupSize && lookup[id].id == dbKey) ? id : SIZE_MAX;
 }
@@ -908,7 +908,7 @@ template<typename T>
 size_t DBReader<T>::getOffset(size_t id) {
     if (id >= size){
         Debug(Debug::ERROR) << "Invalid database read for id=" << id << ", database index=" << indexFileName << "\n";
-        Debug(Debug::ERROR) << "getDbKey: local id (" << id << ") >= db size (" << size << ")\n";
+        Debug(Debug::ERROR) << "getOffset: local id (" << id << ") >= db size (" << size << ")\n";
         EXIT(EXIT_FAILURE);
     }
     if (local2id != NULL) {

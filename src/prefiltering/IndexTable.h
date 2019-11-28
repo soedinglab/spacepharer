@@ -94,7 +94,6 @@ public:
 
     // count k-mers in the sequence, so enough memory for the sequence lists can be allocated in the end
     size_t addSimilarKmerCount(Sequence* s, KmerGenerator* kmerGenerator){
-
         s->resetCurrPos();
         std::vector<unsigned int> seqKmerPosBuffer;
 
@@ -247,11 +246,9 @@ public:
 
         this->entries = new(std::nothrow) IndexEntryLocal[tableEntriesNum];
         Util::checkAllocation(entries, "Can not allocate " + SSTR(tableEntriesNum * sizeof(IndexEntryLocal)) + " bytes for entries in IndexTable::initMemory");
-        memcpy(this->entries, entryOffsets, tableEntriesNum * sizeof(IndexEntryLocal));
+        memcpy(this->entries, entries, tableEntriesNum * sizeof(IndexEntryLocal));
 
-        offsets = new(std::nothrow) size_t[tableSize + 1];
-        Util::checkAllocation(offsets, "Can not allocate " + SSTR((tableSize +1) * sizeof(size_t))  + " bytes for offsets in IndexTable::initMemory");
-        memcpy(offsets, entryOffsets, (tableSize + 1) * sizeof(size_t));
+        memcpy(this->offsets, entryOffsets, (tableSize + 1) * sizeof(size_t));
     }
 
     void revertPointer() {

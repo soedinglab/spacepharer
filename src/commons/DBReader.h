@@ -57,23 +57,73 @@ public:
         T id;
         size_t offset;
         unsigned int length;
-        static bool compareById(const Index& x, const Index& y){
-            return (x.id <= y.id);
+
+        // we need a non-strict-weak ordering function here
+        // so our upper_bound call works correctly
+        static bool compareByIdOnly(const Index &x, const Index &y) {
+            return x.id <= y.id;
         }
-        static bool compareByOffset(const Index& x, const Index& y){
-            return (x.offset <= y.offset);
+
+        static bool compareById(const Index &x, const Index &y) {
+            if (x.id < y.id)
+                return true;
+            if (y.id < x.id)
+                return false;
+            if (x.offset < y.offset)
+                return true;
+            if (y.offset < x.offset)
+                return false;
+            if (x.length < y.length)
+                return true;
+            if (y.length < x.length)
+                return false;
+            return false;
+        }
+
+        static bool compareByOffset(const Index &x, const Index &y) {
+            if (x.offset < y.offset)
+                return true;
+            if (y.offset < x.offset)
+                return false;
+            if (x.id < y.id)
+                return true;
+            if (y.id < x.id)
+                return false;
+            if (x.length < y.length)
+                return true;
+            if (y.length < x.length)
+                return false;
+            return false;
         }
     };
-
 
     struct LookupEntry {
         T id;
         std::string entryName;
         unsigned int fileNumber;
 
-        static bool compareById(const LookupEntry& x, const LookupEntry& y){
-            return (x.id <= y.id);
+        // we need a non-strict-weak ordering function here
+        // so our upper_bound call works correctly
+        static bool compareByIdOnly(const LookupEntry& x, const LookupEntry& y) {
+            return x.id <= y.id;
         }
+
+        static bool compareById(const LookupEntry& x, const LookupEntry& y) {
+            if (x.id < y.id)
+                return true;
+            if (y.id < x.id)
+                return false;
+            if (x.entryName < y.entryName)
+                return true;
+            if (y.entryName < x.entryName)
+                return false;
+            if (x.fileNumber < y.fileNumber)
+                return true;
+            if (y.fileNumber < x.fileNumber)
+                return false;
+            return false;
+        }
+
         static bool compareByAccession(const LookupEntry& x, const LookupEntry& y){
             return x.entryName.compare(y.entryName);
         }
@@ -100,6 +150,7 @@ public:
     size_t getAminoAcidDBSize();
 
     size_t getDataSize() { return dataSize; }
+    void setDataSize(size_t newSize) { dataSize = newSize; }
 
     char* getData(size_t id, int thrIdx);
 
@@ -114,6 +165,8 @@ public:
     char * getDataByOffset(size_t offset);
 
     size_t getSize();
+
+    unsigned int getMaxSeqLen(){return maxSeqLen;}
 
     T getDbKey(size_t id);
 
@@ -144,7 +197,7 @@ public:
     size_t getEntryLen(size_t id){
         if (id >= size){
             Debug(Debug::ERROR) << "Invalid database read for id=" << id << ", database index=" << indexFileName << "\n";
-            Debug(Debug::ERROR) << "getSeqLen: local id (" << id << ") >= db size (" << size << ")\n";
+            Debug(Debug::ERROR) << "getEntryLen: local id (" << id << ") >= db size (" << size << ")\n";
             EXIT(EXIT_FAILURE);
         }
         if (local2id != NULL) {

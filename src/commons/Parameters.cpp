@@ -5,12 +5,11 @@
 #include "CommandCaller.h"
 #include "ByteParser.h"
 #include "FileUtil.h"
-#include <cstdio>
 
+#include <map>
 #include <iomanip>
 #include <regex.h>
 #include <unistd.h>
-
 
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>
@@ -88,10 +87,11 @@ Parameters::Parameters():
         PARAM_PROFILE_TYPE(PARAM_PROFILE_TYPE_ID,"--profile-type", "Profile type", "0: HMM (HHsuite) 1: PSSM or 2: HMMER3",typeid(int),(void *) &profileMode,  "^[0-2]{1}$"),
         // convertalignments
         PARAM_FORMAT_MODE(PARAM_FORMAT_MODE_ID,"--format-mode", "Alignment format", "Output format 0: BLAST-TAB, 1: SAM, 2: BLAST-TAB + query/db length", typeid(int), (void*) &formatAlignmentMode, "^[0-2]{1}$"),
-        PARAM_FORMAT_OUTPUT(PARAM_FORMAT_OUTPUT_ID,"--format-output", "Format alignment output", "Choose output columns 'query,target,evalue,gapopen,pident,nident,qstart,qend,qlen,tstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,qframe,tframe,mismatch,qcov,tcov,qset,qsetid,tset,tsetid'", typeid(std::string), (void*) &outfmt, ""),
+        PARAM_FORMAT_OUTPUT(PARAM_FORMAT_OUTPUT_ID,"--format-output", "Format alignment output", "Choose output columns 'query,target,evalue,gapopen,pident,nident,qstart,qend,qlen,tstart,tend,tlen,alnlen,raw,bits,cigar,qseq,tseq,qheader,theader,qaln,taln,qframe,tframe,mismatch,qcov,tcov,qset,qsetid,tset,tsetid,taxid,taxname,taxlineage'", typeid(std::string), (void*) &outfmt, ""),
         PARAM_DB_OUTPUT(PARAM_DB_OUTPUT_ID, "--db-output", "Database output", "Output a result db instead of a text file", typeid(bool), (void*) &dbOut, "", MMseqsParameter::COMMAND_EXPERT),
         // --include-only-extendablediagonal
         PARAM_RESCORE_MODE(PARAM_RESCORE_MODE_ID,"--rescore-mode", "Rescore mode", "Rescore diagonal with: 0: Hamming distance, 1: local alignment (score only), 2: local alignment, 3: global alignment or 4: longest alignment fullfilling window quality criterion", typeid(int), (void *) &rescoreMode, "^[0-4]{1}$"),
+        PARAM_WRAPPED_SCORING(PARAM_WRAPPED_SCORING_ID,"--wrapped-scoring", "Allow wrapped scoring","Double the (nucleotide) query sequence during the scoring process to allow wrapped diagonal scoring around end and start", typeid(bool), (void *) &wrappedScoring, "", MMseqsParameter::COMMAND_MISC|MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_HITS(PARAM_FILTER_HITS_ID,"--filter-hits", "Remove hits by seq. id. and coverage", "filter hits by seq.id. and coverage", typeid(bool), (void *) &filterHits, "", MMseqsParameter::COMMAND_EXPERT),
         PARAM_SORT_RESULTS(PARAM_SORT_RESULTS_ID, "--sort-results", "Sort results", "Sort results: 0: no sorting, 1: sort by evalue (Alignment) or seq.id. (Hamming)", typeid(int), (void *) &sortResults, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         // result2msa
@@ -134,7 +134,7 @@ Parameters::Parameters():
         PARAM_KMER_PER_SEQ(PARAM_KMER_PER_SEQ_ID, "--kmer-per-seq", "K-mers per sequence", "kmer per sequence", typeid(int), (void*) &kmersPerSequence, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR),
         PARAM_KMER_PER_SEQ_SCALE(PARAM_KMER_PER_SEQ_SCALE_ID, "--kmer-per-seq-scale", "scale k-mers per sequence", "scale kmer per sequence based on sequence length as kmer-per-seq val + scale x seqlen", typeid(float), (void*) &kmersPerSequenceScale, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_INCLUDE_ONLY_EXTENDABLE(PARAM_INCLUDE_ONLY_EXTENDABLE_ID, "--include-only-extendable", "Include only extendable", "Include only extendable", typeid(bool), (void*) &includeOnlyExtendable, "", MMseqsParameter::COMMAND_CLUSTLINEAR),
-        PARAM_SKIP_N_REPEAT_KMER(PARAM_SKIP_N_REPEAT_KMER_ID, "--skip-n-repeat-kmer", "Skip sequence with n repeating k-mers", "Skip sequence with >= n exact repeating k-mers", typeid(int), (void*) &skipNRepeatKmer, "^[0-9]{1}[0-9]*", MMseqsParameter::COMMAND_CLUSTLINEAR|MMseqsParameter::COMMAND_EXPERT),
+        PARAM_IGNORE_MULTI_KMER(PARAM_IGNORE_MULTI_KMER_ID, "--ignore-multi-kmer", "Skip repeating k-mers", "Skip kmers occuring multiple times (>=2)", typeid(bool), (void*) &ignoreMultiKmer, "", MMseqsParameter::COMMAND_CLUSTLINEAR|MMseqsParameter::COMMAND_EXPERT),
         PARAM_HASH_SHIFT(PARAM_HASH_SHIFT_ID, "--hash-shift", "Shift hash", "Shift k-mer hash", typeid(int), (void*) &hashShift, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR|MMseqsParameter::COMMAND_EXPERT),
         PARAM_PICK_N_SIMILAR(PARAM_HASH_SHIFT_ID, "--pick-n-sim-kmer", "Add N similar to search", "adds N similar to search", typeid(int), (void*) &pickNbest, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR|MMseqsParameter::COMMAND_EXPERT),
         PARAM_ADJUST_KMER_LEN(PARAM_ADJUST_KMER_LEN_ID, "--adjust-kmer-len", "Adjust k-mer length", "adjust k-mer length based on specificity (only for nucleotides)", typeid(bool), (void*) &adjustKmerLength, "", MMseqsParameter::COMMAND_CLUSTLINEAR|MMseqsParameter::COMMAND_EXPERT),
@@ -169,12 +169,12 @@ Parameters::Parameters():
         PARAM_USE_HEADER(PARAM_USE_HEADER_ID,"--use-fasta-header", "Use fasta header", "use the id parsed from the fasta header as the index key instead of using incrementing numeric identifiers",typeid(bool),(void *) &useHeader, ""),
         PARAM_ID_OFFSET(PARAM_ID_OFFSET_ID, "--id-offset", "Offset of numeric ids", "numeric ids in index file are offset by this value ",typeid(int),(void *) &identifierOffset, "^(0|[1-9]{1}[0-9]*)$"),
         PARAM_DB_TYPE(PARAM_DB_TYPE_ID,"--dbtype", "Database type", "Database type 0: auto, 1: amino acid 2: nucleotides",typeid(int),(void *) &dbType, "[0-2]{1}"),
-        PARAM_DONT_SPLIT_SEQ_BY_LEN(PARAM_DONT_SPLIT_SEQ_BY_LEN_ID,"--dont-split-seq-by-len", "Split seq. by length", "Dont split sequences by --max-seq-len",typeid(bool),(void *) &splitSeqByLen, ""),
-        PARAM_DONT_SHUFFLE(PARAM_DONT_SHUFFLE_ID,"--dont-shuffle", "Do not shuffle input database", "Do not shuffle input database",typeid(bool),(void *) &shuffleDatabase, ""),
+        PARAM_CREATEDB_MODE(PARAM_CREATEDB_MODE_ID, "--createdb-mode", "Createdb mode", "createdb mode 0: copy data, 1: soft link data and write new index (works only with single line fasta/q)",typeid(int),(void *) &createdbMode, "^[0-1]{1}$"),
+        PARAM_SHUFFLE(PARAM_SHUFFLE_ID,"--shuffle", "Shuffle input database", "Shuffle input database",typeid(bool),(void *) &shuffleDatabase, ""),
         PARAM_USE_HEADER_FILE(PARAM_USE_HEADER_FILE_ID, "--use-header-file", "Use ffindex header", "use the ffindex header file instead of the body to map the entry keys",typeid(bool),(void *) &useHeaderFile, ""),
         // splitsequence
         PARAM_SEQUENCE_OVERLAP(PARAM_SEQUENCE_OVERLAP_ID, "--sequence-overlap", "Overlap between sequences", "overlap between sequences",typeid(int),(void *) &sequenceOverlap, "^(0|[1-9]{1}[0-9]*)$"),
-        PARAM_SEQUENCE_SPLIT_MODE(PARAM_SEQUENCE_SPLIT_MODE_ID, "--sequence-split-mode", "Sequence split mode", "sequence split mode 0: soft link data write new index, 1: copy data",typeid(int),(void *) &sequenceSplitMode, "^[0-1]{1}$"),
+        PARAM_SEQUENCE_SPLIT_MODE(PARAM_SEQUENCE_SPLIT_MODE_ID, "--sequence-split-mode", "Sequence split mode", "sequence split mode 0: copy data, 1: soft link data and write new index,",typeid(int),(void *) &sequenceSplitMode, "^[0-1]{1}$"),
         // gff2db
         PARAM_GFF_TYPE(PARAM_GFF_TYPE_ID,"--gff-type", "GFF type", "type in the GFF file to filter by",typeid(std::string),(void *) &gffType, ""),
         // translatenucs
@@ -243,6 +243,8 @@ Parameters::Parameters():
         PARAM_LCA_RANKS(PARAM_LCA_RANKS_ID, "--lca-ranks", "LCA ranks", "Add column with specified ranks (':' separated)", typeid(std::string), (void*) &lcaRanks, ""),
         PARAM_BLACKLIST(PARAM_BLACKLIST_ID, "--blacklist", "Blacklisted taxa", "Comma separated list of ignored taxa in LCA computation", typeid(std::string), (void*)&blacklist, "([0-9]+,)?[0-9]+"),
         PARAM_TAXON_ADD_LINEAGE(PARAM_TAXON_ADD_LINEAGE_ID, "--tax-lineage", "Show taxon lineage", "Add column with full taxonomy lineage", typeid(bool), (void*)&showTaxLineage, ""),
+        // taxonomyreport
+        PARAM_REPORT_MODE(PARAM_REPORT_MODE_ID,"--report-mode", "Report mode", "Taxonomy report mode 0: Kraken 1: Krona", typeid(int), (void *) &reportMode, "^[0-1]{1}$"),
         // createtaxcb
         PARAM_NCBI_TAX_DUMP(PARAM_NCBI_TAX_DUMP_ID, "--ncbi-tax-dump", "NCBI tax dump directory", "NCBI tax dump directory. The tax dump can be downloaded here \"ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz\"", typeid(std::string), (void*) &ncbiTaxDump, ""),
             PARAM_TAX_MAPPING_FILE(PARAM_TAX_MAPPING_FILE_ID, "--tax-mapping-file", "Taxonomical mapping file", "File to map sequence identifer to taxonomical identifier", typeid(std::string), (void*) &taxMappingFile, ""),
@@ -252,7 +254,7 @@ Parameters::Parameters():
         PARAM_LCA_MODE(PARAM_LCA_MODE_ID, "--lca-mode", "LCA mode", "LCA Mode 1: Single Search LCA , 2: 2bLCA, 3: approx. 2bLCA, 4: top hit", typeid(int), (void*) &taxonomySearchMode, "^[1-4]{1}$"),
         PARAM_TAX_OUTPUT_MODE(PARAM_TAX_OUTPUT_MODE_ID, "--tax-output-mode", "Taxonomy output mode", "0: output LCA, 1: output alignment", typeid(int), (void*) &taxonomyOutpuMode, "^[0-1]{1}$"),
         // createsubdb
-        PARAM_SUBDB_MODE(PARAM_SUBDB_MODE_ID, "--subdb-mode", "Subdb mode", "LCA Mode 0: copy data  1: soft link data", typeid(int), (void*) &subDbMode, "^[0-1]{1}$")
+        PARAM_SUBDB_MODE(PARAM_SUBDB_MODE_ID, "--subdb-mode", "Subdb mode", "Subdb mode 0: copy data  1: soft link data and write index", typeid(int), (void*) &subDbMode, "^[0-1]{1}$")
 {
     if (instance) {
         Debug(Debug::ERROR) << "Parameter instance already exists!\n";
@@ -280,6 +282,7 @@ Parameters::Parameters():
     align.push_back(&PARAM_SUB_MAT);
     align.push_back(&PARAM_ADD_BACKTRACE);
     align.push_back(&PARAM_ALIGNMENT_MODE);
+    align.push_back(&PARAM_WRAPPED_SCORING);
     align.push_back(&PARAM_E);
     align.push_back(&PARAM_MIN_SEQ_ID);
     align.push_back(&PARAM_MIN_ALN_LEN);
@@ -356,6 +359,7 @@ Parameters::Parameters():
     // rescorediagonal
     rescorediagonal.push_back(&PARAM_SUB_MAT);
     rescorediagonal.push_back(&PARAM_RESCORE_MODE);
+    rescorediagonal.push_back(&PARAM_WRAPPED_SCORING);
     rescorediagonal.push_back(&PARAM_FILTER_HITS);
     rescorediagonal.push_back(&PARAM_E);
     rescorediagonal.push_back(&PARAM_C);
@@ -418,6 +422,7 @@ Parameters::Parameters():
     result2profile.push_back(&PARAM_E_PROFILE);
     result2profile.push_back(&PARAM_NO_COMP_BIAS_CORR);
     result2profile.push_back(&PARAM_WG);
+    result2profile.push_back(&PARAM_ALLOW_DELETION);
     result2profile.push_back(&PARAM_FILTER_MSA);
     result2profile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     result2profile.push_back(&PARAM_FILTER_QID);
@@ -639,7 +644,7 @@ Parameters::Parameters():
     kmerindexdb.push_back(&PARAM_MIN_SEQ_ID);
     kmerindexdb.push_back(&PARAM_ADJUST_KMER_LEN);
     kmerindexdb.push_back(&PARAM_SPLIT_MEMORY_LIMIT);
-    kmerindexdb.push_back(&PARAM_SKIP_N_REPEAT_KMER);
+    kmerindexdb.push_back(&PARAM_IGNORE_MULTI_KMER);
     kmerindexdb.push_back(&PARAM_ALPH_SIZE);
     kmerindexdb.push_back(&PARAM_MAX_SEQ_LEN);
     kmerindexdb.push_back(&PARAM_MASK_RESIDUES);
@@ -653,9 +658,9 @@ Parameters::Parameters():
 
     // create db
     createdb.push_back(&PARAM_MAX_SEQ_LEN);
-    createdb.push_back(&PARAM_DONT_SPLIT_SEQ_BY_LEN);
     createdb.push_back(&PARAM_DB_TYPE);
-    createdb.push_back(&PARAM_DONT_SHUFFLE);
+    createdb.push_back(&PARAM_SHUFFLE);
+    createdb.push_back(&PARAM_CREATEDB_MODE);
     createdb.push_back(&PARAM_ID_OFFSET);
     createdb.push_back(&PARAM_COMPRESSED);
     createdb.push_back(&PARAM_V);
@@ -791,7 +796,7 @@ Parameters::Parameters():
     kmermatcher.push_back(&PARAM_HASH_SHIFT);
     kmermatcher.push_back(&PARAM_SPLIT_MEMORY_LIMIT);
     kmermatcher.push_back(&PARAM_INCLUDE_ONLY_EXTENDABLE);
-    kmermatcher.push_back(&PARAM_SKIP_N_REPEAT_KMER);
+    kmermatcher.push_back(&PARAM_IGNORE_MULTI_KMER);
     kmermatcher.push_back(&PARAM_THREADS);
     kmermatcher.push_back(&PARAM_COMPRESSED);
     kmermatcher.push_back(&PARAM_V);
@@ -918,6 +923,11 @@ Parameters::Parameters():
     addtaxonomy.push_back(&PARAM_THREADS);
     addtaxonomy.push_back(&PARAM_V);
 
+    // taxonomyreport
+    taxonomyreport.push_back(&PARAM_REPORT_MODE);
+    taxonomyreport.push_back(&PARAM_THREADS);
+    taxonomyreport.push_back(&PARAM_V);
+
     // view
     view.push_back(&PARAM_ID_LIST);
     view.push_back(&PARAM_IDX_ENTRY_TYPE);
@@ -1032,6 +1042,7 @@ Parameters::Parameters():
     easytaxonomy = combineList(taxonomy, addtaxonomy);
     easytaxonomy = combineList(easytaxonomy, convertalignments);
     easytaxonomy = combineList(easytaxonomy, createtsv);
+    easytaxonomy = combineList(easytaxonomy, createdb);
 
     // multi hit db
     multihitdb = combineList(createdb, extractorfs);
@@ -1187,26 +1198,13 @@ void Parameters::printUsageMessage(const Command& command,
     }
     if (printExpert == false) {
         ss << "\n" << "An extended list of options can be obtained by calling '" << binary_name << " " << command.cmd << " -h'.\n";
-
         if(command.citations > 0) {
-            //ss << "Please cite:\n";
-            if(command.citations & CITATION_SERVER) {
-                ss << " - Mirdita M, Steinegger M, Soding J: MMseqs2 desktop and local web server app for fast, interactive sequence searches. Bioinformatics, doi: 10.1093/bioinformatics/bty1057 (2019).\n";
-            }
-            if(command.citations & CITATION_PLASS) {
-                ss << " - Steinegger M, Mirdita M, Soding J: Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. biorxiv, doi:10.1101/386110 (2018)\n";
-            }
-            if(command.citations & CITATION_LINCLUST) {
-                ss << " - Steinegger M, Soding J: Clustering huge protein sequence sets in linear time. Nature Communications, doi:10.1038/s41467-018-04964-5 (2018)\n";
-            }
-            if(command.citations & CITATION_MMSEQS1) {
-                ss << " - Hauser M, Steinegger M, Soding J: MMseqs software suite for fast and deep clustering and searching of large protein sequence sets. Bioinformatics, 32(9), 1323-1330 (2016). \n";
-            }
-            if(command.citations & CITATION_UNICLUST) {
-                ss << " - Mirdita M, von den Driesch L, Galiez C, Martin M, Soding J, Steinegger M: Uniclust databases of clustered and deeply annotated protein sequences and alignments. Nucleic Acids Res (2017), D170-D176 (2016).\n";
-            }
-            if(command.citations & CITATION_MMSEQS2) {
-                ss << " - Steinegger M, Soding J: MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets. Nature Biotechnology, doi:10.1038/nbt.3988 (2017)\n";
+            ss << "\nReferences:\n";
+            for (unsigned int pos = 0 ; pos != sizeof(command.citations) * CHAR_BIT; ++pos) {
+                unsigned int citation = 1 << pos;
+                if (command.citations & citation && citations.find(citation) != citations.end()) {
+                    ss << " - " << citations.at(citation) << "\n";
+                }
             }
         }
     }
@@ -1546,6 +1544,29 @@ void Parameters::parseParameters(int argc, const char *pargv[], const Command &c
     }
 }
 
+void Parameters::checkIfTaxDbIsComplete(std::string & filename){
+        if (FileUtil::fileExists((filename + "_mapping").c_str()) == false) {
+            Debug(Debug::ERROR) << "Database " << filename << " need taxonomical information.\n"
+                                << "The " << filename << "_mapping is missing.\n";
+            EXIT(EXIT_FAILURE);
+        }
+        if (FileUtil::fileExists((filename + "_nodes.dmp").c_str()) == false) {
+            Debug(Debug::ERROR) << "Database " << filename << " need taxonomical information.\n"
+                                << "The " << filename << "_nodes.dmp is missing.\n";
+            EXIT(EXIT_FAILURE);
+        }
+        if (FileUtil::fileExists((filename + "_names.dmp").c_str()) == false) {
+            Debug(Debug::ERROR) << "Database " << filename << " need taxonomical information.\n"
+                                << "The " << filename << "_names.dmp is missing.\n";
+            EXIT(EXIT_FAILURE);
+        }
+        if (FileUtil::fileExists((filename + "_merged.dmp").c_str()) == false) {
+            Debug(Debug::ERROR) << "Database " << filename << " need taxonomical information.\n"
+                                << "The " << filename << "_merged.dmp is missing.\n";
+            EXIT(EXIT_FAILURE);
+        }
+}
+
 void Parameters::checkIfDatabaseIsValid(const Command& command, bool isStartVar, bool isEndVar) {
     size_t fileIdx = 0;
     for (size_t dbIdx = 0; dbIdx < command.databases.size(); dbIdx++) {
@@ -1582,26 +1603,7 @@ void Parameters::checkIfDatabaseIsValid(const Command& command, bool isStartVar,
                     }
                 }
                 if (db.specialType & DbType::NEED_TAXONOMY) {
-                    if (FileUtil::fileExists((filenames[fileIdx] + "_mapping").c_str()) == false) {
-                        Debug(Debug::ERROR) << "Database " << filenames[fileIdx] << " need taxonomical information.\n"
-                                            << "The " << filenames[fileIdx] << "_mapping is missing.\n";
-                        EXIT(EXIT_FAILURE);
-                    }
-                    if (FileUtil::fileExists((filenames[fileIdx] + "_nodes.dmp").c_str()) == false) {
-                        Debug(Debug::ERROR) << "Database " << filenames[fileIdx] << " need taxonomical information.\n"
-                                            << "The " << filenames[fileIdx] << "_nodes.dmp is missing.\n";
-                        EXIT(EXIT_FAILURE);
-                    }
-                    if (FileUtil::fileExists((filenames[fileIdx] + "_names.dmp").c_str()) == false) {
-                        Debug(Debug::ERROR) << "Database " << filenames[fileIdx] << " need taxonomical information.\n"
-                                            << "The " << filenames[fileIdx] << "_names.dmp is missing.\n";
-                        EXIT(EXIT_FAILURE);
-                    }
-                    if (FileUtil::fileExists((filenames[fileIdx] + "_merged.dmp").c_str()) == false) {
-                        Debug(Debug::ERROR) << "Database " << filenames[fileIdx] << " need taxonomical information.\n"
-                                            << "The " << filenames[fileIdx] << "_merged.dmp is missing.\n";
-                        EXIT(EXIT_FAILURE);
-                    }
+                    checkIfTaxDbIsComplete(filenames[fileIdx]);
                 }
                 if (db.specialType & DbType::NEED_LOOKUP) {
                     if (FileUtil::fileExists((filenames[fileIdx] + ".lookup").c_str()) == false) {
@@ -1817,7 +1819,7 @@ void Parameters::setDefaults() {
     searchType = SEARCH_TYPE_AUTO;
 
     // createdb
-    splitSeqByLen = true;
+    createdbMode = SEQUENCE_SPLIT_MODE_HARD;
     shuffleDatabase = true;
 
     // format alignment
@@ -1900,6 +1902,7 @@ void Parameters::setDefaults() {
 
     // rescorediagonal
     rescoreMode = Parameters::RESCORE_MODE_HAMMING;
+    wrappedScoring = false;
     filterHits = false;
     sortResults = false;
 
@@ -1962,7 +1965,7 @@ void Parameters::setDefaults() {
     kmersPerSequence = 21;
     kmersPerSequenceScale = 0.0;
     includeOnlyExtendable = false;
-    skipNRepeatKmer = 0;
+    ignoreMultiKmer = false;
     hashShift = 5;
     pickNbest = 1;
     adjustKmerLength = false;
@@ -2000,12 +2003,24 @@ void Parameters::setDefaults() {
     // https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=28384
     blacklist = "12908,28384";
 
+    // taxonomyreport
+    reportMode = 0;
+
     // expandaln
     expansionMode = 1;
 
     // taxonomy
     taxonomySearchMode = Parameters::TAXONOMY_TOP_HIT;
     taxonomyOutpuMode = Parameters::TAXONOMY_OUTPUT_LCA;
+
+    citations = {
+            { CITATION_MMSEQS1,  "Hauser M, Steinegger M, Soding J: MMseqs software suite for fast and deep clustering and searching of large protein sequence sets. Bioinformatics, 32(9), 1323-1330 (2016)" },
+            { CITATION_MMSEQS2,  "Steinegger M, Soding J: MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets. Nature Biotechnology, 35(11), 1026-1028 (2017)" },
+            { CITATION_UNICLUST, "Mirdita M, von den Driesch L, Galiez C, Martin M, Soding J, Steinegger M: Uniclust databases of clustered and deeply annotated protein sequences and alignments. Nucleic Acids Research 45(D1), D170-D176 (2017)" },
+            { CITATION_LINCLUST, "Steinegger M, Soding J: Clustering huge protein sequence sets in linear time. Nature Communications, 9(1), 2542 (2018)" },
+            { CITATION_PLASS,    "Steinegger M, Mirdita M, Soding J: Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, 16(7), 603-606 (2019)" },
+            { CITATION_SERVER,   "Mirdita M, Steinegger M, Soding J: MMseqs2 desktop and local web server app for fast, interactive sequence searches. Bioinformatics, 35(16), 2856–2858 (2019)" },
+    };
 }
 
 std::vector<MMseqsParameter*> Parameters::combineList(const std::vector<MMseqsParameter*> &par1,
@@ -2122,7 +2137,8 @@ void Parameters::overrideParameterDescription(Command &command, const int uid,
 
 }
 
-std::vector<int> Parameters::getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders, bool &needLookup, bool &needSource) {
+std::vector<int> Parameters::getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
+                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy) {
     std::vector<std::string> outformatSplit = Util::split(outformat, ",");
     std::vector<int> formatCodes;
     int code = 0;
@@ -2158,6 +2174,9 @@ std::vector<int> Parameters::getOutputFormat(const std::string &outformat, bool 
         else if (outformatSplit[i].compare("qsetid") == 0){ needLookup = true; needSource = true; code = Parameters::OUTFMT_QSETID;}
         else if (outformatSplit[i].compare("tset") == 0){ needLookup = true; code = Parameters::OUTFMT_TSET;}
         else if (outformatSplit[i].compare("tsetid") == 0){ needLookup = true; needSource = true; code = Parameters::OUTFMT_TSETID;}
+        else if (outformatSplit[i].compare("taxid") == 0){ needTaxonomyMapping = true; code = Parameters::OUTFMT_TAXID;}
+        else if (outformatSplit[i].compare("taxname") == 0){ needTaxonomyMapping = true; needTaxonomy = true; code = Parameters::OUTFMT_TAXNAME;}
+        else if (outformatSplit[i].compare("taxlineage") == 0){ needTaxonomyMapping = true; needTaxonomy = true; code = Parameters::OUTFMT_TAXLIN;}
         else if (outformatSplit[i].compare("empty") == 0){ code = Parameters::OUTFMT_EMPTY;}
         else {
             Debug(Debug::ERROR) << "Format code " << outformatSplit[i] << " does not exist.";

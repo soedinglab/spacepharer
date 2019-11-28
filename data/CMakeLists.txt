@@ -22,6 +22,7 @@ set(COMPILED_RESOURCES
         enrich.sh
         blastn.sh
         VTML80.out
+        VTML40.out
         nucleotide.out
         blosum62.out
         PAM30.out
@@ -35,6 +36,7 @@ set(COMPILED_RESOURCES
         searchslicedtargetprofile.sh
         cs219.lib
         linsearch.sh
+        krona_prelude.html
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

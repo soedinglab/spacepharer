@@ -55,6 +55,42 @@ public:
     };
 
     template<typename T>
+    static LocalAlignment computeUngappedWrappedAlignment(const T *querySeq, unsigned int querySeqLen,
+                                                   const T *dbSeq, unsigned int dbSeqLen,
+                                                   const unsigned short diagonal, const char **subMat, int alnMode){
+        /* expect: querySeq = originQuerySeq+originQuerySeq
+                   queryLen = len(querySeq) */
+
+        LocalAlignment max;
+        for(unsigned int devisions = 1; (-devisions * 65536  + diagonal) > -dbSeqLen; devisions++) {
+
+            int realDiagonal = (-devisions * 65536  + diagonal) + querySeqLen/2;
+            LocalAlignment tmp = ungappedAlignmentByDiagonal(querySeq + realDiagonal, querySeqLen/2, dbSeq, dbSeqLen, 0, subMat, alnMode);
+            tmp.diagonal += realDiagonal;
+            tmp.distToDiagonal = abs(realDiagonal);
+
+             if(tmp.score > max.score){
+                max = tmp;
+            }
+        }
+        for(unsigned int devisions = 0; (devisions * 65536 + diagonal) < querySeqLen/2; devisions++) {
+            int realDiagonal = (devisions * 65536 + diagonal);
+            LocalAlignment tmp = ungappedAlignmentByDiagonal(querySeq + realDiagonal, querySeqLen/2, dbSeq, dbSeqLen, 0, subMat, alnMode);
+
+            tmp.diagonal += realDiagonal;
+            tmp.distToDiagonal = abs(realDiagonal);
+
+            if(tmp.score > max.score){
+                max = tmp;
+            }
+        }
+        unsigned int minSeqLen = std::min(dbSeqLen, querySeqLen/2);
+        max.diagonalLen = minSeqLen;
+
+        return  max;
+    }
+
+    template<typename T>
     static LocalAlignment computeUngappedAlignment(const T *querySeq, unsigned int querySeqLen,
                                                    const T *dbSeq, unsigned int dbSeqLen,
                                                    const unsigned short diagonal, const char **subMat, int alnMode){
@@ -170,8 +206,10 @@ public:
                                                                     const unsigned int length,
                                                                     const char **subMat) {
 
-        unsigned int first =  (seq1[0] =='*' || seq2[0] == '*')? 1:0;
-        unsigned int last = (seq1[length-1] =='*' || seq2[length-1] == '*')? length-2 : length-1;
+        unsigned int first =  (seq1[0] == '*' || seq2[0] == '*')? 1:0;
+        unsigned int last = length-1;
+        if (last > 0 && (seq1[length-1] =='*' || seq2[length-1] == '*'))
+            last--;
         int64_t score = 0;
         for(unsigned int pos = first; pos <= last; pos++){
             int curr = subMat[static_cast<int>(seq1[pos])][static_cast<int>(seq2[pos])];
@@ -190,20 +228,21 @@ public:
         uint64_t window = 0;
         uint64_t windowMask = (uint64_t)1 << (windowSize-1);
         unsigned int currErrors = 0;
-	unsigned int maxLength = 0;
+	    unsigned int maxLength = 0;
         unsigned int currLength = 0;
         unsigned int maxEndPos = 0;
         unsigned int maxStartPos = 0;
         int maxScore = 0;
         unsigned int first =  (seq1[0] =='*' || seq2[0] == '*')? 1:0;
-        unsigned int last = (seq1[length-1] =='*' || seq2[length-1] == '*')? length-2 : length-1;
-
+        unsigned int last = length-1;
+        if (last > 0 && (seq1[length-1] =='*' || seq2[length-1] == '*'))
+            last--;
         unsigned int startPos = first;
         for(unsigned int pos = first; pos <= last; pos++){
 
             bool currMatch = seq1[pos]==seq2[pos];
             if(window & windowMask){
-                currErrors -=1;
+                currErrors -= 1;
             }
             window = window << (uint64_t) 1;
 
@@ -254,6 +293,7 @@ public:
         }
         return diff;
     }
+
 
 
     /*
