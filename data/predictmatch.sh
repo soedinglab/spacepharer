@@ -97,7 +97,7 @@ fi
 if notExists "${TMP_PATH}/aln.index"; then
     # shellcheck disable=SC2086
     #"tsetid,qset,query,target,evalue,qstart,qend,tstart,tend,qaln,taln"
-    "${MMSEQS}" convertalis "${QUERY}_nucl" "${TARGET}_nucl" "${TMP_PATH}/aggregate_offset" "${TMP_PATH}/aln" "--db-output" "--search-type" "2" "--format-output" "tsetid,query,qset,target,evalue,qstart,qend,qlen,tstart,tend,qaln,taln" "--print-codon" "1" ${THREADS_PAR} \
+    "${MMSEQS}" convertalis "${QUERY}_nucl" "${TARGET}_nucl" "${TMP_PATH}/aggregate_offset" "${TMP_PATH}/aln" "--db-output" "--search-type" "3" "--format-output" "tsetid,query,qset,target,evalue,qstart,qend,qlen,tstart,tend,qaln,taln" ${THREADS_PAR} \
         || fail "convertalis failed"
 fi
 
