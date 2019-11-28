@@ -9,7 +9,7 @@
 #endif
 
 
-int addid(const std::string &db1, const std::string &db1Index, const std::string &db2, const std::string &db2Index, 
+int addid(const std::string &db1, const std::string &db1Index, const std::string &db2, const std::string &db2Index,
 const bool tsvOut, const std::string &mappingFile, const std::string &userStrToAdd, const bool isPrefix, const int threads, const int compressed) {
     DBReader<unsigned int> reader(db1.c_str(), db1Index.c_str(), threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     reader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
@@ -23,9 +23,13 @@ const bool tsvOut, const std::string &mappingFile, const std::string &userStrToA
 
     size_t entries = reader.getSize();
     Debug::Progress progress(entries);
+    bool doMapping = false;
+    DBReader<unsigned int> * lookupReader=NULL;
+    if(mappingFile.size() > 0){
+        lookupReader = new DBReader<unsigned int>(mappingFile.c_str(), mappingFile.c_str(), 1, DBReader<unsigned int>::USE_LOOKUP);
+        doMapping = true;
+    }
 
-    DBReader<unsigned int> lookupReader(mappingFile.c_str(), mappingFile.c_str(), 1, DBReader<unsigned int>::USE_LOOKUP);
-    const bool doMapping = lookupReader.getLookupSize() > 0;
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -47,12 +51,12 @@ const bool tsvOut, const std::string &mappingFile, const std::string &userStrToA
                 if (userStrToAdd != "") {
                     strToAdd = userStrToAdd;
                 } else if (doMapping) {
-                    size_t lookupId = lookupReader.getLookupIdByKey(key);
+                    size_t lookupId = lookupReader->getLookupIdByKey(key);
                     if (lookupId == SIZE_MAX) {
                         Debug(Debug::ERROR) << "Could not find key " << key << " in lookup\n";
                         EXIT(EXIT_FAILURE);
                     }
-                    strToAdd = lookupReader.getLookupEntryName(lookupId);
+                    strToAdd = lookupReader->getLookupEntryName(lookupId);
                 } else {
                     strToAdd = SSTR(key);
                 }
@@ -73,7 +77,9 @@ const bool tsvOut, const std::string &mappingFile, const std::string &userStrToA
         FileUtil::remove(writer.getIndexFileName());
     }
     reader.close();
-
+    if(doMapping){
+        delete lookupReader;
+    }
     return EXIT_SUCCESS;
 }
 

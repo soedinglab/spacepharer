@@ -100,12 +100,12 @@ void updateOffset(char* data, std::vector<Matcher::result_t> &results, const Orf
 
             Orf::SequenceLocation tloc = Orf::parseOrfHeader(header);
             res.dbKey   = (tloc.id != UINT_MAX) ? tloc.id : res.dbKey;
-            size_t from = (tloc.id != UINT_MAX) ? tloc.from : (tloc.strand == Orf::STRAND_MINUS) ? 0 : res.dbLen - 1;
+            size_t from = (tloc.id != UINT_MAX) ? tloc.from : (tloc.strand == Orf::STRAND_MINUS) ? res.dbLen - 1 : 0;
 
             int dbStartPos = isNucleotideSearch ? res.dbStartPos : res.dbStartPos * 3;
             int dbEndPos   = isNucleotideSearch ? res.dbEndPos : res.dbEndPos * 3;
 
-            if (tloc.strand == Orf::STRAND_MINUS && tloc.id != UINT_MAX) {
+            if (tloc.strand == Orf::STRAND_MINUS) {
                 res.dbStartPos = from - dbStartPos;
                 res.dbEndPos   = from - dbEndPos;
                 // account for last orf
@@ -351,6 +351,9 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
         results.reserve(300);
         tmp.reserve(300);
 
+        std::string newBacktrace;
+        newBacktrace.reserve(300);
+
 #pragma omp for schedule(dynamic, 10)
         for (size_t i = 0; i < entryCount; ++i) {
             progress.updateProgress();
@@ -389,6 +392,12 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
                         for(size_t i = 0; i < results.size(); i++) {
                             Matcher::result_t &res = results[i];
                             bool hasBacktrace = (res.backtrace.size() > 0);
+                            if (isNuclNuclSearch == false && hasBacktrace) {
+                                newBacktrace.reserve(res.backtrace.length() * 3);
+                                Matcher::result_t::protein2nucl(res.backtrace, newBacktrace);
+                                res.backtrace = newBacktrace;
+                                newBacktrace.clear();
+                            }
                             size_t len = Matcher::resultToBuffer(buffer, res, hasBacktrace, false);
                             ss.append(buffer, len);
                         }
@@ -414,6 +423,12 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
                     for(size_t i = 0; i < results.size(); i++){
                         Matcher::result_t &res = results[i];
                         bool hasBacktrace = (res.backtrace.size() > 0);
+                        if (isNuclNuclSearch == false && hasBacktrace) {
+                            newBacktrace.reserve(res.backtrace.length() * 3);
+                            Matcher::result_t::protein2nucl(res.backtrace, newBacktrace);
+                            res.backtrace = newBacktrace;
+                            newBacktrace.clear();
+                        }
                         size_t len = Matcher::resultToBuffer(buffer, res, hasBacktrace, false);
                         ss.append(buffer, len);
                     }
@@ -423,6 +438,12 @@ int offsetalignment(int argc, const char **argv, const Command &command) {
                     for(size_t i = 0; i < tmp.size(); i++){
                         Matcher::result_t &res = tmp[i];
                         bool hasBacktrace = (res.backtrace.size() > 0);
+                        if (isNuclNuclSearch == false && hasBacktrace) {
+                            newBacktrace.reserve(res.backtrace.length() * 3);
+                            Matcher::result_t::protein2nucl(res.backtrace, newBacktrace);
+                            res.backtrace = newBacktrace;
+                            newBacktrace.clear();
+                        }
                         size_t len = Matcher::resultToBuffer(buffer, res, hasBacktrace, false);
                         ss.append(buffer, len);
                     }

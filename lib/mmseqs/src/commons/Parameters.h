@@ -6,6 +6,7 @@
 #define MMSEQS_PARAMETERS
 #include <string>
 #include <vector>
+#include <map>
 #include <typeinfo>
 #include <cstddef>
 #include <utility>
@@ -135,8 +136,13 @@ public:
     static const int OUTFMT_QSETID = 29;
     static const int OUTFMT_TSET = 30;
     static const int OUTFMT_TSETID = 31;
+    static const int OUTFMT_TAXID = 32;
+    static const int OUTFMT_TAXNAME = 33;
+    static const int OUTFMT_TAXLIN = 34;
 
-    static std::vector<int> getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders, bool &needLookup, bool &needSource);
+
+    static std::vector<int> getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
+                                            bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy);
 
     // convertprofiledb
     static const int PROFILE_MODE_HMM = 0;
@@ -214,8 +220,8 @@ public:
     static const int SEQ_ID_LONG = 2;
 
     // seq. split mode
-    static const int SEQUENCE_SPLIT_MODE_SOFT = 0;
-    static const int SEQUENCE_SPLIT_MODE_HARD = 1;
+    static const int SEQUENCE_SPLIT_MODE_HARD = 0;
+    static const int SEQUENCE_SPLIT_MODE_SOFT = 1;
 
     // rescorediagonal
     static const int RESCORE_MODE_HAMMING = 0;
@@ -396,6 +402,7 @@ public:
 
     // rescorediagonal
     int rescoreMode;
+    bool wrappedScoring;
     bool filterHits;
     bool globalAlignment;
     int sortResults;
@@ -446,7 +453,7 @@ public:
     int kmersPerSequence;
     float kmersPerSequenceScale;
     bool includeOnlyExtendable;
-    int skipNRepeatKmer;
+    bool ignoreMultiKmer;
     int hashShift;
     int pickNbest;
     int adjustKmerLength;
@@ -458,12 +465,13 @@ public:
     // createdb
     int identifierOffset;
     int dbType;
-    bool splitSeqByLen;
+    int createdbMode;
     bool shuffleDatabase;
 
     // splitsequence
     int sequenceOverlap;
     int sequenceSplitMode;
+
     // convert2fasta
     bool useHeaderFile;
 
@@ -556,6 +564,9 @@ public:
     bool showTaxLineage;
     std::string blacklist;
 
+    // taxonomyreport
+    int reportMode;
+
     // createtaxdb
     std::string ncbiTaxDump;
     std::string taxMappingFile;
@@ -569,6 +580,9 @@ public:
 
     // createsubdb
     int subDbMode;
+
+    // tool citations
+    std::map<unsigned int, const char*> citations;
 
     static Parameters& getInstance()
     {
@@ -666,6 +680,7 @@ public:
 
     // rescoremode
     PARAMETER(PARAM_RESCORE_MODE)
+    PARAMETER(PARAM_WRAPPED_SCORING)
     PARAMETER(PARAM_FILTER_HITS)
     PARAMETER(PARAM_SORT_RESULTS)
 
@@ -715,7 +730,7 @@ public:
     PARAMETER(PARAM_KMER_PER_SEQ)
     PARAMETER(PARAM_KMER_PER_SEQ_SCALE)
     PARAMETER(PARAM_INCLUDE_ONLY_EXTENDABLE)
-    PARAMETER(PARAM_SKIP_N_REPEAT_KMER)
+    PARAMETER(PARAM_IGNORE_MULTI_KMER)
     PARAMETER(PARAM_HASH_SHIFT)
     PARAMETER(PARAM_PICK_N_SIMILAR)
     PARAMETER(PARAM_ADJUST_KMER_LEN)
@@ -756,8 +771,8 @@ public:
     PARAMETER(PARAM_USE_HEADER) // also used by extractorfs
     PARAMETER(PARAM_ID_OFFSET)  // same
     PARAMETER(PARAM_DB_TYPE)
-    PARAMETER(PARAM_DONT_SPLIT_SEQ_BY_LEN)
-    PARAMETER(PARAM_DONT_SHUFFLE)
+    PARAMETER(PARAM_CREATEDB_MODE)
+    PARAMETER(PARAM_SHUFFLE)
 
     // convert2fasta
     PARAMETER(PARAM_USE_HEADER_FILE)
@@ -854,6 +869,10 @@ public:
     PARAMETER(PARAM_LCA_RANKS)
     PARAMETER(PARAM_BLACKLIST)
     PARAMETER(PARAM_TAXON_ADD_LINEAGE)
+
+    // taxonomyreport
+    PARAMETER(PARAM_REPORT_MODE)
+
     // createtaxdb
     PARAMETER(PARAM_NCBI_TAX_DUMP)
     PARAMETER(PARAM_TAX_MAPPING_FILE)
@@ -939,6 +958,7 @@ public:
     std::vector<MMseqsParameter*> tsv2db;
     std::vector<MMseqsParameter*> lca;
     std::vector<MMseqsParameter*> addtaxonomy;
+    std::vector<MMseqsParameter*> taxonomyreport;
     std::vector<MMseqsParameter*> filtertaxdb;
     std::vector<MMseqsParameter*> taxonomy;
     std::vector<MMseqsParameter*> easytaxonomy;
@@ -963,6 +983,8 @@ public:
     std::string createParameterString(const std::vector<MMseqsParameter*> &vector, bool wasSet = false);
 
     void overrideParameterDescription(Command& command, int uid, const char* description, const char* regex = NULL, int category = 0);
+
+    static void checkIfTaxDbIsComplete(std::string & filename);
 
     static bool isEqualDbtype(const int type1, const int type2) {
         return ((type1 & 0x3FFFFFFF) == (type2 & 0x3FFFFFFF));

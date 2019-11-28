@@ -16,9 +16,9 @@
 
 #include "simd.h"
 #include "MemoryMapped.h"
-
 #include <algorithm>
 #include <sys/mman.h>
+#include <fstream>      // std::ifstream
 
 #ifdef OPENMP
 #include <omp.h>
@@ -244,7 +244,9 @@ std::pair<ssize_t,ssize_t> Util::getFastaHeaderPosition(const std::string& heade
 }
 
 
-std::string Util::parseFastaHeader(const std::string& header) {
+std::string Util::parseFastaHeader(const char * headerPtr) {
+    size_t len = Util::skipNoneWhitespace(headerPtr);
+    std::string header(headerPtr, len);
     std::pair<ssize_t, ssize_t> pos = Util::getFastaHeaderPosition(header);
     if(pos.first == -1 && pos.second == -1)
         return "";
@@ -462,6 +464,35 @@ int Util::omp_thread_count() {
     return n;
 }
 
+std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const bool removeSplit) {
+    std::map<unsigned int, std::string> mapping;
+    if (file.length() > 0) {
+        std::ifstream mappingStream(file);
+        if (mappingStream.fail()) {
+            Debug(Debug::ERROR) << "File " << file << " not found!\n";
+            EXIT(EXIT_FAILURE);
+        }
+
+        std::string line;
+        while (std::getline(mappingStream, line)) {
+            std::vector<std::string> split = Util::split(line, "\t");
+            unsigned int id = strtoul(split[0].c_str(), NULL, 10);
+
+            std::string& name = split[1];
+
+            size_t pos;
+            if (removeSplit && (pos = name.find_last_of('_')) != std::string::npos) {
+                name = name.substr(0, pos);
+            }
+
+            mapping.emplace(id, name);
+        }
+    }
+
+    return mapping;
+}
+
+
 std::string Util::removeWhiteSpace(std::string in) {
     in.erase(std::remove_if(in.begin(), in.end(), isspace), in.end());
     return in;
@@ -588,26 +619,6 @@ uint64_t Util::revComplement(const uint64_t kmer, const int k) {
     return (((uint64_t)_mm_cvtsi128_si64(x)) >> (uint64_t)(64-2*k));
 
 }
-
-
-
-float Util::averageValueOnAminoAcids(const std::unordered_map<char, float> &values, const char *seq) {
-    const char *seqPointer = seq;
-    float ret = values.at('0') + values.at('1'); // C ter and N ter values
-    std::unordered_map<char, float>::const_iterator k;
-
-    while (*seqPointer != '\0' && *seqPointer != '\n') {
-        if ((k = values.find(tolower(*seqPointer))) != values.end()) {
-            ret += k->second;
-        }
-
-        seqPointer++;
-    }
-
-    size_t seqLen = seqPointer - seq;
-    return ret / std::max(static_cast<size_t>(1), seqLen);
-}
-
 
 template<> std::string SSTR(char x) { return std::string(1, x); }
 template<> std::string SSTR(const std::string &x) { return x; }

@@ -5,13 +5,9 @@
 #include <cstddef>
 #include <cstring>
 #include <vector>
-#include <sstream>
-#include <map>
-#include <unordered_map>
 #include <limits>
-
+#include <map>
 #include "MMseqsMPI.h"
-
 
 #ifndef EXIT
 #define EXIT(exitCode) do { int __status = (exitCode); std::cerr.flush(); std::cout.flush(); exit(__status); } while(0)
@@ -20,8 +16,6 @@
 #define BIT_SET(a,b) ((a) | (1ULL<<(b)))
 #define BIT_CLEAR(a,b) ((a) & ~(1ULL<<(b)))
 #define BIT_CHECK(a,b) (!!((a) & (1ULL<<(b))))
-
-
 
 template<typename T>
 struct assert_false : std::false_type
@@ -246,8 +240,8 @@ public:
     }
 
 
-    static std::pair<ssize_t,ssize_t> getFastaHeaderPosition(const std::string& header);
-    static std::string parseFastaHeader(const std::string& header);
+    static std::pair<ssize_t,ssize_t> getFastaHeaderPosition(const std::string & header);
+    static std::string parseFastaHeader(const char * header);
 
     static inline char toUpper(char character){
         character += ('a' <= character && character <= 'z') ? ('A' - 'a') : 0;
@@ -316,6 +310,9 @@ public:
 
     static std::string removeWhiteSpace(std::string in);
 
+    static std::map<unsigned int, std::string> readLookup(const std::string& lookupFile,
+                                                          const bool removeSplit = false);
+
     static bool canBeCovered(const float covThr, const int covMode, float queryLength, float targetLength);
 
     static bool hasCoverage(float covThr, int covMode, float queryCov, float targetCov);
@@ -325,8 +322,6 @@ public:
     static float computeSeqId(int seqIdMode, int aaIds, int qLen, int tLen, int alnLen);
 
     static uint64_t revComplement(const uint64_t kmer, const int k);
-
-    static float averageValueOnAminoAcids(const std::unordered_map<char, float> &values, const char *seq);
 
     static bool hasAlignmentLength(int alnLenThr, int alnLen) {
         return alnLen >= alnLenThr;
