@@ -52,7 +52,6 @@ int downloadgenome(int argc, const char **argv, const Command& command) {
     CommandCaller cmd;
     cmd.addVariable("OUTDB", outDb.c_str());
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    par.splitSeqByLen = false;
     cmd.addVariable("CREATE_REVERSE_SETDB", par.reverseSetDb == 1 ? "TRUE" : NULL);
     cmd.addVariable("REVERSE_FRAGMENTS", par.reverseFragments == 1 ? "TRUE" : NULL);
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());

@@ -26,7 +26,6 @@ void setpredictmatchDefaults(Parameters *p) {
     p->simpleBestHit = true;
     //combinepval par
     p->aggregationMode = 3;
-    p->printCodon = true;
 }
 
 int predictmatch(int argc, const char **argv, const Command& command) {
@@ -91,7 +90,6 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     CommandCaller cmd;
     cmd.addVariable("OUTDB", outDb.c_str());
     cmd.addVariable("TMP_PATH", tmpDir.c_str());
-    par.splitSeqByLen = false;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("REVERSE_FRAGMENTS", par.reverseFragments == 1 ? "TRUE" : NULL);
     cmd.addVariable("REPORT_PAM", par.reportPam == 1 ? "TRUE" : NULL);
