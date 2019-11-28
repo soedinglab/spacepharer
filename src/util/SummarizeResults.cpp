@@ -12,14 +12,10 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
-    std::string matchDBName = std::string(par.db1);
-    std::string matchDBIndex = std::string(par.db1) + ".index";
-    DBReader<unsigned int> matchReader(matchDBName.c_str(), matchDBIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    DBReader<unsigned int> matchReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     matchReader.open(DBReader<unsigned int>::NOSORT);
 
-    std::string alnDBName = std::string(par.db2);
-    std::string alnDBIndex = std::string(par.db2) + ".index";
-    DBReader<unsigned int> alnReader(alnDBName.c_str(), alnDBIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    DBReader<unsigned int> alnReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     alnReader.open(DBReader<unsigned int>::NOSORT);
 
     DBWriter dbw(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, alnReader.getDbtype());
