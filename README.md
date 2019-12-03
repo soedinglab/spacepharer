@@ -12,7 +12,7 @@ SpacePHARER is a modular toolkit for sensitive phage-host interaction identifica
      wget https://mmseqs.com/metaeuk/metaeuk-linux-avx2.tar.gz; tar xvfz metaeuk-linux-avx2.tar.gz; export PATH=$(pwd)/metaeuk/bin/:$PATH -->
 
 ## Input 
-SpacePHARER will search with 6-frame translated CRISPR spacer sequences to sets of phage **ORFs** (open reading frames) based on similarity, combining multiple evidences (**hits**) found between two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are Fasta files of nucleotide sequences (.fasta or .tar.gz). Spacers should be provided in multi-Fasta files each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
+SpacePHARER will search with 6-frame translated CRISPR spacer sequences to sets of phage **ORFs** (open reading frames) based on similarity, combining multiple evidences (**hits**) found between two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are Fasta files of nucleotide sequences (.fasta or .tar.gz). Spacers should be provided in multi-Fasta files each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/), [MinCED](https://github.com/ctSkennerton/minced) (derived from CRT format) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
 
 ## Running SpacePHARER 
 
@@ -31,12 +31,6 @@ SpacePHARER will search with 6-frame translated CRISPR spacer sequences to sets 
      --fmt                    output format for predictmatch. (0: short (only matches); 1: long (matches and hits); 2: long with nucleotide alignment)
      
 
-### Downlading phage genomes:
-
-This module will download all available phage genomes from NCBI GenBank ftp site, and create target SetDB in the provided path, and ```--reverse-setDB``` to additionaly create control target setDB with the name targetSetDB_rev in the same path. 
-
-      spacepharer downloadgenome pathto/data/phagegenome.txt targetGenomeFolder targetSetDB tmpFolder
-      
 
 ### Creating setDB:
 
@@ -45,9 +39,17 @@ Before search, query or target sequences contained in Fasta files will need to b
       spacepharer createsetdb Query1.fasta [...QueryN.fasta] querySetDB tmpFolder --extractorf-spacer 1
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB tmpFolder
 
-You will also need to generate a control target set DB, one of the options is with reversed protein fragments of target DB using ```--reverse-fragments 1```
+You will also need to generate a control target set DB. One of the options is with reversed protein fragments of target DB using ```--reverse-fragments 1```
 
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] controlTargetSetDB tmpFolder --reverse-fragments 1
+
+### Downlading phage genomes:
+
+As an alternative of creating target and control setDB, this module will download all available phage genomes from NCBI GenBank ftp site, and create target SetDB in the provided path.  ```--reverse-setdb``` will additionaly create control target setDB with the name targetSetDB_rev in the same path. 
+
+      spacepharer downloadgenome pathto/data/phagegenome.txt targetGenomeFolder targetSetDB tmpFolder
+      
+
 
 
 ### Parsing spacer files:
@@ -57,6 +59,25 @@ If you wish to provide spacer files (CRT,PILER-CR or CRISPRDetect) as query, par
     spacepharer parsespacer spacerFile1.txt [...spacerFileN.txt] queryDB 
     spacepharer createsetdb queryDB querySetDB tmpFolder --extractorf-spacer 1
     
+
+####Sample commands for running spacer extraction tools
+
+PILER-CR:
+
+      pilercr -noinfo -quiet -in prok.fasta -out prok.txt
+
+CRT:
+
+      java -cp CRT1.2-CLI.jar crt prok.fasta prok.txt
+
+MinCED:
+
+      ./minced prok.fasta prok.txt
+
+CRISPRDetect:
+
+CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
+
 
 ### Searching and predicting matches:
 
