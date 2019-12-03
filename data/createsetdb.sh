@@ -8,12 +8,18 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+hasCommand () {
+    command -v "$1" >/dev/null 2>&1 || { echo "Please make sure that $1 is in \$PATH."; exit 1; }
+}
+
+hasCommand awk
+hasCommand sort
+
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
 
-
 #check if already created db
-if notExists "${OUTDB}"; then
-    if notExists "$1.dbtype"; then
+if notExists "${OUTDB}.dbtype"; then
+    if notExists "${1}.dbtype"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" createdb "$@" "${OUTDB}" ${CREATEDB_PAR} \
             || fail "createdb failed"
@@ -28,7 +34,6 @@ if notExists "${OUTDB}"; then
         cp "$1_h.index" "${OUTDB}_h.index"
         cp "$1_h.dbtype" "${OUTDB}_h.dbtype"
     fi
-
 fi
 
 
@@ -52,25 +57,26 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
 
     if notExists "${OUTDB}_nucl_contig_to_set.index"; then
         awk '{ print $1"\t"$3; }' "${OUTDB}_nucl.lookup" | sort -k1,1n -k2,2n > "${OUTDB}_nucl_contig_to_set.tsv"
-        "${MMSEQS}" tsv2db "${OUTDB}_nucl_contig_to_set.tsv" "${OUTDB}_nucl_contig_to_set" "--output-dbtype" "5"\
+        # shellcheck disable=SC2086
+        "${MMSEQS}" tsv2db "${OUTDB}_nucl_contig_to_set.tsv" "${OUTDB}_nucl_contig_to_set" --output-dbtype 5 ${VERBOSITY_PAR} \
             || fail "tsv2db failed"
     fi
 
     if notExists "${OUTDB}_nucl_set_to_contig.index"; then
         awk '{ print $3"\t"$1; }' "${OUTDB}_nucl.lookup" | sort -k1,1n -k2,2n > "${OUTDB}_nucl_set_to_contig.tsv"
-        "${MMSEQS}" tsv2db "${OUTDB}_nucl_set_to_contig.tsv" "${OUTDB}_nucl_set_to_contig" "--output-dbtype" "5"\
+        # shellcheck disable=SC2086
+        "${MMSEQS}" tsv2db "${OUTDB}_nucl_set_to_contig.tsv" "${OUTDB}_nucl_set_to_contig" --output-dbtype 5 ${VERBOSITY_PAR} \
             || fail "tsv2db failed"
     fi
 
     if notExists "${OUTDB}_nucl_orf.index"; then
-        # shellcheck disable=SC2086
         if [ -n "${EXTRACTORFS_SPACER}" ]; then
-            echo "Extract ORF using spacer parameters..."
-            #"--reverse-frames" " "
-            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "--min-length" "9" "--orf-start-mode" "1" ${THREADS_PAR}\
+            # shellcheck disable=SC2086
+            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" --min-length 9 --orf-start-mode 1 ${THREADS_PAR} \
                 || fail "extractorfs failed"     
         else   
-            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "--orf-start-mode" "0" ${THREADS_PAR}\
+            # shellcheck disable=SC2086
+            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" --orf-start-mode 0 ${THREADS_PAR} \
                 || fail "extractorfs failed"
         fi
     fi
@@ -83,7 +89,8 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
 
     # write extracted orfs locations on contig in alignment format
     if notExists "${OUTDB}_nucl_orf_aligned_to_contig.index"; then
-        "${MMSEQS}" orftocontig "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "${OUTDB}_nucl_orf_aligned_to_contig" \
+        # shellcheck disable=SC2086
+        "${MMSEQS}" orftocontig "${OUTDB}_nucl" "${OUTDB}_nucl_orf" "${OUTDB}_nucl_orf_aligned_to_contig" ${THREADS_PAR} \
             || fail "orftocontig step died"
     fi
 
@@ -113,14 +120,12 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
 
     if [ -n "${REVERSE_FRAGMENTS}" ]; then
         # shellcheck disable=SC2086
-        echo  "Reversing database..."
-        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" "${THREADS_PAR}"\
+        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" "${THREADS_PAR}" \
             || fail "reverseseq died"
+        # TODO: check mvdb instead
         mv -f "${OUTDB}_reverse" "${OUTDB}"
         mv -f "${OUTDB}_reverse.index" "${OUTDB}.index"
         mv -f "${OUTDB}_reverse.dbtype" "${OUTDB}.dbtype"
-        #OUTDB="${OUTDB}_reverse"
-        echo "Will base search on ${OUTDB}"
     fi
 else
     fail "protein mode not implemented"
@@ -128,10 +133,6 @@ fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
-    rmdir "${TMP_PATH}/search"
-    if [ -n "${NUCL}" ]; then
-        rm -f "${TMP_PATH}/nucl_set.tsv"
-    fi
     rm -f "${TMP_PATH}/createsetdb.sh"
 fi
 

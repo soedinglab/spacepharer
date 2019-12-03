@@ -38,7 +38,6 @@ int predictmatch(int argc, const char **argv, const Command& command) {
                                      par.PARAM_DB_OUTPUT.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &) command, par.PARAM_OVERLAP.uniqid, NULL, NULL,
                                      par.PARAM_OVERLAP.category | MMseqsParameter::COMMAND_EXPERT);
-
     for (size_t i = 0; i < par.extractorfs.size(); i++){
         par.overrideParameterDescription((Command &)command, par.extractorfs[i]->uniqid, NULL, NULL, par.extractorfs[i]->category | MMseqsParameter::COMMAND_EXPERT);
     }
@@ -56,40 +55,16 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // check if temp dir exists and if not, try to create it:
-    std::string tmpDir = par.filenames.back();
-    par.filenames.pop_back();
-    if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
-        Debug(Debug::INFO) << "Tmp " << tmpDir << " folder does not exist or is not a directory.\n";
-        if (FileUtil::makeDir(tmpDir.c_str()) == false) {
-            Debug(Debug::ERROR) << "Can not create tmp folder " << tmpDir << ".\n";
-            return EXIT_FAILURE;
-        } else {
-            Debug(Debug::INFO) << "Created dir " << tmpDir << "\n";
-        }
-    }
-
+    std::string tmpDir = par.db5;
     std::string hash = SSTR(par.hashParameter(par.filenames, par.predictmatchworkflow));
-    if(par.reuseLatest){
-        hash = FileUtil::getHashFromSymLink(tmpDir+"/latest");
+    if (par.reuseLatest) {
+        hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
-    tmpDir += "/" + hash;
-    if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
-        if (FileUtil::makeDir(tmpDir.c_str()) == false) {
-            Debug(Debug::ERROR) << "Can not create sub tmp folder " << tmpDir << ".\n";
-            return EXIT_FAILURE;
-        }
-    }
-    std::string outDb = par.filenames.back();
+    tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
+    par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
 
-    FileUtil::symlinkAlias(tmpDir, "latest");
-
-
-
-
     CommandCaller cmd;
-    cmd.addVariable("OUTDB", outDb.c_str());
-    cmd.addVariable("TMP_PATH", tmpDir.c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("REVERSE_FRAGMENTS", par.reverseFragments == 1 ? "TRUE" : NULL);
     cmd.addVariable("REPORT_PAM", par.reportPam == 1 ? "TRUE" : NULL);
@@ -105,7 +80,6 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("FILTERMATCHBYFDR_PAR", par.createParameterString(par.filtermatchbyfdr).c_str());
     cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
-
 
     FileUtil::writeFile(tmpDir + "/predictmatch.sh", predictmatch_sh, predictmatch_sh_len);
     std::string program(tmpDir + "/predictmatch.sh");

@@ -12,10 +12,9 @@
 #include <omp.h>
 #endif
 
-
 int truncatebesthits(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    par.parseParameters(argc, argv, command, true, 0, 0);
 
     std::string sizeDBName = std::string(par.db1) + "_set_size";
     std::string sizeDBIndex = std::string(par.db1) + "_set_size.index";
@@ -28,11 +27,12 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
     setReader.open(DBReader<unsigned int>::NOSORT);
 
     DBReader<unsigned int> resultReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    resultReader.open(DBReader<unsigned int>::NOSORT);
+    resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
     DBWriter dbw(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, resultReader.getDbtype());
     dbw.open();
 
+    Debug::Progress progress(resultReader.getSize());
 #pragma omp parallel
     {
         int thread_idx = 0;
@@ -41,8 +41,9 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
 #endif
         std::string buffer;
         buffer.reserve(10 * 1024);
-#pragma omp for schedule(static)
+#pragma omp for schedule(dynamic, 10)
         for (size_t i = 0; i < resultReader.getSize(); ++i) {
+            progress.updateProgress();
             char *data = resultReader.getData(i, thread_idx);
             while (*data != '\0'){
                 char *current = data;
@@ -74,8 +75,8 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
                     }
                 }
             }
-        dbw.writeData(buffer.c_str(), buffer.length(), resultReader.getDbKey(i), thread_idx);
-        buffer.clear();
+            dbw.writeData(buffer.c_str(), buffer.length(), resultReader.getDbKey(i), thread_idx);
+            buffer.clear();
         }
     }
     dbw.close();

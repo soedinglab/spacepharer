@@ -1,5 +1,4 @@
 #!/bin/sh -e
-
 fail() {
     echo "Error: $1"
     exit 1
@@ -16,10 +15,7 @@ hasCommand () {
 }
 
 hasCommand wget
-#hasCommand awk
-#hasCommand zcat
 hasCommand touch
-#hasCommand tar
 
 GENOME_FTP="$1"
 OUT_PATH="$2"
@@ -30,30 +26,27 @@ TMP_PATH="$4"
 INPUTS=""
 if notExists "${OUT_PATH}/phage_download.complete"; then
     echo "Download phage genomes"
-    while read NAME URL; 
-    do
-        wget -nv -O "${OUT_PATH}/${NAME}" "${URL}" ;        
-        INPUTS="${OUT_PATH}/${NAME} ${INPUTS}";
+    while read NAME URL; do
+        wget -nv -O "${OUT_PATH}/${NAME}" "${URL}"
+        INPUTS="${OUT_PATH}/${NAME} ${INPUTS}"
     done <  "${GENOME_FTP}"
     touch "${OUT_PATH}/phage_download.complete" \
         || fail "download failed"
     
 else
-    while read NAME URL;
-    do
+    while read NAME URL; do
         INPUTS="${OUT_PATH}/${NAME} ${INPUTS}";
     done < "${GENOME_FTP}"
 fi
 
-
 if notExists "${OUTDB}.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" createsetdb ${INPUTS} "${OUTDB}" "${TMP_PATH}" \
+    "${MMSEQS}" createsetdb ${INPUTS} "${OUTDB}" "${TMP_PATH}" ${VERBOSITY_PAR}  \
         || fail "createsetdb failed"
 fi
 
 if [ -n "$CREATE_REVERSE_SETDB" ] && notExists "${OUTDB}_rev.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" createsetdb ${INPUTS} "${OUTDB}_rev" "${TMP_PATH}" "--reverse-fragments" "1" \
+    "${MMSEQS}" createsetdb ${INPUTS} "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 \
         || fail "create reverse setdb failed"
 fi

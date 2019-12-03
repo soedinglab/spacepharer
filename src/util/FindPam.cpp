@@ -7,9 +7,9 @@
 #include "Orf.h"
 #include "PatternCompiler.h"
 
-#include <algorithm>
-#include <climits>
-//#include <regex>
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 //degenrate nucleotide code
 // A 	Adenine 	A
@@ -52,12 +52,12 @@ std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand,
     regmatch_t pmatch[1];
     std::pair<std::string, std::string> result;
 
-    PatternCompiler YCN("[TC]C[ACGT]");
-    PatternCompiler CCW ("CC[AT]");
-    PatternCompiler YYC ("[TC][TC]C");
-    PatternCompiler AWG ("A[AT]G");
-    PatternCompiler CC ("CC");
-    PatternCompiler TTN ("TT[ACGT]");
+    static PatternCompiler YCN("[TC]C[ACGT]");
+    static PatternCompiler CCW ("CC[AT]");
+    static PatternCompiler YYC ("[TC][TC]C");
+    static PatternCompiler AWG ("A[AT]G");
+    static PatternCompiler CC ("CC");
+    static PatternCompiler TTN ("TT[ACGT]");
     if(YCN.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
     } else if(CCW.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
@@ -74,12 +74,13 @@ std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand,
         result.first.append("-");
     }
 
-    PatternCompiler MMA ("[AC][AC]A");
-    PatternCompiler NGG ("[ACGT]GG");
-    PatternCompiler NNAGAA ("[ACGT][ACGT]AGAA");
-    PatternCompiler NNGRRT ("[ACGT][ACGT]G[AG][AG]T");
-    PatternCompiler NNNNGWWT ("[ACGT][ACGT][ACGT][ACGT]G[AT][AT]T");
-    PatternCompiler D ("[AGT]");
+    // static PatternCompiler MMA ("[AC][AC]A");
+    static PatternCompiler NGG ("[ACGT]GG");
+    static PatternCompiler NNAGAA ("[ACGT][ACGT]AGAA");
+    static PatternCompiler NNGRRT ("[ACGT][ACGT]G[AG][AG]T");
+    static PatternCompiler NNNNGWWT ("[ACGT][ACGT][ACGT][ACGT]G[AT][AT]T");
+    // static PatternCompiler D ("[AGT]");
+
     // if(MMA.isMatch(threePrime, 1, pmatch)) {
     //     if(pmatch[0].rm_so < matchStartThreePrime){
     //         matchStartThreePrime = pmatch[0].rm_so;
@@ -103,11 +104,9 @@ std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand,
 
 int findpam(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    par.parseParameters(argc, argv, command, true, 0, 0);
 
-    std::string targetDBName = std::string(par.db1);
-    std::string targetDBIndex = std::string(par.db1) + ".index";
-    DBReader<unsigned int> targetReader(targetDBName.c_str(), targetDBIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    DBReader<unsigned int> targetReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     targetReader.open(DBReader<unsigned int>::NOSORT);
 
     std::string setName = std::string(par.db1) + "_set_to_contig";
@@ -115,121 +114,120 @@ int findpam(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> setReader(setName.c_str(), setIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     setReader.open(DBReader<unsigned int>::NOSORT);
 
-    std::string alnDBName = std::string(par.db2);
-    std::string alnDBIndex = std::string(par.db2) + ".index";
-    DBReader<unsigned int> alnReader(alnDBName.c_str(), alnDBIndex.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
-    alnReader.open(DBReader<unsigned int>::NOSORT);
+    DBReader<unsigned int> alnReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    alnReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    std::string outDb = par.db3;
-    DBWriter writer(outDb.c_str(), (outDb + ".index").c_str(), 1, par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
+    DBWriter writer(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_GENERIC_DB);
     writer.open();
 
-    std::string buffer = "";
-	buffer.reserve(1000000);
-    for (size_t id = 0; id < alnReader.getSize(); id++){
-        char *data = alnReader.getData(id, 0);
-        while (*data != '\0'){
-            char *current = data;
-            data = Util::skipLine(data);
-            size_t length = data - current;
-            std::string line(current, length - 1);
-            if (line.empty() == true) {
-                continue;
-            }
-            std::vector<std::string> columns = Util::split(line, "\t");
-            size_t tsetid = Util::fast_atoi<size_t>(columns[0].c_str());
-            size_t contigid = Util::fast_atoi<size_t>(setReader.getData(tsetid, 0));
-            char *data = targetReader.getData(contigid, 0);
-            size_t qstart = Util::fast_atoi<size_t>(columns[5].c_str()) - 1;
-            size_t qend = Util::fast_atoi<size_t>(columns[6].c_str()) - 1;
-            size_t qlen = Util::fast_atoi<size_t>(columns[7].c_str());
-            size_t tstart = Util::fast_atoi<size_t>(columns[8].c_str()) - 1;
-            size_t tend = Util::fast_atoi<size_t>(columns[9].c_str()) - 1;
-            bool isqReverse = (qstart > qend) ? true : false;
-            bool istReverse = (tstart > tend) ? true : false;
-            std::string fivePrimeStrand = "";
-            std::string threePrimeStrand = "";
-            size_t fivePrimeEndPos;
-            size_t threePrimeEndPos;
-            if (isqReverse == false && istReverse == false) {
-                fivePrimeEndPos = tstart - qstart;
-                threePrimeEndPos = tend + (qlen - qend);
-                for (size_t i = fivePrimeEndPos - 10; i < fivePrimeEndPos; ++i){
-                    char seqChar = data[i];
-                    fivePrimeStrand.append(1, seqChar);
-                }
-                for (size_t i = threePrimeEndPos; i < threePrimeEndPos + 10; ++i){
-                    char seqChar = data[i];
-                    threePrimeStrand.append(1, seqChar);
-                }
-            } else if (isqReverse == false && istReverse == true){   
-                threePrimeEndPos = tend - (qlen - qend);
-                fivePrimeEndPos = tstart + qstart;
-                for (size_t i = fivePrimeEndPos + 10; i > fivePrimeEndPos; i--){
-                    char seqChar = Orf::complement(data[i]);
-                    fivePrimeStrand.append(1, seqChar);
-                }
-                for (size_t i = threePrimeEndPos; i > threePrimeEndPos -10; i--){
-                    char seqChar = Orf::complement(data[i]);
-                    threePrimeStrand.append(1, seqChar);
-                }
-            } else if (isqReverse == true && istReverse == false){
-                threePrimeEndPos = tend + qend + 1;
-                fivePrimeEndPos = tstart - (qlen - qstart) + 1;
-                for (size_t i = fivePrimeEndPos -10; i < fivePrimeEndPos; ++i){
-                    char seqChar = data[i];
-                    fivePrimeStrand.append(1, seqChar);
-                }
-                for (size_t i = threePrimeEndPos; i < threePrimeEndPos + 10; ++i){
-                    char seqChar = data[i];
-                    threePrimeStrand.append(1, seqChar);
-                }
-            } else if (isqReverse == true && istReverse == true){
-                threePrimeEndPos = tend - qend - 1;
-                fivePrimeEndPos = tstart + (qlen - qstart) - 1;
-                for (size_t i = fivePrimeEndPos + 10; i > fivePrimeEndPos; i--){
-                    char seqChar = Orf::complement(data[i]);
-                    fivePrimeStrand.append(1, seqChar);
-                }
-                for (size_t i = threePrimeEndPos; i > threePrimeEndPos -10; i--){
-                    char seqChar = Orf::complement(data[i]);
-                    threePrimeStrand.append(1, seqChar);
-                }
-            }
-            std::string na = "-";
-            std::pair<std::string, std::string> pamResult = searchpamlist(threePrimeStrand, fivePrimeStrand);
-            buffer.append(line);
-            buffer.append("\t");
-            if(pamResult.first.c_str() == na){
-                buffer.append("-");
-            } else {
-                buffer.append(SSTR(pamResult.first));
-                // buffer.append("|");
-                // buffer.append(SSTR(pamResult.first.second.first));
-                // buffer.append("|");
-                // buffer.append(SSTR(pamResult.first.second.second));
-            }
+    Debug::Progress progress(alnReader.getSize());
+#pragma omp parallel
+    {
+        int thread_idx = 0;
+#ifdef OPENMP
+        thread_idx = omp_get_thread_num();
+#endif
 
-            buffer.append("|");
+        std::string buffer;
+        buffer.reserve(1000000);
+#pragma omp for schedule(dynamic, 10)
+        for (size_t id = 0; id < alnReader.getSize(); id++) {
+            progress.updateProgress();
+            char *data = alnReader.getData(id, thread_idx);
+            while (*data != '\0') {
+                char *current = data;
+                data = Util::skipLine(data);
+                size_t length = data - current;
+                std::string line(current, length - 1);
+                if (line.empty() == true) {
+                    continue;
+                }
+                std::vector<std::string> columns = Util::split(line, "\t");
+                size_t tsetid = Util::fast_atoi<size_t>(columns[0].c_str());
+                // should we not call getId first? is this not a key?
+                size_t contigid = Util::fast_atoi<size_t>(setReader.getData(tsetid, thread_idx));
+                char *data = targetReader.getData(contigid, thread_idx);
+                size_t qstart = Util::fast_atoi<size_t>(columns[5].c_str()) - 1;
+                size_t qend = Util::fast_atoi<size_t>(columns[6].c_str()) - 1;
+                size_t qlen = Util::fast_atoi<size_t>(columns[7].c_str());
+                size_t tstart = Util::fast_atoi<size_t>(columns[8].c_str()) - 1;
+                size_t tend = Util::fast_atoi<size_t>(columns[9].c_str()) - 1;
+                bool isqReverse = (qstart > qend) ? true : false;
+                bool istReverse = (tstart > tend) ? true : false;
+                std::string fivePrimeStrand = "";
+                std::string threePrimeStrand = "";
+                size_t fivePrimeEndPos;
+                size_t threePrimeEndPos;
+                if (isqReverse == false && istReverse == false) {
+                    fivePrimeEndPos = tstart - qstart;
+                    threePrimeEndPos = tend + (qlen - qend);
+                    for (size_t i = fivePrimeEndPos - 10; i < fivePrimeEndPos; ++i){
+                        char seqChar = data[i];
+                        fivePrimeStrand.append(1, seqChar);
+                    }
+                    for (size_t i = threePrimeEndPos; i < threePrimeEndPos + 10; ++i){
+                        char seqChar = data[i];
+                        threePrimeStrand.append(1, seqChar);
+                    }
+                } else if (isqReverse == false && istReverse == true){   
+                    threePrimeEndPos = tend - (qlen - qend);
+                    fivePrimeEndPos = tstart + qstart;
+                    for (size_t i = fivePrimeEndPos + 10; i > fivePrimeEndPos; i--){
+                        char seqChar = Orf::complement(data[i]);
+                        fivePrimeStrand.append(1, seqChar);
+                    }
+                    for (size_t i = threePrimeEndPos; i > threePrimeEndPos -10; i--){
+                        char seqChar = Orf::complement(data[i]);
+                        threePrimeStrand.append(1, seqChar);
+                    }
+                } else if (isqReverse == true && istReverse == false){
+                    threePrimeEndPos = tend + qend + 1;
+                    fivePrimeEndPos = tstart - (qlen - qstart) + 1;
+                    for (size_t i = fivePrimeEndPos -10; i < fivePrimeEndPos; ++i){
+                        char seqChar = data[i];
+                        fivePrimeStrand.append(1, seqChar);
+                    }
+                    for (size_t i = threePrimeEndPos; i < threePrimeEndPos + 10; ++i){
+                        char seqChar = data[i];
+                        threePrimeStrand.append(1, seqChar);
+                    }
+                } else if (isqReverse == true && istReverse == true){
+                    threePrimeEndPos = tend - qend - 1;
+                    fivePrimeEndPos = tstart + (qlen - qstart) - 1;
+                    for (size_t i = fivePrimeEndPos + 10; i > fivePrimeEndPos; i--){
+                        char seqChar = Orf::complement(data[i]);
+                        fivePrimeStrand.append(1, seqChar);
+                    }
+                    for (size_t i = threePrimeEndPos; i > threePrimeEndPos -10; i--){
+                        char seqChar = Orf::complement(data[i]);
+                        threePrimeStrand.append(1, seqChar);
+                    }
+                }
+                std::string na = "-";
+                std::pair<std::string, std::string> pamResult = searchpamlist(threePrimeStrand, fivePrimeStrand);
+                buffer.append(line);
+                buffer.append("\t");
+                if(pamResult.first.c_str() == na){
+                    buffer.append("-");
+                } else {
+                    buffer.append(SSTR(pamResult.first));
+                }
 
-            if(pamResult.second.c_str() == na){
-                buffer.append("-");
-            } else {
-                buffer.append(SSTR(pamResult.second));
-                // buffer.append("|");
-                // buffer.append(SSTR(pamResult.second.second.first));
-                // buffer.append("|");
-                // buffer.append(SSTR(pamResult.second.second.second));
-            }                    
-            if (buffer.back() != '\n'){
-                buffer.append("\n");
-            }
-        }    
-            writer.writeData(buffer.c_str(), buffer.length(), alnReader.getDbKey(id));
+                buffer.append("|");
+
+                if(pamResult.second.c_str() == na){
+                    buffer.append("-");
+                } else {
+                    buffer.append(SSTR(pamResult.second));
+                }                    
+                if (buffer.back() != '\n'){
+                    buffer.append("\n");
+                }
+            }    
+            writer.writeData(buffer.c_str(), buffer.length(), alnReader.getDbKey(id), thread_idx);
             buffer.clear();
+        }
     }
-
-
     writer.close();
     alnReader.close();
     targetReader.close();

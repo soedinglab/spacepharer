@@ -15,8 +15,7 @@ notExists() {
 # check if files exist
 [ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
 [ ! -f "$2.dbtype" ] && echo "$2.dbtype not found!" && exit 1;
-[ ! -f "$3.dbtype" ] && echo "$2.dbtype not found!" && exit 1;
-# TO DO??? add check if $3.dbtype already exists before entire workfolw ???
+[ ! -f "$3.dbtype" ] && echo "$3.dbtype not found!" && exit 1;
 
 QUERY="$1"
 TARGET="$2"
@@ -90,14 +89,14 @@ fi
 
 if notExists "${TMP_PATH}/aggregate_offset.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" offsetalignment "${QUERY}_nucl" "${QUERY}" "${TARGET}_nucl" "${TARGET}" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_offset" "--search-type" "2" ${THREADS_PAR} \
+    "${MMSEQS}" offsetalignment "${QUERY}_nucl" "${QUERY}" "${TARGET}_nucl" "${TARGET}" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_offset" --search-type 2 ${THREADS_PAR} \
         || fail "offsetalignment failed"
 fi
 
 if notExists "${TMP_PATH}/aln.index"; then
     # shellcheck disable=SC2086
-    #"tsetid,qset,query,target,evalue,qstart,qend,tstart,tend,qaln,taln"
-    "${MMSEQS}" convertalis "${QUERY}_nucl" "${TARGET}_nucl" "${TMP_PATH}/aggregate_offset" "${TMP_PATH}/aln" "--db-output" "--search-type" "3" "--format-output" "tsetid,query,qset,target,evalue,qstart,qend,qlen,tstart,tend,qaln,taln" ${THREADS_PAR} \
+    "${MMSEQS}" convertalis "${QUERY}_nucl" "${TARGET}_nucl" "${TMP_PATH}/aggregate_offset" "${TMP_PATH}/aln" \
+        --db-output --search-type 3 --format-output "tsetid,query,qset,target,evalue,qstart,qend,qlen,tstart,tend,qaln,taln" ${THREADS_PAR} \
         || fail "convertalis failed"
 fi
 
@@ -108,34 +107,24 @@ if notExists "${TMP_PATH}/aln_merge.index"; then
 fi
 
 if [ -n "$REPORT_PAM" ]; then
-
     if notExists "${TMP_PATH}/aln_merge_pam.index"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" findpam "${TARGET}_nucl" "${TMP_PATH}/aln_merge" "${TMP_PATH}/aln_merge_pam" ${THREADS_PAR} \
             || fail "findpam failed"
     fi
 
-    if notExists "${TMP_PATH}/output"; then
+    if notExists "${OUTPUT}.tsv"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${TMP_PATH}/aln_merge_pam" "${TMP_PATH}/output" ${SUMMARIZERESULTS_PAR} \
+        "${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${TMP_PATH}/aln_merge_pam" "${OUTPUT}.tsv" ${SUMMARIZERESULTS_PAR} \
             || fail "summarizeresults failed"
     fi
 
 else
-
-    if notExists "${TMP_PATH}/output"; then
+    if notExists "${OUTPUT}.tsv"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${TMP_PATH}/aln_merge" "${TMP_PATH}/output" ${SUMMARIZERESULTS_PAR} \
+        "${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${TMP_PATH}/aln_merge" "${OUTPUT}.tsv" ${SUMMARIZERESULTS_PAR} \
             || fail "summarizeresults failed"
     fi
-
-fi
-
-if notExists "${OUTPUT}.tsv"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" createtsv "${QUERY}" "${TMP_PATH}/output" "${TMP_PATH}/output.tsv"
-    cut -f4- "${TMP_PATH}/output.tsv" > "${OUTPUT}.tsv"\
-        || fail "createtsv failed"
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
@@ -158,6 +147,6 @@ if [ -n "${REMOVE_TMP}" ]; then
         "$MMSEQS" rmdb "${TMP_PATH}/aln_merge_pam"
     fi
     "$MMSEQS" rmdb "${TMP_PATH}/output"
-    rm "${TMP_PATH}/output.tsv"
-    rm -f "${TMP_PATH}/multihitsearch.sh"
+    rm -f "${TMP_PATH}/output.tsv"
+    rm -f "${TMP_PATH}/predictmatch.sh"
 fi
