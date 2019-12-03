@@ -120,7 +120,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
 
     if [ -n "${REVERSE_FRAGMENTS}" ]; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" "${THREADS_PAR}" \
+        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" ${THREADS_PAR} \
             || fail "reverseseq died"
         # TODO: check mvdb instead
         mv -f "${OUTDB}_reverse" "${OUTDB}"
