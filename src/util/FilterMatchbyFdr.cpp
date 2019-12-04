@@ -112,6 +112,12 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
             pos_counter++;
             while (posToSort[pos_counter] >= negToSort[neg_counter]) {
                 neg_counter++;
+                //check if neg_counter has run to the end
+                if(neg_counter == negEvalDb.getSize()){
+                    Debug(Debug::WARNING) << "FDR of " << par.fdrCutoff << " cannot be reached, combined e-value threshold is " << numTargetSets << "\n";
+                    threshold = numTargetSets;
+                    break;
+                }
             }
             currentFDR = neg_counter * expectedFPcoef / (pos_counter + neg_counter);
         }
@@ -120,11 +126,13 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         if (pos_counter == posEvalDb.getSize()) {
             Debug(Debug::WARNING) << "Combined e-value threshold with FDR of " << par.fdrCutoff << "cannot be determined.\n";
         } else {
-            Debug(Debug::INFO) << "Combined e-value threshold is " << threshold << " with FDR of " << par.fdrCutoff << ".\n"; 
+            if (neg_counter < negEvalDb.getSize()){
+                Debug(Debug::INFO) << "Combined e-value threshold is " << threshold << " with FDR of " << par.fdrCutoff << ".\n"; 
+            }
             Debug(Debug::INFO) << pos_counter << " matches passed combined e-value threshold.\n";   
         }
     } else {
-        Debug(Debug::WARNING) << "Combined e-value list of control set is empty, will include all entries.\n";    
+        Debug(Debug::WARNING) << "Combined e-value list of control set is empty, combined e-value threshold is " << numTargetSets << "\n";  
         threshold = numTargetSets;
     }
     negEvalDb.close();
