@@ -41,15 +41,15 @@ std::vector<Command> commands = {
 
         {"predictmatch",             predictmatch,            &localPar.predictmatchworkflow,    COMMAND_MAIN,
                 "Predict phage-host matches",
-                "Create query sequence database and search with a query set of sequences against target set",
+                "Search with a query set DB of sequences against target set DB, output a .tsv file report on predicted matches",
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
-                "<i:queryDB> <i:targetDB> <i:controltargetDB> <o:cEvalDB> <tmpDir>",
+                "<i:queryDB> <i:targetDB> <i:controltargetDB> <o:output[.tsv]> <tmpDir>",
                 CITATION_SPACEPHARER, {
                         //{"queryfast[a|q]File[.gz|bz]",  DbType::ACCESS_MODE_INPUT,  DbType::NEED_DATA | DbType::VARIADIC,  &DbValidator::flatfile },
                                          {"queryDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
                                          {"targetDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
                                          {"controltargetDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
-                                         {"cEvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb},
+                                         {"cEvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
                                          
        {"filtermatchbyfdr",             filtermatchbyfdr,            &localPar.filtermatchbyfdr,    COMMAND_EXPERT,
