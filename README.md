@@ -11,6 +11,22 @@ SpacePHARER can be used by compiling from source (see below) or downloading a st
      # static build AVX2
      wget https://mmseqs.com/spacepharer/spacepharer-linux-avx2.tar.gz; tar xvfz spacepharer-linux-avx2.tar.gz; export PATH=$(pwd)/spacepharer/bin/:$PATH
 
+### Compile from source
+
+Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
+
+      git clone git@github.com:soedinglab/spacepharer.git .
+      mkdir build
+      cd build
+      cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
+      make -j
+      make install
+      export PATH="$(pwd)/bin/:$PATH"
+
+:exclamation: If you want to compile SpacePHARER on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and SpacePHARER will not be able to run multithreaded. Use the following cmake call:
+
+      CXX="$(brew --prefix)/bin/g++-8" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. .. 
+
 ## Input
 
 SpacePHARER will search with 6-frame translated CRISPR spacer sequences to sets of phage **ORFs** (open reading frames) based on similarity, combining multiple evidences (**hits**) found between two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are Fasta files of nucleotide sequences (.fasta or .tar.gz). Spacers should be provided in multi-Fasta files each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/), [MinCED](https://github.com/ctSkennerton/minced) (derived from CRT format) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
@@ -99,22 +115,6 @@ Optionally, the aligned spacer and phage sequences can be printed in two additio
 ### Removing TMP files
 
 During the workflow execution, SpacePHARER will keep all intermediate outputs in tmpFolder, ```--remove-tmp-files``` will clear out the tmpFolder after workflow has finished.
-
-### Compile from source
-
-<!-- Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
-
-      git clone git@github.com:soedinglab/spacepharer.git .
-      mkdir build
-      cd build
-      cmake -DCMAKE_BUILD_TYPE=Release -DHAVE_MPI=1 -DCMAKE_INSTALL_PREFIX=. ..
-      make -j
-      make install
-      export PATH="$(pwd)/bin/:$PATH"
-
-:exclamation: If you want to compile SpacePHARER on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and SpacePHARER will not be able to run multithreaded. Use the following cmake call:
-
-      CXX="$(brew --prefix)/bin/g++-8" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..  -->
 
 ## Hardware requirements
 
