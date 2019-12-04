@@ -56,7 +56,7 @@ If you wish to provide spacer files (CRT,PILER-CR or CRISPRDetect) as query, par
 
 #### Sample commands for running spacer extraction tools
 
-PILER-CR:
+PILER-CR: Use of "-noinfo" is a must. Otherwise, the format cannot be read.
 
       pilercr -noinfo -quiet -in prok.fasta -out prok.txt
 
@@ -75,10 +75,8 @@ CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CR
 
 ### Searching and predicting matches
 
-    
-    spacepharer predictmatch querySetDB targetSetDB controlTargetSetDB outputFileName tmpFolder
 
-
+    spacepharer predictmatch querySetDB targetSetDB controlTargetSetDB outputFileName.tsv tmpFolder
 
 ### The SpacePHARER output
 
@@ -102,13 +100,12 @@ Optionally, the aligned spacer and phage sequences can be printed in two additio
 
 During the workflow execution, SpacePHARER will keep all intermediate outputs in tmpFolder, ```--remove-tmp-files``` will clear out the tmpFolder after workflow has finished.
 
-<!-- ## Compile from source
-Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
+### Compile from source
 
-      git clone git@github.com:soedinglab/whisper.git .
-      <!-- git submodule init
-      git submodule update 
-      <!-- mkdir build
+<!-- Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
+
+      git clone git@github.com:soedinglab/spacepharer.git .
+      mkdir build
       cd build
       cmake -DCMAKE_BUILD_TYPE=Release -DHAVE_MPI=1 -DCMAKE_INSTALL_PREFIX=. ..
       make -j
