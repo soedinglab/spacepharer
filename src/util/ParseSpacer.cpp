@@ -79,11 +79,12 @@ int parsespacer(int argc, const char **argv, const Command& command) {
     Debug::Progress progress;
     size_t key = 0;
     for (size_t i = 0; i < par.filenames.size(); ++i) {
+        //TODO: should only parse filename not the whole path
         std::string& file = par.filenames[i];
         MemoryMapped input(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
         char* data = (char *) input.getData();
 
-        std::string sequence;
+        std::string sequence = "";
         sequence.reserve(par.maxSeqLen);
 
         std::string arrayHeader;
@@ -119,7 +120,12 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                 if(type == CRT){
                     arrayHeader = getCurrentLine(data, 11);
                     accession = Util::parseFastaHeader(arrayHeader.c_str());
-                }                
+                }
+                if(type == MINCED){
+                    arrayHeader = getCurrentLine(data);
+                    std::vector<std::string> values = Util::split(arrayHeader, "'");
+                    accession = Util::parseFastaHeader(values[1].c_str());
+                }
             }
 
             switch (type){
@@ -142,7 +148,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                             if(sequence.size() >= minSpacerLen && isNucl(sequence)){
                                 key++;
                                 spacerNum++;
-                                //position + repeat length                            
+                                //position + repeat length
                                 spacerStartPos = (unsigned int) strtoul(values[0].c_str(), NULL, 10) + (unsigned int) strtoul(values[1].c_str(), NULL, 10);
                                 spacerEndPos = spacerStartPos + sequence.size();
                                 //"accession_Array_#_spacer_#_spacerStartPos_spacerEndPos_spacerLen"
@@ -185,32 +191,35 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                         while (*data != '-'){
                             std::string line = getCurrentLine(data);
                             std::vector<std::string> values = Util::split(line, "\t");
-                            sequence = Util::removeWhiteSpace(values[2].c_str());
-                            if(sequence.size() >= minSpacerLen && isNucl(sequence)){
-                                key++;
-                                spacerNum++;      
-                                spacerStartPos = (unsigned int) strtoul(values[0].c_str(), NULL, 10) + values[1].size();
-                                spacerEndPos = spacerStartPos + sequence.size();
-                                //"accession_Array_#_spacer_#_spacerStartPos_spacerEndPos_spacerLen"
-                                header.append(accession.c_str());
-                                header.append("_Array_");
-                                header.append(SSTR(arrayNum));
-                                header.append("_spacer_");
-                                header.append(SSTR(spacerNum));
-                                header.append("_");
-                                header.append(SSTR(spacerStartPos));
-                                header.append("_");
-                                header.append(SSTR(spacerEndPos));
-                                header.append("_");
-                                header.append(SSTR(sequence.size()));
-                                fprintf(lookup, "%zu\t%s\t%zu\n", key, header.c_str(), i);
-                                sequence += std::string("\n");
-                                header += std::string("\n");                     
-                                writer.writeData(sequence.c_str(), sequence.size(), key, 0);
-                                headers.writeData(header.c_str(), header.size(), key, 0);
-                                progress.updateProgress();
-                                sequence.clear();
-                                header.clear();
+                            //avoid last row empty spacer column
+                            if(values.size() == 3){
+                                sequence = Util::removeWhiteSpace(values[2].c_str());
+                                if(sequence.size() >= minSpacerLen && isNucl(sequence)){
+                                    key++;
+                                    spacerNum++;
+                                    spacerStartPos = (unsigned int) strtoul(values[0].c_str(), NULL, 10) + values[1].size();
+                                    spacerEndPos = spacerStartPos + sequence.size();
+                                    //"accession_Array_#_spacer_#_spacerStartPos_spacerEndPos_spacerLen"
+                                    header.append(accession.c_str());
+                                    header.append("_Array_");
+                                    header.append(SSTR(arrayNum));
+                                    header.append("_spacer_");
+                                    header.append(SSTR(spacerNum));
+                                    header.append("_");
+                                    header.append(SSTR(spacerStartPos));
+                                    header.append("_");
+                                    header.append(SSTR(spacerEndPos));
+                                    header.append("_");
+                                    header.append(SSTR(sequence.size()));
+                                    fprintf(lookup, "%zu\t%s\t%zu\n", key, header.c_str(), i);
+                                    sequence += std::string("\n");
+                                    header += std::string("\n");
+                                    writer.writeData(sequence.c_str(), sequence.size(), key, 0);
+                                    headers.writeData(header.c_str(), header.size(), key, 0);
+                                    progress.updateProgress();
+                                    sequence.clear();
+                                    header.clear();
+                                }
                             }
                             data = Util::skipLine(data); 
                             entry++;
