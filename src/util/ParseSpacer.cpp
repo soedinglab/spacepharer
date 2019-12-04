@@ -79,8 +79,8 @@ int parsespacer(int argc, const char **argv, const Command& command) {
     Debug::Progress progress;
     size_t key = 0;
     for (size_t i = 0; i < par.filenames.size(); ++i) {
-        //TODO: should only parse filename not the whole path
         std::string& file = par.filenames[i];
+        std::string fileName = Util::split(file, "/").back();
         MemoryMapped input(file, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
         char* data = (char *) input.getData();
 
@@ -293,7 +293,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
             }
         }
         input.close();
-        fprintf(source, "%zu\t%s\n", i, file.c_str());
+        fprintf(source, "%zu\t%s\n", i, fileName.c_str());
     }
     fclose(lookup);
     fclose(source);
