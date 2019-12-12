@@ -88,9 +88,7 @@ CRISPRDetect:
 
 CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
 
-
 ### Searching and predicting matches
-
 
     spacepharer predictmatch querySetDB targetSetDB controlTargetSetDB outputFileName.tsv tmpFolder
 
@@ -98,11 +96,10 @@ CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CR
 
 Upon completion, SpacePHARER outputs a tab-separated text file (.tsv). Each prokaryotic-phage match spans two or more lines:
 
-*#prok_acc  phage_acc   E_comb      num_hits*
-*>spacer_acc phage_acc   p_adjust    spacer_start spacer_end   phage_start     phage_end   putative_5'_PAM|putative_3'_PAM*
-*NUCL_SEQ_ALN_SPACER*
+*#prok_acc  phage_acc   E_comb      num_hits* \
+*>spacer_acc      phage_acc   p_adjust    spacer_start      spacer_end  phage_start phage_end   putative_5'_PAM|putative_3'_PAM* \
+*NUCL_SEQ_ALN_SPACER* \
 *NUCL_SEQ_ALN_PHAGE*
-
 
 The first line starts with ’#’: prokaryotic accession, phage accession, E comb and number of hits in the match.
 
