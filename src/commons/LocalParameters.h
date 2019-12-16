@@ -77,7 +77,7 @@ private:
         predictmatchworkflow = combineList(predictmatchworkflow, filtermatchbyfdr);
         predictmatchworkflow = combineList(predictmatchworkflow, summarizeresults);
         predictmatchworkflow.push_back(&PARAM_FDR_CUTOFF);
-        predictmatchworkflow.push_back(&PARAM_FORMAT_TYPE);
+        //predictmatchworkflow.push_back(&PARAM_FORMAT_TYPE);
         predictmatchworkflow.push_back(&PARAM_REPORT_PAM);
 
         // default value 0 means no reverse of AA fragments
