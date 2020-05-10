@@ -42,9 +42,9 @@ if notExists "${TMP_PATH}/aggregate_merged.index"; then
         || fail "mergesetresults failed"
 fi
 
-if notExists "${TMP_PATH}/cEval.index"; then
+if notExists "${TMP_PATH}/cScore.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" combinepvalperset "${QUERY}" "${TARGET}" "${TMP_PATH}/aggregate_merged" "${TMP_PATH}/cEval" "${TMP_PATH}" ${COMBINEPVALPERSET_PAR} \
+    "${MMSEQS}" combinepvalperset "${QUERY}" "${TARGET}" "${TMP_PATH}/aggregate_merged" "${TMP_PATH}/cScore" "${TMP_PATH}" ${COMBINEPVALPERSET_PAR} \
         || fail "combinepvalperset failed"
 fi
 
@@ -67,16 +67,16 @@ if notExists "${TMP_PATH}/aggregate_merged_rev.index"; then
         || fail "mergesetresults failed"
 fi
 
-if notExists "${TMP_PATH}/cEval_rev.index"; then
+if notExists "${TMP_PATH}/cScore_rev.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" combinepvalperset "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/aggregate_merged_rev" "${TMP_PATH}/cEval_rev" "${TMP_PATH}" ${COMBINEPVALPERSET_PAR} \
+    "${MMSEQS}" combinepvalperset "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/aggregate_merged_rev" "${TMP_PATH}/cScore_rev" "${TMP_PATH}" ${COMBINEPVALPERSET_PAR} \
         || fail "combinepvalperset failed"
 fi
 
 #fdr analysis
 if notExists "${TMP_PATH}/match.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" filtermatchbyfdr "${TARGET}" "${TMP_PATH}/cEval" "${CONTROLTARGET}" "${TMP_PATH}/cEval_rev" "${TMP_PATH}/match" ${FILTERMATCHBYFDR_PAR} \
+    "${MMSEQS}" filtermatchbyfdr "${TMP_PATH}/cScore" "${TMP_PATH}/cScore_rev" "${TMP_PATH}/match" ${FILTERMATCHBYFDR_PAR} \
         || fail "filtermatchbyfdr failed"
 fi
 
@@ -133,11 +133,11 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/result"
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate"
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged"
-    "$MMSEQS" rmdb "${TMP_PATH}/cEval"
+    "$MMSEQS" rmdb "${TMP_PATH}/cScore"
     "$MMSEQS" rmdb "${TMP_PATH}/result_rev"
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_rev"
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged_rev"
-    "$MMSEQS" rmdb "${TMP_PATH}/cEval_rev"
+    "$MMSEQS" rmdb "${TMP_PATH}/cScore_rev"
     "$MMSEQS" rmdb "${TMP_PATH}/match"
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_truncated"
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_offset"

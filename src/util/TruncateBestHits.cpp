@@ -55,20 +55,33 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
                 }
                 std::vector<std::string> columns = Util::split(line, "\t");
                 double logPval = strtod(columns[1].c_str(), NULL);
-                //size_t id = resultReader.getId(i);
-                //size_t key = resultReader.getDbKey(id);
+                //compute besthit P-val, column [3] now at positon [1] and reappend all other columns back to line
+                line.clear();
+                line.append(columns[0]);
+                line.append("\t");
+                line.append(columns[3]);
+                line.append("\t");
+                line.append(columns[2]);
+                line.append("\t");
+                line.append(SSTR(exp(logPval)));
+                line.append("\t");
+                line.append(columns[4]);
+                line.append("\t");
+                line.append(columns[5]);
+                line.append("\t");
+                line.append(columns[6]);
+                line.append("\t");
+                line.append(columns[7]);
+                line.append("\t");
+                line.append(columns[8]);
+                line.append("\t");
+                line.append(columns[9]);
+                line.append("\t");
+                line.append(columns[10]);
                 size_t setKey = Util::fast_atoi<size_t>(setReader.getDataByDBKey(i, thread_idx));
                 unsigned int setSize = Util::fast_atoi<unsigned int>(sizeReader.getDataByDBKey(setKey, thread_idx));
-                double logPvalThr = 1.0/(setSize + 1);
-                if(exp(logPval) < logPvalThr) {
-                    // buffer.append(SSTR(i));
-                    // buffer.append("\t");
-                    // buffer.append(SSTR(setKey));
-                    // buffer.append("\t");
-                    // buffer.append(SSTR(setSize));
-                    // buffer.append("\t");
-                    // buffer.append(SSTR(logPvalThr));
-                    // buffer.append("\t");
+                double logPvalThr = log(1.0/(setSize + 1));
+                if(logPval < logPvalThr) {
                     buffer.append(line);
                     if (buffer.back() != '\n'){
                         buffer.append("\n");

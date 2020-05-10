@@ -53,7 +53,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 }
                 std::vector<std::string> columns = Util::split(line, "\t");
                 size_t targetSetId = Util::fast_atoi<size_t>(columns[0].c_str());
-                std::string cEval = columns[1].c_str();
+                std::string cScore = columns[1].c_str();
                 size_t key = matchReader.getDbKey(i);
                 char *alnData = alnReader.getDataByDBKey(key, thread_idx);
 
@@ -76,7 +76,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                             tmpBuffer.append("\t");
                             tmpBuffer.append(alnColumns[3].c_str()); //genomename
                             tmpBuffer.append("\t");
-                            tmpBuffer.append(alnColumns[4].c_str()); //eval
+                            tmpBuffer.append(alnColumns[4].c_str()); //best-hit pval
                             tmpBuffer.append("\t");
                             tmpBuffer.append(alnColumns[5].c_str()); //qstart
                             tmpBuffer.append("\t");
@@ -106,7 +106,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     buffer.append("\t");
                     buffer.append(targetSetName);
                     buffer.append("\t");
-                    buffer.append(cEval.c_str());
+                    buffer.append(cScore.c_str());
                     buffer.append("\t");
                     buffer.append(SSTR(lineCount));
                     buffer.append("\n");
