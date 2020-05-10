@@ -17,7 +17,8 @@ SpacePHARER can be used by compiling from source (see below) or downloading a st
 
 Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
 
-      git clone git@github.com:soedinglab/spacepharer.git .
+      git clone https://github.com/soedinglab/spacepharer.git
+      cd spacepharer
       mkdir build
       cd build
       cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
@@ -98,12 +99,12 @@ CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CR
 
 Upon completion, SpacePHARER outputs a tab-separated text file (.tsv). Each prokaryotic-phage match spans two or more lines:
 
-*#prok_acc  phage_acc   E_comb      num_hits* \
+*#prok_acc  phage_acc   S_comb      num_hits* \
 *>spacer_acc      phage_acc   p_adjust    spacer_start      spacer_end  phage_start phage_end   putative_5'_PAM|putative_3'_PAM* \
 *NUCL_SEQ_ALN_SPACER* \
 *NUCL_SEQ_ALN_PHAGE*
 
-The first line starts with ’#’: prokaryotic accession, phage accession, E comb and number of hits in the match.
+The first line starts with ’#’: prokaryotic accession, phage accession, combined score and number of hits in the match.
 
 Each following line describes an individual hit: spacer accession, phage accession, p adjust, spacer start and end, phage start and end, putative 5’ PAM|putative 3’ PAM.
 
