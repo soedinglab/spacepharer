@@ -13,8 +13,8 @@ Providing context helps us come up with a solution and improve our documentation
 
 ## Your Environment
 Include as many relevant details about the environment you experienced the bug in.
-* Git commit used (The string after "Plass Version:" when you execute Plass without any parameters):
-* Which Plass version was used (Statically-compiled, self-compiled, Homebrew, etc.):
+* Git commit used (The string after "MMseqs Version:" when you execute SpacePHARER without any parameters):
+* Which SpacePHARER version was used (Statically-compiled, self-compiled, Conda, etc.):
 * For self-compiled and Homebrew: Compiler and Cmake versions used and their invocation:
 * Server specifications (especially CPU support for AVX2/SSE and amount of system memory):
 * Operating system and version:
