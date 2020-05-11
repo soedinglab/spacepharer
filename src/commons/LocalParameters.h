@@ -88,7 +88,7 @@ private:
         formatType = 1;
         reportPam = 1;
         
-        citations.emplace(CITATION_SPACEPHARER, "Ruoshi.... biorxiv");
+        citations.emplace(CITATION_SPACEPHARER, "Zhang R, Mirdita M, Levy Karin E, Norroy C, Galiez C, and Soding J: SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. (2020)");
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};

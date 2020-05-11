@@ -6,7 +6,7 @@ const char* binary_name = "spacepharer";
 const char* tool_name = "SpacePHARER";
 // TODO Write one full sentence
 const char* tool_introduction = "CRISPR spacer phage-host finder";
-const char* main_author = "Ruoshi Zhang, ruoshi.zhang@mpibpc.mpg.de";
+const char* main_author = "Ruoshi Zhang (ruoshi.zhang@mpibpc.mpg.de)";
 const char* show_extended_help = "1";
 const char* show_bash_info = NULL;
 bool hide_base_commands = true;
@@ -25,7 +25,7 @@ std::vector<Command> commands = {
                 "The program will download a default list of phage genomes from NCBI GenBank ftp in provided directory, and create set db and optionally reversed set db",
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
                 "<i: genomeFtpFile> <i:outDir> <o:setDB> <tmpDir>",
-                CITATION_SPACEPHARER, {{"genomeFtpFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA| DbType::VARIADIC, &DbValidator::flatfile},
+                CITATION_SPACEPHARER, {{"genomeFtpFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                 {"outDir", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::directory},
                                 {"setDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
                                 {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},

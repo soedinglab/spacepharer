@@ -81,8 +81,8 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
-    FileUtil::writeFile(tmpDir + "/predictmatch.sh", predictmatch_sh, predictmatch_sh_len);
     std::string program(tmpDir + "/predictmatch.sh");
+    FileUtil::writeFile(program.c_str(), predictmatch_sh, predictmatch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;
