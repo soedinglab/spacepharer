@@ -2,7 +2,7 @@
 
 SpacePHARER is a modular toolkit for sensitive phage-host interaction identification using CRISPR spacers. SpacePHARER combines the fast and sensitive homology search capabilities of [MMseqs2](https://github.com/soedinglab/MMseqs2) with a novel approach of searching sets of sequences. SpacePHARER is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS. The software is designed to run on multiple cores.
 
-<p align="center"><img src="https://github.com/soedinglab/spacepharer/blob/master/SpacePHARER.png" height="250"/></p>
+<p align="center"><img src="https://github.com/soedinglab/spacepharer/blob/master/.github/SpacePHARER.png" height="250"/></p>
 
 ## Installation
 
