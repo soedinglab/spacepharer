@@ -18,7 +18,7 @@ void setpredictmatchDefaults(Parameters *p) {
     p->spacedKmer = true;
     p->spacedKmerPattern = "11011101";
     //TODO: change path for VTML40
-    p->scoringMatrixFile = ScoreMatrixFile("VTML40.out", "nucleotide.out");
+    p->scoringMatrixFile = MultiParam<char*>("VTML40.out", "nucleotide.out");
     p->gapExtend = 2;
     p->gapOpen = 16;
 
@@ -32,26 +32,21 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     setpredictmatchDefaults(&par);
 
-    par.overrideParameterDescription((Command &) command, par.PARAM_MAX_REJECTED.uniqid, NULL, NULL,
-                                     par.PARAM_MAX_REJECTED.category | MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &) command, par.PARAM_DB_OUTPUT.uniqid, NULL, NULL,
-                                     par.PARAM_DB_OUTPUT.category | MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &) command, par.PARAM_OVERLAP.uniqid, NULL, NULL,
-                                     par.PARAM_OVERLAP.category | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
     for (size_t i = 0; i < par.extractorfs.size(); i++){
-        par.overrideParameterDescription((Command &)command, par.extractorfs[i]->uniqid, NULL, NULL, par.extractorfs[i]->category | MMseqsParameter::COMMAND_EXPERT);
+        par.extractorfs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
     for (size_t i = 0; i < par.translatenucs.size(); i++){
-        par.overrideParameterDescription((Command &)command, par.translatenucs[i]->uniqid, NULL, NULL, par.translatenucs[i]->category | MMseqsParameter::COMMAND_EXPERT);
+        par.translatenucs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
     for (size_t i = 0; i < par.result2profile.size(); i++){
-        par.overrideParameterDescription((Command &)command, par.result2profile[i]->uniqid, NULL, NULL, par.result2profile[i]->category | MMseqsParameter::COMMAND_EXPERT);
+        par.result2profile[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
-    par.overrideParameterDescription((Command &) command, par.PARAM_THREADS.uniqid, NULL, NULL,
-                                     par.PARAM_THREADS.category & ~MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &) command, par.PARAM_V.uniqid, NULL, NULL,
-                                     par.PARAM_V.category & ~MMseqsParameter::COMMAND_EXPERT);
-
+    par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     // check if temp dir exists and if not, try to create it:
@@ -81,8 +76,8 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
+    FileUtil::writeFile(tmpDir + "/predictmatch.sh", predictmatch_sh, predictmatch_sh_len);
     std::string program(tmpDir + "/predictmatch.sh");
-    FileUtil::writeFile(program.c_str(), predictmatch_sh, predictmatch_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;

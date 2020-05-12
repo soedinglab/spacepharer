@@ -89,7 +89,7 @@ fi
 
 if notExists "${TMP_PATH}/aggregate_offset.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" offsetalignment "${QUERY}_nucl" "${QUERY}" "${TARGET}_nucl" "${TARGET}" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_offset" --search-type 2 ${THREADS_PAR} \
+    "${MMSEQS}" offsetalignment "${QUERY}_nucl" "${QUERY}" "${TARGET}_nucl" "${TARGET}" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_offset" --search-type 4 ${THREADS_PAR} \
         || fail "offsetalignment failed"
 fi
 
