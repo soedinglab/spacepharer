@@ -39,6 +39,7 @@ set(util_source_files
         util/profile2cs.cpp
         util/profile2pssm.cpp
         util/profile2seq.cpp
+        util/result2dnamsa.cpp
         util/result2flat.cpp
         util/result2msa.cpp
         util/result2rbh.cpp
@@ -62,6 +63,7 @@ set(util_source_files
         util/translatenucs.cpp
         util/translateaa.cpp
         util/tsv2db.cpp
+        util/tar2db.cpp
         util/proteinaln2nucl.cpp
         util/versionstring.cpp
         util/diskspaceavail.cpp

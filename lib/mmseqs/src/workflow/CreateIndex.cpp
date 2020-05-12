@@ -68,8 +68,23 @@ int createlinindex(int argc, const char **argv, const Command& command) {
     par.orfMaxLength = 32734;
     par.kmerScore = 0; // extract all k-mers
     par.maskMode = 0;
+    par.spacedKmer = false;
     // VTML has a slightly lower sensitivity in the regression test
-    par.seedScoringMatrixFile = ScoreMatrixFile("blosum62.out", "nucleotide.out");
+    par.seedScoringMatrixFile = MultiParam<char*>("blosum62.out", "nucleotide.out");
+
+    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MIN_SEQ_ID.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    for (size_t i = 0; i < par.extractorfs.size(); i++) {
+        par.extractorfs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
+    for (size_t i = 0; i < par.translatenucs.size(); i++) {
+        par.translatenucs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
+    par.PARAM_COMPRESSED.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+
     par.parseParameters(argc, argv, command, true, 0, 0);
     int dbType = FileUtil::parseDbType(par.db1.c_str());
     bool isNucl = Parameters::isEqualDbtype(dbType, Parameters::DBTYPE_NUCLEOTIDES);
@@ -96,16 +111,33 @@ int createindex(int argc, const char **argv, const Command& command) {
     par.kmerScore = 0; // extract all k-mers
     par.sensitivity = 7.5;
     par.maskMode = 1;
+
+    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MIN_SEQ_ID.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MAX_SEQS.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_SPLIT.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    for (size_t i = 0; i < par.splitsequence.size(); i++) {
+        par.splitsequence[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
+    for (size_t i = 0; i < par.extractorfs.size(); i++) {
+        par.extractorfs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
+    for (size_t i = 0; i < par.translatenucs.size(); i++) {
+        par.translatenucs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    }
+    par.PARAM_COMPRESSED.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     int dbType = FileUtil::parseDbType(par.db1.c_str());
     bool isNucl = Parameters::isEqualDbtype(dbType, Parameters::DBTYPE_NUCLEOTIDES);
 
-    if(par.PARAM_STRAND.wasSet == false){
+    if (par.PARAM_STRAND.wasSet == false) {
         par.strand = 1;
     }
-    par.overrideParameterDescription((Command &) command, par.PARAM_MASK_RESIDUES.uniqid, "0: w/o low complexity masking, 1: with low complexity masking, 2: add both masked and unmasked sequences to index", "^[0-2]{1}", par.PARAM_MASK_RESIDUES.category);
-
     if(isNucl && par.searchType == Parameters::SEARCH_TYPE_NUCLEOTIDES ){
         if ( par.PARAM_K.wasSet == false) {
             par.kmerSize = 15;

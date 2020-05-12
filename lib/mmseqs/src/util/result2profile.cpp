@@ -80,7 +80,7 @@ int result2profile(DBReader<unsigned int> &resultReader, Parameters &par, const 
     // adjust score of each match state by -0.2 to trim alignment
     SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0f, -0.2f);
     ProbabilityMatrix probMatrix(subMat);
-    EvalueComputation evalueComputation(tDbr->getAminoAcidDBSize(), &subMat, par.gapOpen, par.gapExtend);
+    EvalueComputation evalueComputation(tDbr->getAminoAcidDBSize(), &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
 
     if (qDbr->getDbtype() == -1 || targetSeqType == -1) {
         Debug(Debug::ERROR) << "Please recreate your database or add a .dbtype file to your sequence/profile database\n";
@@ -96,7 +96,7 @@ int result2profile(DBReader<unsigned int> &resultReader, Parameters &par, const 
     Debug(Debug::INFO) << "Target database size: " << tDbr->getSize() << " type: " << Parameters::getDbTypeName(targetSeqType) << "\n";
 
     const bool isFiltering = par.filterMsa != 0;
-    int xAmioAcid = subMat.aa2int[(int) 'X'];
+    int xAmioAcid = subMat.aa2num[static_cast<int>('X')];
     Debug::Progress progress(dbSize);
 #pragma omp parallel num_threads(localThreads)
     {
@@ -105,10 +105,10 @@ int result2profile(DBReader<unsigned int> &resultReader, Parameters &par, const 
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
 
-        Matcher matcher(qDbr->getDbtype(), maxSequenceLength, &subMat, &evalueComputation, par.compBiasCorrection, par.gapOpen, par.gapExtend);
+        Matcher matcher(qDbr->getDbtype(), maxSequenceLength, &subMat, &evalueComputation, par.compBiasCorrection, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         MultipleAlignment aligner(maxSequenceLength, maxSetSize, &subMat, &matcher);
         PSSMCalculator calculator(&subMat, maxSequenceLength, maxSetSize, par.pca, par.pcb);
-        MsaFilter filter(maxSequenceLength, maxSetSize, &subMat, par.gapOpen, par.gapExtend);
+        MsaFilter filter(maxSequenceLength, maxSetSize, &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         Sequence centerSequence(maxSequenceLength, qDbr->getDbtype(), &subMat, 0, false, par.compBiasCorrection);
         std::string result;
         result.reserve((maxSequenceLength + 1) * Sequence::PROFILE_READIN_SIZE);
@@ -176,11 +176,9 @@ int result2profile(DBReader<unsigned int> &resultReader, Parameters &par, const 
 
             size_t filteredSetSize = res.setSize;
             if (isFiltering) {
-                filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100),
+                filteredSetSize = filter.filter(res, static_cast<int>(par.covMSAThr * 100),
                               static_cast<int>(par.qid * 100), par.qsc,
-                              static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff,
-                              (const char **) res.msaSequence, &filteredSetSize);
-                filter.shuffleSequences((const char **) res.msaSequence, res.setSize);
+                              static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff);
             }
             //MultipleAlignment::print(res, &subMat);
 
@@ -194,7 +192,7 @@ int result2profile(DBReader<unsigned int> &resultReader, Parameters &par, const 
             PSSMCalculator::Profile pssmRes = calculator.computePSSMFromMSA(filteredSetSize, res.centerLength, (const char **) res.msaSequence, par.wg);
             if (par.maskProfile == true) {
                 for (int i = 0; i < centerSequence.L; ++i) {
-                    charSequence[i] = (char) centerSequence.int_sequence[i];
+                    charSequence[i] = (unsigned char ) centerSequence.numSequence[i];
                 }
 
                 tantan::maskSequences(charSequence, charSequence + centerSequence.L,
@@ -222,8 +220,8 @@ int result2profile(DBReader<unsigned int> &resultReader, Parameters &par, const 
                     result.push_back(Sequence::scoreMask(pssmRes.prob[pos * Sequence::PROFILE_AA_SIZE + aa]));
                 }
                 // write query, consensus sequence and neffM
-                result.push_back(static_cast<unsigned char>(centerSequence.int_sequence[pos]));
-                result.push_back(static_cast<unsigned char>(subMat.aa2int[static_cast<int>(pssmRes.consensus[pos])]));
+                result.push_back(static_cast<unsigned char>(centerSequence.numSequence[pos]));
+                result.push_back(static_cast<unsigned char>(subMat.aa2num[static_cast<int>(pssmRes.consensus[pos])]));
                 unsigned char neff = MathUtil::convertNeffToChar(pssmRes.neffM[pos]);
                 result.push_back(neff);
             }

@@ -12,7 +12,8 @@ public:
         kstring_t sequence;
         kstring_t comment;
         kstring_t qual;
-        size_t offset;
+        size_t headerOffset;
+        size_t sequenceOffset;
         bool multiline;
     } entry;
 
@@ -30,6 +31,14 @@ public:
     ~KSeqFile();
 private:
     FILE* file;
+};
+
+
+class KSeqStream : public KSeqWrapper {
+public:
+    KSeqStream();
+    bool ReadEntry();
+    ~KSeqStream();
 };
 
 #ifdef HAVE_ZLIB

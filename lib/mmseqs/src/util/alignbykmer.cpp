@@ -41,6 +41,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
         querySeqType = qdbr->getDbtype();
     }
 
+    int gapOpen, gapExtend;
     if(Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)){
         par.alphabetSize = 5;
         if(par.PARAM_SPACED_KMER_MODE.wasSet == false) {
@@ -49,18 +50,15 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
         if(par.PARAM_K.wasSet == false) {
             par.kmerSize = 9;
         }
-        if(par.PARAM_GAP_OPEN.wasSet == false){
-            par.gapOpen = 5;
-        }
-        if(par.PARAM_GAP_EXTEND.wasSet == false) {
-            par.gapExtend = 2;
-        }
-
+        gapOpen = par.gapOpen.nucleotides;
+        gapExtend = par.gapExtend.nucleotides;
     } else {
         if(par.PARAM_K.wasSet == false) {
             par.kmerSize = 4;
         }
         par.alphabetSize = 21;
+        gapOpen = par.gapOpen.aminoacids;
+        gapExtend = par.gapExtend.aminoacids;
     }
     par.printParameters(command.cmd, argc, argv, *command.params);
 
@@ -75,18 +73,18 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
     if (Parameters::isEqualDbtype(querySeqType,Parameters::DBTYPE_NUCLEOTIDES)) {
         subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
     } else {
-        if (par.alphabetSize == 21) {
+        if (par.alphabetSize.aminoacids == 21) {
             subMat = new SubstitutionMatrix(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
         } else {
             SubstitutionMatrix sMat(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
-            subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, sMat.aa2int, sMat.int2aa,
-                    sMat.alphabetSize, par.alphabetSize, 2.0);
-            SubstitutionMatrix::print(subMat->subMatrix, subMat->int2aa, subMat->alphabetSize );
+            subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, sMat.aa2num, sMat.num2aa,
+                    sMat.alphabetSize, par.alphabetSize.aminoacids, 2.0);
+            SubstitutionMatrix::print(subMat->subMatrix, subMat->num2aa, subMat->alphabetSize );
         }
     }
     ScoreMatrix _2merSubMatrix = ExtendedSubstitutionMatrix::calcScoreMatrix(*subMat, 2);
 
-    EvalueComputation evaluer(tdbr->getAminoAcidDBSize(), subMat, par.gapOpen, par.gapExtend);
+    EvalueComputation evaluer(tdbr->getAminoAcidDBSize(), subMat, gapOpen, gapExtend);
 
     DBWriter resultWriter(par.db4.c_str(), par.db4Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_ALIGNMENT_RES);
     resultWriter.open();
@@ -170,7 +168,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
             Sequence target(par.maxSeqLen, targetSeqType, subMat, par.kmerSize, par.spacedKmer, false, true, par.spacedKmerPattern);
             KmerGenerator kmerGenerator(par.kmerSize, subMat->alphabetSize, 70.0);
             kmerGenerator.setDivideStrategy(NULL, &_2merSubMatrix);
-            size_t lookupSize = MathUtil::ipow<size_t>(par.alphabetSize, par.kmerSize);
+            size_t lookupSize = MathUtil::ipow<size_t>(subMat->alphabetSize, par.kmerSize);
             unsigned short * queryPosLookup = new unsigned short[lookupSize];
             memset(queryPosLookup, 255, lookupSize * sizeof(unsigned short) );
 
@@ -199,7 +197,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                 query.mapSequence(id, queryId, querySeq, qdbr->getSeqLen(id));
 
                 while (query.hasNextKmer()) {
-                    const int *kmer = query.nextKmer();
+                    const unsigned char *kmer = query.nextKmer();
                     unsigned short pos = query.getCurrentPosition();
                     unsigned short kmerIdx = idxer.int2index(kmer);
                     if (queryPosLookup[kmerIdx] == USHRT_MAX) {
@@ -224,7 +222,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                     target.mapSequence(targetId, dbKey, targetSeq, tdbr->getSeqLen(targetId));
                     size_t kmerPosSize = 0;
                     while (target.hasNextKmer()) {
-                        const int *kmer = target.nextKmer();
+                        const unsigned char *kmer = target.nextKmer();
                         unsigned short kmerIdx = idxer.int2index(kmer);
                         if (queryPosLookup[kmerIdx] != USHRT_MAX) {
                             unsigned short pos_j = target.getCurrentPosition();
@@ -311,7 +309,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                             if (stretcheVec[currStretche].i_start > stretcheVec[prevPotentialStretche].i_end &&
                                     stretcheVec[currStretche].j_start > stretcheVec[prevPotentialStretche].i_end) {
                                 int bestScorePathPrevIsLast = dpMatrixRow[prevPotentialStretche].pathScore;
-                                int distance =  par.gapOpen + (stretcheVec[prevPotentialStretche].i_end - stretcheVec[currStretche].i_start)*par.gapExtend;
+                                int distance =  gapOpen + (stretcheVec[prevPotentialStretche].i_end - stretcheVec[currStretche].i_start) * gapExtend;
                                 int costOfPrevToCurrTransition = distance;
                                 int currScore = stretcheVec[currStretche].kmerCnt*par.kmerSize*2;
                                 int currScoreWithPrev = bestScorePathPrevIsLast + costOfPrevToCurrTransition + currScore;
@@ -347,19 +345,19 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
 
 //                        for (int i = strechtPath[stretch].i_end, j = strechtPath[stretch].j_end;
 //                             i < strechtPath[stretch - 1].i_start; i++, j++) {
-//                            std::cout << subMat->int2aa[query.int_sequence[i]];
+//                            std::cout << subMat->num2aa[query.sequence[i]];
 //                        }
 //                        std::cout << std::endl;
 //
 //                        for (int i = strechtPath[stretch].i_end, j = strechtPath[stretch].j_end;
 //                             i < strechtPath[stretch - 1].i_start; i++, j++) {
-//                            std::cout << subMat->int2aa[target.int_sequence[j]];
+//                            std::cout << subMat->num2aa[target.sequence[j]];
 //                        }
 //                        std::cout << std::endl;
 
                         for (int i = strechtPath[stretch].i_end, j = strechtPath[stretch].j_end;
                              i < strechtPath[stretch - 1].i_start && j < strechtPath[stretch - 1].j_start; i++, j++) {
-                            int curr = subMat->subMatrix[query.int_sequence[i]][target.int_sequence[j]];
+                            int curr = subMat->subMatrix[query.numSequence[i]][target.numSequence[j]];
                             score = curr + score;
 //                            score = (score < 0) ? 0 : score;
                             scores[pos] = score;
@@ -373,7 +371,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                         score = 0;
                         for (int i = strechtPath[stretch - 1].i_start, j = strechtPath[stretch - 1].j_start;
                              i > strechtPath[stretch].i_end && j > strechtPath[stretch].j_end; i--, j--) {
-                            int curr = subMat->subMatrix[query.int_sequence[i]][target.int_sequence[j]];
+                            int curr = subMat->subMatrix[query.numSequence[i]][target.numSequence[j]];
                             score = curr + score;
 //                            score = (score < 0) ? 0 : score;
                             if (scores[pos] + score > maxScore) {
@@ -395,7 +393,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                         int maxScore = 0;
                         int score = 0;
                         for (int i = strechtPath[strechtPath.size()-1].i_start, j = strechtPath[strechtPath.size()-1].j_start; i > -1 && j > -1; i--, j--) {
-                            int curr = subMat->subMatrix[query.int_sequence[i]][target.int_sequence[j]];
+                            int curr = subMat->subMatrix[query.numSequence[i]][target.numSequence[j]];
                             score = curr + score;
                             //                            score = (score < 0) ? 0 : score;
                             if (score > maxScore) {
@@ -406,7 +404,7 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                         score = 0;
 
                         for (int i = strechtPath[0].i_end, j = strechtPath[0].j_end; i < query.L && j < target.L; i++, j++) {
-                            int curr = subMat->subMatrix[query.int_sequence[i]][target.int_sequence[j]];
+                            int curr = subMat->subMatrix[query.numSequence[i]][target.numSequence[j]];
                             score = curr + score;
                             //                            score = (score < 0) ? 0 : score;
                             if (score > maxScore) {
@@ -428,27 +426,27 @@ int alignbykmer(int argc, const char **argv, const Command &command) {
                     for (int stretch = strechtPath.size()-1; stretch > -1 ; stretch--) {
                         for (size_t i = strechtPath[stretch].i_start, j = strechtPath[stretch].j_start;
                                i < strechtPath[stretch].i_end; i++, j++) {
-//                            querystr.push_back(subMat->int2aa[query.int_sequence[i]]);
-//                            targetstr.push_back(subMat->int2aa[target.int_sequence[j]]);
+//                            querystr.push_back(subMat->num2aa[query.sequence[i]]);
+//                            targetstr.push_back(subMat->num2aa[target.sequence[j]]);
                             bt.push_back('M');
-                            ids += (query.int_sequence[i] == target.int_sequence[j]);
-                            score += subMat->subMatrix[query.int_sequence[i]][target.int_sequence[j]];
+                            ids += (query.numSequence[i] == target.numSequence[j]);
+                            score += subMat->subMatrix[query.numSequence[i]][target.numSequence[j]];
                         }
                         if (stretch > 0) {
-                            score -= par.gapOpen;
+                            score -= gapOpen;
                             if (strechtPath[stretch-1].i_start==strechtPath[stretch].i_end) {
                                 for (size_t pos = strechtPath[stretch].j_end; pos < strechtPath[stretch-1].j_start; pos++) {
 //                                    querystr.push_back('-');
-//                                    targetstr.push_back(subMat->int2aa[target.int_sequence[pos]]);
+//                                    targetstr.push_back(subMat->num2aa[target.sequence[pos]]);
                                     bt.push_back('I');
-                                    score -= par.gapExtend;
+                                    score -= gapExtend;
                                 }
                             } else {
                                 for (size_t pos = strechtPath[stretch].i_end; pos < strechtPath[stretch-1].i_start; pos++) {
-//                                    querystr.push_back(subMat->int2aa[query.int_sequence[pos]]);
+//                                    querystr.push_back(subMat->num2aa[query.sequence[pos]]);
 //                                    targetstr.push_back('-');
                                     bt.push_back('D');
-                                    score -= par.gapExtend;
+                                    score -= gapExtend;
                                 }
                             }
                         }

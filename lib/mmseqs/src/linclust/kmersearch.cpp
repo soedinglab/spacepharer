@@ -21,43 +21,27 @@
 #define SIZE_T_MAX ((size_t) -1)
 #endif
 
-KmerSearch::ExtractKmerAndSortResult KmerSearch::extractKmerAndSort(size_t totalKmers, size_t split, size_t splits, DBReader<unsigned int> & seqDbr,
-                                                                 Parameters & par, BaseMatrix  * subMat, size_t KMER_SIZE, size_t chooseTopKmer, size_t pickNBest, bool adjustLength) {
-    Debug(Debug::INFO) << "Generate k-mers list " << split <<"\n";
+KmerSearch::ExtractKmerAndSortResult KmerSearch::extractKmerAndSort(size_t totalKmers, size_t hashStartRange, size_t hashEndRange, DBReader<unsigned int> & seqDbr,
+                                                                    Parameters & par, BaseMatrix  * subMat) {
 
-    size_t splitKmerCount = totalKmers;
-    if(splits > 1){
-        size_t memoryLimit;
-        if (par.splitMemoryLimit > 0) {
-            memoryLimit = static_cast<size_t>(par.splitMemoryLimit);
-        } else {
-            memoryLimit = static_cast<size_t>(Util::getTotalSystemMemory() * 0.9);
-        }
-        // we do not really know how much memory is needed. So this is our best choice
-        splitKmerCount = (memoryLimit / sizeof(KmerPosition<short>));
-    }
-
-    KmerPosition<short> * hashSeqPair = initKmerPositionMemory<short>(splitKmerCount*pickNBest);
+    KmerPosition<short> * hashSeqPair = initKmerPositionMemory<short>(totalKmers);
     Timer timer;
     size_t elementsToSort;
-    if(pickNBest > 1){
-        std::pair<size_t, size_t> ret = fillKmerPositionArray<Parameters::DBTYPE_HMM_PROFILE,short>(hashSeqPair, seqDbr, par, subMat, KMER_SIZE,
-                                                                               chooseTopKmer, false, splits, split, pickNBest, false);
+    if(par.pickNbest > 1){
+        std::pair<size_t, size_t> ret = fillKmerPositionArray<Parameters::DBTYPE_HMM_PROFILE,short>(hashSeqPair, totalKmers, seqDbr, par, subMat, false, hashStartRange, hashEndRange, NULL);
         elementsToSort = ret.first;
     } else if(Parameters::isEqualDbtype(seqDbr.getDbtype(), Parameters::DBTYPE_NUCLEOTIDES)){
-        std::pair<size_t, size_t> ret = fillKmerPositionArray<Parameters::DBTYPE_NUCLEOTIDES,short>(hashSeqPair, seqDbr, par, subMat, KMER_SIZE,
-                                                                               chooseTopKmer, false, splits, split, 1, adjustLength);
+        std::pair<size_t, size_t> ret = fillKmerPositionArray<Parameters::DBTYPE_NUCLEOTIDES,short>(hashSeqPair, totalKmers, seqDbr, par, subMat, false, hashStartRange, hashEndRange, NULL);
         elementsToSort = ret.first;
-        KMER_SIZE = ret.second;
-        Debug(Debug::INFO) << "\nAdjusted k-mer length " << KMER_SIZE << "\n";
+        par.kmerSize = ret.second;
+        Debug(Debug::INFO) << "\nAdjusted k-mer length " << par.kmerSize << "\n";
     }else {
-        std::pair<size_t, size_t> ret = fillKmerPositionArray<Parameters::DBTYPE_AMINO_ACIDS, short>(hashSeqPair, seqDbr, par, subMat, KMER_SIZE,
-                                                                               chooseTopKmer, false, splits, split, 1, false);
+        std::pair<size_t, size_t> ret = fillKmerPositionArray<Parameters::DBTYPE_AMINO_ACIDS, short>(hashSeqPair, totalKmers, seqDbr, par, subMat, false, hashStartRange, hashEndRange, NULL);
         elementsToSort = ret.first;
 
     }
     Debug(Debug::INFO) << "\nTime for fill: " << timer.lap() << "\n";
-    if(splits == 1){
+    if(hashEndRange == SIZE_T_MAX){
         seqDbr.unmapData();
     }
 
@@ -72,7 +56,7 @@ KmerSearch::ExtractKmerAndSortResult KmerSearch::extractKmerAndSort(size_t total
 
     Debug(Debug::INFO) << "Time for sort: " << timer.lap() << "\n";
 
-    return ExtractKmerAndSortResult(elementsToSort, hashSeqPair, KMER_SIZE);
+    return ExtractKmerAndSortResult(elementsToSort, hashSeqPair, par.kmerSize);
 }
 
 template <int TYPE>
@@ -131,7 +115,6 @@ void KmerSearch::writeResult(DBWriter & dbw, KmerPosition<short> *kmers, size_t 
 
         hit_t h;
         h.seqId = prevHitId;
-        bestRevertMask = (repSeqId == prevHitId) ? 0 : bestRevertMask;
         h.prefScore =  (bestRevertMask) ? -topScore : topScore;
         h.diagonal =  bestDiagonal;
         int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
@@ -155,7 +138,6 @@ int kmersearch(int argc, const char **argv, const Command &command) {
     par.parseParameters(argc, argv, command, true, 0, MMseqsParameter::COMMAND_CLUSTLINEAR);
     int targetSeqType;
     int adjustedKmerSize = 0;
-    bool isAdjustedKmerLen = false;
     if (Parameters::isEqualDbtype(FileUtil::parseDbType(par.db2.c_str()), Parameters::DBTYPE_INDEX_DB) == false) {
         Debug(Debug::ERROR) << "Create index before calling kmersearch with mmseqs createlinindex.\n";
         EXIT(EXIT_FAILURE);
@@ -172,9 +154,9 @@ int kmersearch(int argc, const char **argv, const Command &command) {
         }
     }
     if(par.PARAM_ALPH_SIZE.wasSet){
-        if(data.alphabetSize != par.alphabetSize){
-            Debug(Debug::ERROR) << "Index was created with --alph-size  " << data.alphabetSize << " but the prefilter was called with --alph-size " << par.alphabetSize << "!\n";
-            Debug(Debug::ERROR) << "createindex --alph-size " << par.alphabetSize << "\n";
+        if(data.alphabetSize != (Parameters::isEqualDbtype(data.seqType, Parameters::DBTYPE_AMINO_ACIDS)? par.alphabetSize.aminoacids:par.alphabetSize.nucleotides)){
+            Debug(Debug::ERROR) << "Index was created with --alph-size  " << data.alphabetSize << " but the prefilter was called with --alph-size " << MultiParam<int>::format(par.alphabetSize) << "!\n";
+            Debug(Debug::ERROR) << "createindex --alph-size " << MultiParam<int>::format(par.alphabetSize) << "\n";
             EXIT(EXIT_FAILURE);
         }
     }
@@ -192,7 +174,6 @@ int kmersearch(int argc, const char **argv, const Command &command) {
     par.maxSeqLen = data.maxSeqLength;
     // Reuse the compBiasCorr field to store the adjustedKmerSize, It is not needed in the linsearch
     adjustedKmerSize = data.compBiasCorr;
-    isAdjustedKmerLen = data.kmerSize != adjustedKmerSize;
 
     DBReader<unsigned int> queryDbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     queryDbr.open(DBReader<unsigned int>::NOSORT);
@@ -207,8 +188,6 @@ int kmersearch(int argc, const char **argv, const Command &command) {
     par.printParameters(command.cmd, argc, argv, *command.params);
 
     //queryDbr.readMmapedDataInMemory();
-    const size_t KMER_SIZE = par.kmerSize;
-    size_t chooseTopKmer = par.kmersPerSequence;
 
     // memoryLimit in bytes
     size_t memoryLimit;
@@ -217,41 +196,42 @@ int kmersearch(int argc, const char **argv, const Command &command) {
     } else {
         memoryLimit = static_cast<size_t>(Util::getTotalSystemMemory() * 0.9);
     }
-
-    size_t totalKmers = computeKmerCount(queryDbr, KMER_SIZE, chooseTopKmer);
+    float kmersPerSequenceScale = (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)) ?
+                                  par.kmersPerSequenceScale.nucleotides : par.kmersPerSequenceScale.aminoacids;
+    size_t totalKmers = computeKmerCount(queryDbr, par.kmerSize, par.kmersPerSequence, kmersPerSequenceScale);
     size_t totalSizeNeeded = computeMemoryNeededLinearfilter<short>(totalKmers);
-    Debug(Debug::INFO) << "Estimated memory consumption " << totalSizeNeeded/1024/1024 << " MB\n";
 
     BaseMatrix *subMat;
     if (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)) {
         subMat = new NucleotideMatrix(par.seedScoringMatrixFile.nucleotides, 1.0, 0.0);
     } else {
-        if (par.alphabetSize == 21) {
+        if (par.alphabetSize.aminoacids == 21) {
             subMat = new SubstitutionMatrix(par.seedScoringMatrixFile.aminoacids, 8.0, -0.2);
         } else {
             SubstitutionMatrix sMat(par.seedScoringMatrixFile.aminoacids, 8.0, -0.2);
-            subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, sMat.aa2int, sMat.int2aa, sMat.alphabetSize, par.alphabetSize, 8.0);
+            subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, sMat.aa2num, sMat.num2aa, sMat.alphabetSize, par.alphabetSize.aminoacids, 8.0);
         }
     }
 
     // compute splits
     size_t splits = static_cast<size_t>(std::ceil(static_cast<float>(totalSizeNeeded) / memoryLimit));
-//    size_t splits = 2;
-    if (splits > 1) {
-//         security buffer
-        splits += 1;
-    }
+    size_t totalKmersPerSplit = std::max(static_cast<size_t>(1024+1),
+                                         static_cast<size_t>(std::min(totalSizeNeeded, memoryLimit)/sizeof(KmerPosition<short>))+1);
+
+    std::vector<std::pair<size_t, size_t>> hashRanges = setupKmerSplits<short>(par, subMat, queryDbr, totalKmersPerSplit, splits);
+
     int outDbType = (Parameters::isEqualDbtype(queryDbr.getDbtype(), Parameters::DBTYPE_NUCLEOTIDES)) ? Parameters::DBTYPE_PREFILTER_REV_RES : Parameters::DBTYPE_PREFILTER_RES;
-    Debug(Debug::INFO) << "Process file into " << splits << " parts\n";
+    Debug(Debug::INFO) << "Process file into " << hashRanges.size() << " parts\n";
 
     std::vector<std::string> splitFiles;
-    for (size_t split = 0; split < splits; split++) {
+    for (size_t split = 0; split < hashRanges.size(); split++) {
         tidxdbr.remapData();
         char *entriesData = tidxdbr.getDataUncompressed(tidxdbr.getId(PrefilteringIndexReader::ENTRIES));
         char *entriesOffsetsData = tidxdbr.getDataUncompressed(tidxdbr.getId(PrefilteringIndexReader::ENTRIESOFFSETS));
         int64_t entriesNum = *((int64_t *) tidxdbr.getDataUncompressed(tidxdbr.getId(PrefilteringIndexReader::ENTRIESNUM)));
         int64_t entriesGridSize = *((int64_t *) tidxdbr.getDataUncompressed(tidxdbr.getId(PrefilteringIndexReader::ENTRIESGRIDSIZE)));
-        KmerIndex kmerIndex(par.alphabetSize, adjustedKmerSize, entriesData, entriesOffsetsData, entriesNum, entriesGridSize);
+        int alphabetSize = (Parameters::isEqualDbtype(queryDbr.getDbtype(), Parameters::DBTYPE_NUCLEOTIDES)) ? par.alphabetSize.nucleotides:par.alphabetSize.aminoacids;
+        KmerIndex kmerIndex(alphabetSize, adjustedKmerSize, entriesData, entriesOffsetsData, entriesNum, entriesGridSize);
 //        kmerIndex.printIndex<Parameters::DBTYPE_NUCLEOTIDES>(subMat);
         std::pair<std::string, std::string> tmpFiles;
         if (splits > 1) {
@@ -260,22 +240,19 @@ int kmersearch(int argc, const char **argv, const Command &command) {
             tmpFiles = std::make_pair(par.db3, par.db3Index);
         }
         splitFiles.push_back(tmpFiles.first);
-        
+
         std::string splitFileNameDone = tmpFiles.first + ".done";
         if(FileUtil::fileExists(splitFileNameDone.c_str()) == false) {
-            KmerSearch::ExtractKmerAndSortResult sortedKmers = KmerSearch::extractKmerAndSort(totalKmers, split,
-                                                                                              splits, queryDbr, par,
-                                                                                              subMat,
-                                                                                              KMER_SIZE, chooseTopKmer,
-                                                                                              par.pickNbest,
-                                                                                              isAdjustedKmerLen);
+            KmerSearch::ExtractKmerAndSortResult sortedKmers = KmerSearch::extractKmerAndSort(totalKmersPerSplit, hashRanges[split].first,
+                                                                                              hashRanges[split].second, queryDbr, par,
+                                                                                              subMat);
             std::pair<KmerPosition<short> *, size_t> result;
             if (Parameters::isEqualDbtype(queryDbr.getDbtype(), Parameters::DBTYPE_NUCLEOTIDES)) {
                 result = KmerSearch::searchInIndex<Parameters::DBTYPE_NUCLEOTIDES>(sortedKmers.kmers,
-                                                                                   sortedKmers.kmerCount, kmerIndex);
+                                                                                   sortedKmers.kmerCount, kmerIndex, par.resultDirection);
             } else {
                 result = KmerSearch::searchInIndex<Parameters::DBTYPE_AMINO_ACIDS>(sortedKmers.kmers,
-                                                                                   sortedKmers.kmerCount, kmerIndex);
+                                                                                   sortedKmers.kmerCount, kmerIndex, par.resultDirection);
             }
 
             KmerPosition<short> *kmers = result.first;
@@ -292,7 +269,7 @@ int kmersearch(int argc, const char **argv, const Command &command) {
             } else {
                 if (Parameters::isEqualDbtype(queryDbr.getDbtype(), Parameters::DBTYPE_NUCLEOTIDES)) {
                     writeKmersToDisk<Parameters::DBTYPE_NUCLEOTIDES, KmerEntryRev, short>(tmpFiles.first, kmers,
-                            kmerCount );
+                                                                                          kmerCount );
                 } else {
                     writeKmersToDisk<Parameters::DBTYPE_AMINO_ACIDS, KmerEntry, short>(tmpFiles.first, kmers, kmerCount );
                 }
@@ -322,9 +299,9 @@ int kmersearch(int argc, const char **argv, const Command &command) {
     return EXIT_SUCCESS;
 }
 template  <int TYPE>
-std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex( KmerPosition<short> *kmers, size_t kmersSize, KmerIndex &kmerIndex) {
+std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex(KmerPosition<short> *kmers, size_t kmersSize, KmerIndex &kmerIndex, int resultDirection) {
     Timer timer;
-
+    bool queryTargetSwitched = (resultDirection == Parameters::PARAM_RESULT_DIRECTION_TARGET);
     kmerIndex.reset();
     KmerIndex::KmerEntry currTargetKmer;
     bool isDone = false;
@@ -395,48 +372,48 @@ std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex( KmerPosition
                 //  10 Same here, we can revert query to match the not inverted target
                 //  11 Both are reverted so no problem!
                 //  So we need just 1 bit of information to encode all four states
-                bool targetIsReverse = (BIT_CHECK(currQueryKmer->kmer, 63) == false);
-                bool repIsReverse = (BIT_CHECK(currTargetKmer.kmer, 63) == false);
+                bool targetIsReverse = (queryTargetSwitched) ? (BIT_CHECK(currQueryKmer->kmer, 63) == false) :
+                                       (BIT_CHECK(currTargetKmer.kmer, 63) == false);
+                bool repIsReverse = (queryTargetSwitched) ? (BIT_CHECK(currTargetKmer.kmer, 63) == false) :
+                                    (BIT_CHECK(currQueryKmer->kmer, 63) == false);
                 bool queryNeedsToBeRev = false;
                 // we now need 2 byte of information (00),(01),(10),(11)
                 // we need to flip the coordinates of the query
-                short queryPos=0;
-                short targetPos=0;
+                short queryPos = currTargetKmer.pos;
+                short targetPos= currQueryKmer->pos;;
                 // revert kmer in query hits normal kmer in target
                 // we need revert the query
                 if (repIsReverse == true && targetIsReverse == false){
-                    queryPos = currTargetKmer.pos;
-                    targetPos = currQueryKmer->pos;
                     queryNeedsToBeRev = true;
                     // both k-mers were extracted on the reverse strand
                     // this is equal to both are extract on the forward strand
                     // we just need to offset the position to the forward strand
                 }else if (repIsReverse == true && targetIsReverse == true){
-                    queryPos = (currTargetKmer.seqLen - 1) - currTargetKmer.pos;
+                    queryPos  = (currTargetKmer.seqLen - 1) - currTargetKmer.pos;
                     targetPos = (currQueryKmer->seqLen - 1) - currQueryKmer->pos;
                     queryNeedsToBeRev = false;
                     // query is not revers but target k-mer is reverse
                     // instead of reverting the target, we revert the query and offset the the query/target position
                 }else if (repIsReverse == false && targetIsReverse == true){
-                    queryPos = (currTargetKmer.seqLen - 1) - currTargetKmer.pos;
+                    queryPos  = (currTargetKmer.seqLen - 1) - currTargetKmer.pos;
                     targetPos = (currQueryKmer->seqLen - 1) - currQueryKmer->pos;
                     queryNeedsToBeRev = true;
                     // both are forward, everything is good here
-                }else{
-                    queryPos = currTargetKmer.pos;
-                    targetPos =  currQueryKmer->pos;
-                    queryNeedsToBeRev = false;
                 }
-                (kmers+writePos)->pos = queryPos - targetPos;
-                size_t id = (queryNeedsToBeRev) ? BIT_CLEAR(static_cast<size_t >(currTargetKmer.id), 63) : BIT_SET(static_cast<size_t >(currTargetKmer.id), 63);
+                (kmers+writePos)->pos = (queryTargetSwitched) ? queryPos - targetPos : targetPos - queryPos;
+                size_t id = (queryTargetSwitched) ? currTargetKmer.id : currQueryKmer->id;
+                id = (queryNeedsToBeRev) ? BIT_CLEAR(static_cast<size_t >(id), 63) :
+                     BIT_SET(static_cast<size_t >(id), 63);
                 (kmers+writePos)->kmer = id;
+                (kmers+writePos)->id   = (queryTargetSwitched) ? currQueryKmer->id : currTargetKmer.id;
             }else{
                 // i - j
-                (kmers+writePos)->kmer= currTargetKmer.id;
+                (kmers+writePos)->kmer = (queryTargetSwitched) ? currTargetKmer.id : currQueryKmer->id;
+                (kmers+writePos)->id   = (queryTargetSwitched) ? currQueryKmer->id : currTargetKmer.id;
 //                std::cout << currTargetKmer.pos - currQueryKmer->pos << "\t" << currTargetKmer.pos << "\t" << currQueryKmer->pos << std::endl;
-                (kmers+writePos)->pos = currTargetKmer.pos - currQueryKmer->pos;
+                (kmers+writePos)->pos  = (queryTargetSwitched) ? currTargetKmer.pos - currQueryKmer->pos :
+                                         currQueryKmer->pos - currTargetKmer.pos;
             }
-            (kmers+writePos)->id = currQueryKmer->id;
             (kmers+writePos)->seqLen = currQueryKmer->seqLen;
 
             writePos++;
@@ -457,7 +434,7 @@ std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex( KmerPosition
     return std::make_pair(kmers, writePos);
 }
 
-template std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex<0>( KmerPosition<short> *kmers, size_t kmersSize, KmerIndex &kmerIndex);
-template std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex<1>( KmerPosition<short> *kmers, size_t kmersSize, KmerIndex &kmerIndex);
+template std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex<0>( KmerPosition<short> *kmers, size_t kmersSize, KmerIndex &kmerIndex, int resultDirection);
+template std::pair<KmerPosition<short> *,size_t > KmerSearch::searchInIndex<1>( KmerPosition<short> *kmers, size_t kmersSize, KmerIndex &kmerIndex, int resultDirection);
 
 #undef SIZE_T_MAX

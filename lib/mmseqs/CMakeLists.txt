@@ -38,14 +38,25 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     set(CMAKE_COMPILER_IS_ICC 1)
 endif ()
 
-# set flags
+# see https://wiki.debian.org/ArchitectureSpecificsMemo for char signedness
 set(MMSEQS_CXX_FLAGS "-std=c++0x")
-if (NOT ${HAVE_NEON})
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm.*|ARM.*)")
+    set(ARM 1)
+    set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -DNEON=1 -DSSE=1 -fsigned-char -mfpu=neon")
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64.*|AARCH64.*)")
+    set(ARM 1)
+    set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -DNEON=1 -DSSE=1 -fsigned-char")
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "PPC64*|ppc64*|powerpc64*")
+    set(PPC64 1)
+    set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -DSSE=1 -fsigned-char -std=gnu++0x -mcpu=power8 -mvsx")
+elseif (EMSCRIPTEN)
+    set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -DSSE=1 -DWASM=1 -msimd128 -s WASM=1 -s ASSERTIONS=1")
+else ()
     set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -m64")
 endif ()
 
 # Compiler-specific features
-if (CMAKE_COMPILER_IS_CLANG)
+if (CMAKE_COMPILER_IS_CLANG AND (NOT EMSCRIPTEN))
     set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
     set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
     set(MMSEQS_CXX_FLAGS "${MMSEQS_CXX_FLAGS} -stdlib=libc++")
@@ -83,12 +94,23 @@ add_subdirectory(lib/zstd/build/cmake/lib EXCLUDE_FROM_ALL)
 include_directories(lib/tinyexpr)
 add_subdirectory(lib/tinyexpr EXCLUDE_FROM_ALL)
 
+# microtar
+include_directories(lib/microtar)
+add_subdirectory(lib/microtar)
+
+# default cygwin allocator (dlmalloc) locks on every allocation and destroys MT performance
+if (CYGWIN)
+    add_subdirectory(lib/nedmalloc)
+endif()
+
 include_directories(lib)
 include_directories(lib/simd)
 include_directories(lib/gzstream)
 include_directories(lib/alp)
 include_directories(lib/cacode)
 include_directories(lib/ksw2)
+include_directories(lib/xxhash)
+
 add_subdirectory(lib/cacode)
 add_subdirectory(lib/alp)
 add_subdirectory(lib/ksw2)

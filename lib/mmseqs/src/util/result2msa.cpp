@@ -80,7 +80,7 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
 
     Debug(Debug::INFO) << "Start computing "
                        << (par.compressMSA ? "compressed" : "") << " multiple sequence alignments.\n";
-    EvalueComputation evalueComputation(tDbr->getAminoAcidDBSize(), &subMat, par.gapOpen, par.gapExtend);
+    EvalueComputation evalueComputation(tDbr->getAminoAcidDBSize(), &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
     if (qDbr.getDbtype() == -1 || tDbr->getDbtype() == -1) {
         Debug(Debug::ERROR) << "Please recreate your database or add a .dbtype file to your sequence/profile database.\n";
         EXIT(EXIT_FAILURE);
@@ -102,10 +102,10 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
 
-        Matcher matcher(qDbr.getDbtype(), maxSequenceLength, &subMat, &evalueComputation, par.compBiasCorrection, par.gapOpen, par.gapExtend);
+        Matcher matcher(qDbr.getDbtype(), maxSequenceLength, &subMat, &evalueComputation, par.compBiasCorrection, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         MultipleAlignment aligner(maxSequenceLength, maxSetSize, &subMat, &matcher);
         PSSMCalculator calculator(&subMat, maxSequenceLength, maxSetSize, par.pca, par.pcb);
-        MsaFilter filter(maxSequenceLength, maxSetSize, &subMat, par.gapOpen, par.gapExtend);
+        MsaFilter filter(maxSequenceLength, maxSetSize, &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         UniprotHeaderSummarizer summarizer;
         Sequence centerSequence(maxSequenceLength, qDbr.getDbtype(), &subMat, 0, false, par.compBiasCorrection);
 
@@ -133,14 +133,14 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
             // TODO: Do we still need this?
             if (centerSequence.L)
             {
-                if(centerSequence.int_sequence[centerSequence.L-1] == 20) // remove last in it is a *
+                if(centerSequence.numSequence[centerSequence.L-1] == 20) // remove last in it is a *
                 {
                     centerSequence.L--;
                 }
             }
             char *centerSequenceHeader = queryHeaderReader.getDataByDBKey(queryKey, 0);
 
-            char *results = resultReader.getData(id, 0);
+            char *results = resultReader.getData(id, thread_idx);
             std::vector<Matcher::result_t> alnResults;
             std::vector<Sequence *> seqSet;
             while (*results != '\0') {
@@ -188,10 +188,9 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
             alnResults = res.alignmentResults;
             size_t filteredSetSize = res.setSize;
             if (isFiltering) {
-                filter.filter(res.setSize, res.centerLength, static_cast<int>(par.covMSAThr * 100),
+                filteredSetSize = filter.filter(res, static_cast<int>(par.covMSAThr * 100),
                               static_cast<int>(par.qid * 100), par.qsc,
-                              static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff,
-                              (const char **) res.msaSequence, &filteredSetSize);
+                              static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff);
                 filter.getKept(kept, res.setSize);
             }
 
@@ -240,7 +239,7 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
                     // need to allow insertion in the centerSequence
                     for (size_t pos = 0; pos < res.centerLength; pos++) {
                         char aa = res.msaSequence[i][pos];
-                        msa << ((aa < MultipleAlignment::NAA) ? subMat.int2aa[(int) aa] : '-');
+                        msa << ((aa < MultipleAlignment::NAA) ? subMat.num2aa[(int) aa] : '-');
                     }
 
                     msa << "\n";
@@ -260,10 +259,6 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
 
                 std::ostringstream msa;
                 if (par.omitConsensus == false) {
-                    if (isFiltering) {
-                        filter.shuffleSequences((const char **) res.msaSequence, res.setSize);
-                    }
-
                     for (size_t pos = 0; pos < res.centerLength; pos++) {
                         if (res.msaSequence[0][pos] == MultipleAlignment::GAP) {
                             Debug(Debug::ERROR) <<  "Error in computePSSMFromMSA. First sequence of MSA is not allowed to contain gaps.\n";
@@ -279,7 +274,7 @@ int result2msa(Parameters &par, const std::string &resultData, const std::string
                     std::ostringstream centerSeqStr;
                     // Retrieve the master sequence
                     for (int pos = 0; pos < centerSequence.L; pos++) {
-                        centerSeqStr << subMat.int2aa[centerSequence.int_sequence[pos]];
+                        centerSeqStr << subMat.num2aa[centerSequence.numSequence[pos]];
                     }
                     msa << ">" << queryHeaderReader.getDataByDBKey(queryKey,  thread_idx) << centerSeqStr.str() << "\n;";
                 }
@@ -337,7 +332,6 @@ int result2msa(Parameters &par) {
         // Use only 1 thread for concat to ensure the same order as the later header concat
         referenceDBr = new DBConcat(par.db1, par.db1Index, par.db2, par.db2Index,
                                     referenceSeqName, referenceSeqIndexName, 1);
-        referenceDBr->concat();
         // When exporting in ca3m,
         // we need to have an access in SORT_BY_LINE
         // mode in order to keep track of the original
@@ -353,7 +347,6 @@ int result2msa(Parameters &par) {
         // Use only 1 thread for concat to ensure the same order as the former sequence concat
         DBConcat referenceHeadersDBr(par.hdr1, par.hdr1Index, par.hdr2, par.hdr2Index,
                                      referenceHeadersName, referenceHeadersIndexName, 1);
-        referenceHeadersDBr.concat();
 
         outDb.append("_ca3m.ffdata");
         outIndex = par.db4;
@@ -393,8 +386,7 @@ int result2msa(Parameters &par, const unsigned int mpiRank, const unsigned int m
 
         // Use only 1 thread for concat to ensure the same order as the later header concat
         referenceDBr = new DBConcat(par.db1, par.db1Index, par.db2, par.db2Index,
-                                    referenceSeqName, referenceSeqIndexName, 1);
-        referenceDBr->concat(MMseqsMPI::isMaster());
+                                    referenceSeqName, referenceSeqIndexName, 1, MMseqsMPI::isMaster());
 
 #ifdef HAVE_MPI
         MPI_Barrier(MPI_COMM_WORLD);
@@ -415,7 +407,6 @@ int result2msa(Parameters &par, const unsigned int mpiRank, const unsigned int m
             // Use only 1 thread for concat to ensure the same order as the former sequence concat
             DBConcat referenceHeadersDBr(par.hdr1, par.hdr1Index, par.hdr2, par.hdr2Index,
                                          referenceHeadersName, referenceHeadersIndexName, 1);
-            referenceHeadersDBr.concat();
         }
 
         outDb.append("_ca3m.ffdata");
@@ -444,7 +435,6 @@ int result2msa(Parameters &par, const unsigned int mpiRank, const unsigned int m
             splitFiles.push_back(std::make_pair(tmpFile.first, tmpFile.second));
 
         }
-        // merge output ffindex databases
         DBWriter::mergeResults(outDb, outIndex, splitFiles, par.compressMSA);
     }
 

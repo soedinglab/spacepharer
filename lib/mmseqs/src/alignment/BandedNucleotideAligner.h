@@ -17,7 +17,7 @@ class BandedNucleotideAligner {
 public:
 
 
-    BandedNucleotideAligner(BaseMatrix *subMat, size_t maxSequenceLength, int gapo, int gape);
+    BandedNucleotideAligner(BaseMatrix *subMat, size_t maxSequenceLength, int gapo, int gape, int zdrop);
 
     ~BandedNucleotideAligner();
 
@@ -28,10 +28,11 @@ public:
 
 private:
     SubstitutionMatrix::FastMatrix fastMatrix;
-    uint8_t * targetSeq;
     uint8_t * targetSeqRev;
+    int targetSeqRevDataLen;
     uint8_t * querySeq;
     uint8_t * querySeqRev;
+    int querySeqRevDataLen;
     uint8_t * queryRevCompSeq;
     char * queryRevCompCharSeq;
     uint8_t * queryRevCompSeqRev;
@@ -41,4 +42,5 @@ private:
 //    uint32_t * cigar;
     int gapo;
     int gape;
+    int zdrop;
 };

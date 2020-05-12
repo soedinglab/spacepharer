@@ -5,7 +5,6 @@
 // storage for k-mers
 #include "MathUtil.h"
 #include <string>
-#include <iostream>
 #include <algorithm>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -149,7 +148,7 @@ public:
         }
         entries[writingPosition].id = id;
         entries[writingPosition].kmerOffset = kmer - kmerStartRange;
-        entries[writingPosition].kmerOffset = (isReverse) ? BIT_SET(15, entries[writingPosition].kmerOffset) :  entries[writingPosition].kmerOffset;
+        entries[writingPosition].kmerOffset = (isReverse) ? BIT_SET(entries[writingPosition].kmerOffset, 15) :  entries[writingPosition].kmerOffset;
         entries[writingPosition].pos = pos;
         entries[writingPosition].seqLen = seqLen;
         writingPosition++;
@@ -218,9 +217,9 @@ public:
             if(TYPE==Parameters::DBTYPE_NUCLEOTIDES){
                 kmerIdx = BIT_CLEAR(kmerIdx, 15);
                 Indexer::printKmer(kmerIdx, kmerSize);
-//                indexer.printKmer(kmer.kmer, kmerSize, mat->int2aa);
+//                indexer.printKmer(kmer.kmer, kmerSize, mat->num2aa);
             }else{
-                indexer.printKmer(kmerIdx, kmerSize, mat->int2aa);
+                indexer.printKmer(kmerIdx, kmerSize, mat->num2aa);
             }
             Debug(Debug::INFO) << "\t";
             Debug(Debug::INFO) << kmerIdx << "\t";

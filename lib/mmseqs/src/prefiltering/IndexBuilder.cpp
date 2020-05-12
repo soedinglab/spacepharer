@@ -109,9 +109,8 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
             generator->setDivideStrategy(s.profile_matrix);
         }
 
-        unsigned int *buffer = new unsigned int[seq->getMaxLen()];
-        char *charSequence = new char[seq->getMaxLen()];
-
+        unsigned int *buffer = static_cast<unsigned int*>(malloc(seq->getMaxLen() * sizeof(unsigned int)));
+        unsigned int bufferSize = seq->getMaxLen();
         #pragma omp for schedule(dynamic, 100) reduction(+:totalKmerCount, maskedResidues)
         for (size_t id = dbFrom; id < dbTo; id++) {
             progress.updateProgress();
@@ -121,24 +120,24 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
             unsigned int qKey = dbr->getDbKey(id);
 
             s.mapSequence(id - dbFrom, qKey, seqData, dbr->getSeqLen(id));
-
+            if(s.getMaxLen() >= bufferSize ){
+                buffer = static_cast<unsigned int*>(realloc(buffer, s.getMaxLen() * sizeof(unsigned int)));
+                bufferSize = seq->getMaxLen();
+            }
             // count similar or exact k-mers based on sequence type
             if (isProfile) {
                 // Find out if we should also mask profiles
                 totalKmerCount += indexTable->addSimilarKmerCount(&s, generator);
-                (*unmaskedLookup)->addSequence(s.int_consensus_sequence, s.L, id - dbFrom, info->sequenceOffsets[id - dbFrom]);
+                (*unmaskedLookup)->addSequence(s.numConsensusSequence, s.L, id - dbFrom, info->sequenceOffsets[id - dbFrom]);
             } else {
                 // Do not mask if column state sequences are used
                 if (unmaskedLookup != NULL) {
-                    (*unmaskedLookup)->addSequence(s.int_sequence, s.L, id - dbFrom, info->sequenceOffsets[id - dbFrom]);
+                    (*unmaskedLookup)->addSequence(s.numSequence, s.L, id - dbFrom, info->sequenceOffsets[id - dbFrom]);
                 }
                 if (mask == true) {
-                    for (int i = 0; i < s.L; ++i) {
-                        charSequence[i] = (char) s.int_sequence[i];
-                    }
                     // s.print();
-                    maskedResidues += tantan::maskSequences(charSequence,
-                                                            charSequence + s.L,
+                    maskedResidues += tantan::maskSequences((char*)s.numSequence,
+                                                            (char*)(s.numSequence + s.L),
                                                             50 /*options.maxCycleLength*/,
                                                             probMatrix->probMatrixPointers,
                                                             0.005 /*options.repeatProb*/,
@@ -147,32 +146,27 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
                                                             0, 0,
                                                             0.9 /*options.minMaskProb*/,
                                                             probMatrix->hardMaskTable);
-
-                    for (int i = 0; i < s.L; i++) {
-                        s.int_sequence[i] = charSequence[i];
-                    }
                 }
 
                 if(maskLowerCaseMode == true && (Parameters::isEqualDbtype(s.getSequenceType(), Parameters::DBTYPE_AMINO_ACIDS) ||
                                                   Parameters::isEqualDbtype(s.getSequenceType(), Parameters::DBTYPE_NUCLEOTIDES))) {
                     const char * charSeq = s.getSeqData();
-                    int maskLetter = subMat.aa2int[(int)'X'];
+                    unsigned char maskLetter = subMat.aa2num[static_cast<int>('X')];
                     for (int i = 0; i < s.L; i++) {
                         bool isLowerCase = (islower(charSeq[i]));
                         maskedResidues += isLowerCase;
-                        s.int_sequence[i] = isLowerCase ? maskLetter : s.int_sequence[i];
+                        s.numSequence[i] = isLowerCase ? maskLetter : s.numSequence[i];
                     }
                 }
                 if(maskedLookup != NULL){
-                    (*maskedLookup)->addSequence(s.int_sequence, s.L, id - dbFrom, info->sequenceOffsets[id - dbFrom]);
+                    (*maskedLookup)->addSequence(s.numSequence, s.L, id - dbFrom, info->sequenceOffsets[id - dbFrom]);
                 }
 
                 totalKmerCount += indexTable->addKmerCount(&s, &idxer, buffer, kmerThr, idScoreLookup);
             }
         }
 
-        delete[] charSequence;
-        delete[] buffer;
+        free(buffer);
 
         if (generator != NULL) {
             delete generator;
@@ -225,8 +219,8 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
 #endif
         Sequence s(seq->getMaxLen(), seq->getSeqType(), &subMat, seq->getKmerSize(), seq->isSpaced(), false, true, seq->getSpacedKmerPattern());
         Indexer idxer(static_cast<unsigned int>(indexTable->getAlphabetSize()), seq->getKmerSize());
-        IndexEntryLocalTmp *buffer = new IndexEntryLocalTmp[seq->getMaxLen()];
-
+        IndexEntryLocalTmp *buffer = static_cast<IndexEntryLocalTmp *>(malloc( seq->getMaxLen() * sizeof(IndexEntryLocalTmp)));
+        size_t bufferSize = seq->getMaxLen();
         KmerGenerator *generator = NULL;
         if (isProfile) {
             generator = new KmerGenerator(seq->getKmerSize(), indexTable->getAlphabetSize(), kmerThr);
@@ -241,10 +235,10 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
             unsigned int qKey = dbr->getDbKey(id);
             if (isProfile) {
                 s.mapSequence(id - dbFrom, qKey, dbr->getData(id, thread_idx), dbr->getSeqLen(id));
-                indexTable->addSimilarSequence(&s, generator, &idxer);
+                indexTable->addSimilarSequence(&s, generator, &buffer, bufferSize, &idxer);
             } else {
                 s.mapSequence(id - dbFrom, qKey, sequenceLookup->getSequence(id - dbFrom));
-                indexTable->addSequence(&s, &idxer, buffer, kmerThr, idScoreLookup);
+                indexTable->addSequence(&s, &idxer, &buffer, bufferSize, kmerThr, idScoreLookup);
             }
         }
 
@@ -252,7 +246,7 @@ void IndexBuilder::fillDatabase(IndexTable *indexTable, SequenceLookup **maskedL
             delete generator;
         }
 
-        delete [] buffer;
+        free(buffer);
     }
     if(idScoreLookup!=NULL){
         delete[] idScoreLookup;

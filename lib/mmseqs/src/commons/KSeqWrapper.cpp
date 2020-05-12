@@ -19,7 +19,8 @@ bool KSeqFile::ReadEntry() {
     int result = KSEQFILE::kseq_read(s);
     if (result < 0)
         return false;
-    entry.offset = s->offset;
+    entry.headerOffset = s->headerOffset;
+    entry.sequenceOffset = s->sequenceOffset;
     entry.multiline = s->multiline;
     entry.name = s->name;
     entry.comment = s->comment;
@@ -32,6 +33,33 @@ bool KSeqFile::ReadEntry() {
 KSeqFile::~KSeqFile() {
     kseq_destroy((KSEQFILE::kseq_t*)seq);
     fclose(file);
+}
+
+
+namespace KSEQSTREAM {
+    KSEQ_INIT(int, read)
+}
+
+KSeqStream::KSeqStream() {
+    seq = (void*) KSEQSTREAM::kseq_init(STDIN_FILENO);
+}
+
+bool KSeqStream::ReadEntry() {
+    KSEQSTREAM::kseq_t* s = (KSEQSTREAM::kseq_t*) seq;
+    int result = KSEQSTREAM::kseq_read(s);
+    if (result < 0)
+        return false;
+
+    entry.name = s->name;
+    entry.comment = s->comment;
+    entry.sequence = s->seq;
+    entry.qual = s->qual;
+
+    return true;
+}
+
+KSeqStream::~KSeqStream() {
+    kseq_destroy((KSEQSTREAM::kseq_t*)seq);
 }
 
 #ifdef HAVE_ZLIB
@@ -64,7 +92,8 @@ bool KSeqGzip::ReadEntry() {
     entry.comment = s->comment;
     entry.sequence = s->seq;
     entry.qual = s->qual;
-    entry.offset = -1;
+    entry.headerOffset = -1;
+    entry.sequenceOffset = -1;
     entry.multiline = s->multiline;
 
     return true;
@@ -108,7 +137,8 @@ bool KSeqBzip::ReadEntry() {
     entry.comment = s->comment;
     entry.sequence = s->seq;
     entry.qual = s->qual;
-    entry.offset = -1;
+    entry.headerOffset = -1;
+    entry.sequenceOffset = -1;
     entry.multiline = s->multiline;
 
     return true;
@@ -123,12 +153,19 @@ KSeqBzip::~KSeqBzip() {
 
 KSeqWrapper* KSeqFactory(const char* file) {
     KSeqWrapper* kseq = NULL;
+    if( strcmp(file, "stdin") == 0 ){
+        kseq = new KSeqStream();
+        return kseq;
+    }
+
     if(Util::endsWith(".gz", file) == false && Util::endsWith(".bz2", file) == false ) {
         kseq = new KSeqFile(file);
+        return kseq;
     }
 #ifdef HAVE_ZLIB
     else if(Util::endsWith(".gz", file) == true) {
         kseq = new KSeqGzip(file);
+        return kseq;
     }
 #else
     else if(Util::endsWith(".gz", file) == true) {
@@ -140,6 +177,7 @@ KSeqWrapper* KSeqFactory(const char* file) {
 #ifdef HAVE_BZLIB
     else if(Util::endsWith(".bz2", file) == true) {
         kseq = new KSeqBzip(file);
+        return kseq;
     }
 #else
     else if(Util::endsWith(".bz2", file) == true) {

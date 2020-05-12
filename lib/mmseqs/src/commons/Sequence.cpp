@@ -2,7 +2,6 @@
 #include "Debug.h"
 #include "Util.h"
 #include "simd.h"
-#include "ScoreMatrix.h"
 #include "SubstitutionMatrix.h"
 #include "Parameters.h"
 #include "MathUtil.h"
@@ -15,14 +14,14 @@
 Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const unsigned int kmerSize, const bool spaced, const bool aaBiasCorrection, bool shouldAddPC, const std::string& spacedKmerPattern)
  : spacedKmerPattern(spacedKmerPattern) {
     this->maxLen = maxLen;
-    this->int_sequence = new int[maxLen + 1];
-    this->int_consensus_sequence = new int[maxLen + 1];
+    this->numSequence = static_cast<unsigned char*>(malloc(maxLen + 1));
+    this->numConsensusSequence = new unsigned char[maxLen + 1];
     this->aaBiasCorrection = aaBiasCorrection;
     this->subMat = (BaseMatrix*)subMat;
     this->spaced = spaced;
     this->seqType = seqType;
     std::pair<const char *, unsigned int> spacedKmerInformation;
-    if (spacedKmerPattern.size() == 0){
+    if (spacedKmerPattern.empty()) {
         spacedKmerInformation = getSpacedPattern(spaced, kmerSize);
     } else {
         spacedKmerInformation = parseSpacedPattern(kmerSize, spaced, spacedKmerPattern);
@@ -34,7 +33,10 @@ Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const u
     this->aaPosInSpacedPattern = NULL;
     this->shouldAddPC = shouldAddPC;
     if(spacedPatternSize){
-        this->kmerWindow = new int[kmerSize];
+        simdKmerRegisterCnt = (kmerSize / (VECSIZE_INT*4)) + 1;
+        unsigned int simdKmerLen =  simdKmerRegisterCnt *  (VECSIZE_INT*4); // for SIMD memory alignment
+        this->kmerWindow = (unsigned char*) mem_align(ALIGN_INT, simdKmerLen * sizeof(unsigned char));
+        memset(this->kmerWindow, 0, simdKmerLen * sizeof(unsigned char));
         this->aaPosInSpacedPattern = new unsigned char[kmerSize];
         if(spacedPattern == NULL ) {
             Debug(Debug::ERROR) << "Sequence does not have a kmerSize (kmerSize= " << spacedPatternSize << ") to use nextKmer.\n";
@@ -81,10 +83,10 @@ Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const u
 
 Sequence::~Sequence() {
     delete[] spacedPattern;
-    delete[] int_sequence;
-    delete[] int_consensus_sequence;
+    free(numSequence);
+    delete[] numConsensusSequence;
     if (kmerWindow) {
-        delete[] kmerWindow;
+        free(kmerWindow);
     }
     if (aaPosInSpacedPattern){
         delete[] aaPosInSpacedPattern;
@@ -151,7 +153,7 @@ std::pair<const char *, unsigned int> Sequence::getSpacedPattern(bool spaced, un
             for(size_t i = 0; i < kmerSize; i++){
                 pattern[i]=1;
             }
-            return std::make_pair<const char *, unsigned int>((const char *) pattern, static_cast<unsigned int>(kmerSize));
+            return std::make_pair<const char *, unsigned int>(const_cast<const char*>(pattern), static_cast<unsigned int>(kmerSize));
 
 //            Debug(Debug::ERROR) << "Did not find spaced pattern for kmerSize: " << kmerSize << ". \n";
 //            Debug(Debug::ERROR) << "Please report this bug to the developer\n";
@@ -162,7 +164,7 @@ std::pair<const char *, unsigned int> Sequence::getSpacedPattern(bool spaced, un
     if (pair.second > 0) {
         memcpy(pattern, pair.first, pair.second * sizeof(char));
     }
-    return std::make_pair<const char *, unsigned int>(pattern, static_cast<unsigned int>(pair.second));
+    return std::make_pair<const char *, unsigned int>(const_cast<const char*>(pattern), static_cast<unsigned int>(pair.second));
 #undef CASE
 }
 
@@ -240,9 +242,11 @@ void Sequence::mapSequence(size_t id, unsigned int dbKey, std::pair<const unsign
         || Parameters::isEqualDbtype( this->seqType,Parameters::DBTYPE_NUCLEOTIDES)
         || Parameters::isEqualDbtype(this->seqType, Parameters::DBTYPE_PROFILE_STATE_SEQ)){
         this->L = data.second;
-        for (int aa = 0; aa < this->L; aa++) {
-            this->int_sequence[aa] = data.first[aa];
+        if(this->L >= static_cast<int>(maxLen)){
+            numSequence = static_cast<unsigned char *>(realloc(numSequence, this->L+1));
+            maxLen = this->L;
         }
+        memcpy(this->numSequence, data.first, this->L);
     } else {
         Debug(Debug::ERROR) << "Invalid sequence type!\n";
         EXIT(EXIT_FAILURE);
@@ -250,13 +254,13 @@ void Sequence::mapSequence(size_t id, unsigned int dbKey, std::pair<const unsign
     currItPos = -1;
 }
 
-void Sequence::mapProfileStateSequence(const char * sequence, unsigned int seqLen){
+void Sequence::mapProfileStateSequence(const char * profileStateSeq, unsigned int seqLen){
     size_t l = 0;
     size_t pos = 0;
-    unsigned char curr = sequence[pos];
+    unsigned char curr = profileStateSeq[pos];
     while (curr != '\0' && l < seqLen){
 
-        this->int_sequence[l]  = curr - 1;
+        this->numSequence[l]  = curr - 1;
 
         l++;
         if (l > maxLen){
@@ -264,28 +268,26 @@ void Sequence::mapProfileStateSequence(const char * sequence, unsigned int seqLe
             EXIT(EXIT_FAILURE);
         }
         pos++;
-        curr  = sequence[pos];
+        curr  = profileStateSeq[pos];
     }
     this->L = l;
 }
 
 
 
-void Sequence::mapProfile(const char * sequence, bool mapScores, unsigned int seqLen){
-    char * data = (char *) sequence;
+void Sequence::mapProfile(const char * profileData, bool mapScores, unsigned int seqLen){
+    char * data = (char *) profileData;
     size_t currPos = 0;
     float scoreBias = 0.0;
     // if no data exists
     {
         size_t l = 0;
         while (data[currPos] != '\0' && l < maxLen  && l < seqLen){
-            int nullCnt = 0;
             for (size_t aa_idx = 0; aa_idx < PROFILE_AA_SIZE; aa_idx++) {
                 // shift bytes back (avoids NULL byte)
 //            short value = static_cast<short>( ^ mask);
                 profile[l * PROFILE_AA_SIZE + aa_idx] = scoreUnmask(data[currPos + aa_idx]);
                 //value * 4;
-                nullCnt += (profile[l * PROFILE_AA_SIZE + aa_idx]==0.0);
             }
 
             float sumProb = 0.0;
@@ -295,17 +297,12 @@ void Sequence::mapProfile(const char * sequence, bool mapScores, unsigned int se
             if(sumProb > 0.9){
                 MathUtil::NormalizeTo1(&profile[l * PROFILE_AA_SIZE], PROFILE_AA_SIZE);
             }
-            if(nullCnt==PROFILE_AA_SIZE) {
-                for (size_t aa_idx = 0; aa_idx < PROFILE_AA_SIZE; aa_idx++) {
-                    profile[l * PROFILE_AA_SIZE + aa_idx] = 0.0;
-                }
-            }
 
             unsigned char queryLetter = data[currPos + PROFILE_AA_SIZE];
             // read query sequence
-            int_sequence[l] = queryLetter; // index 0 is the highst scoring one
+            numSequence[l] = queryLetter; // index 0 is the highst scoring one
             unsigned char consensusLetter = data[currPos + PROFILE_AA_SIZE+1];
-            int_consensus_sequence[l] = consensusLetter;
+            numConsensusSequence[l] = consensusLetter;
             unsigned short neff = data[currPos + PROFILE_AA_SIZE+2];
             neffM[l] = MathUtil::convertNeffToFloat(neff);
             l++;
@@ -374,8 +371,8 @@ void Sequence::mapProfile(const char * sequence, bool mapScores, unsigned int se
 
 
 template <int T>
-void Sequence::mapProfileState(const char * sequence, unsigned int seqLen){
-    mapProfile(sequence, false, seqLen);
+void Sequence::mapProfileState(const char * profileState, unsigned int seqLen){
+    mapProfile(profileState, false, seqLen);
 
     SubstitutionMatrixProfileStates * profileStateMat = (SubstitutionMatrixProfileStates *) subMat;
     // compute avg. amino acid probability
@@ -429,7 +426,7 @@ void Sequence::mapProfileState(const char * sequence, unsigned int seqLen){
 
             memcpy(&profile_index[l * profile_row_size], &indexArray, T * sizeof(int) );
             // create consensus sequence
-    //        int_sequence[l] = indexArray[0]; // index 0 is the highst scoring one
+    //        sequence[l] = indexArray[0]; // index 0 is the highst scoring one
         }
 
         // write alignment profile
@@ -481,15 +478,14 @@ void Sequence::nextProfileKmer() {
 void Sequence::mapSequence(const char * sequence, unsigned int dataLen){
     size_t l = 0;
     char curr = sequence[l];
+    if(dataLen >= maxLen){
+        numSequence = static_cast<unsigned char*>(realloc(numSequence, dataLen+1));
+        maxLen = dataLen;
+    }
     while (curr != '\0' && curr != '\n' && l < dataLen &&  l < maxLen){
-        int intaa = subMat->aa2int[(int)curr];
-        this->int_sequence[l] = intaa;
+        this->numSequence[l] = subMat->aa2num[static_cast<int>(curr)];
         l++;
         curr  = sequence[l];
-    }
-
-    if(l > maxLen && curr != '\0' && curr != '\n' ){
-        Debug(Debug::INFO) << "Entry " << dbKey << " is longer than max seq. len " << maxLen << "\n";
     }
     this->L = l;
 }
@@ -498,7 +494,7 @@ void Sequence::printPSSM(){
     printf("Query profile of sequence %d\n", dbKey);
     printf("Pos ");
     for(size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
-        printf("%3c ", subMat->int2aa[aa]);
+        printf("%3c ", subMat->num2aa[aa]);
     }
     printf("Neff \n");
     for(int i = 0; i < this->L; i++){
@@ -515,7 +511,7 @@ void Sequence::printProfileStatePSSM(){
     printf("Query profile of sequence %d\n", dbKey);
     printf("Pos ");
     for(int aa = 0; aa < subMat->alphabetSize; aa++) {
-        printf("%3c ", subMat->int2aa[aa]);
+        printf("%3c ", subMat->num2aa[aa]);
     }
     printf("\n");
     for(int i = 0; i < this->L; i++){
@@ -533,7 +529,7 @@ void Sequence::printProfile(){
     printf("Query profile of sequence %d\n", dbKey);
     printf("Pos ");
     for(size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
-        printf("%3c ", subMat->int2aa[aa]);
+        printf("%3c ", subMat->num2aa[aa]);
     }
     printf("\n");
     for(int i = 0; i < this->L; i++){
@@ -550,7 +546,7 @@ void Sequence::reverse() {
         short        tmpScore[PROFILE_AA_SIZE*4];
         unsigned int tmpIndex[PROFILE_AA_SIZE*4];
 
-        int i_curr = 0 * profile_row_size;
+        int i_curr = 0;
         int j_curr = (this->L - 1)  * profile_row_size;
 
         for (int i = 0; i < this->L/2; i++) {
@@ -564,13 +560,13 @@ void Sequence::reverse() {
             j_curr -= profile_row_size;
         }
     }
-    std::reverse(int_sequence, int_sequence + this->L); // reverse sequence
+    std::reverse(numSequence, numSequence + this->L); // reverse sequence
 }
 
 void Sequence::print() {
     std::cout << "Sequence ID " << this->id << "\n";
     for(int i = 0; i < this->L; i++){
-        printf("%c",subMat->int2aa[this->int_sequence[i]]);
+        printf("%c",subMat->num2aa[this->numSequence[i]]);
     }
     std::cout << std::endl;
 }
@@ -578,7 +574,7 @@ void Sequence::print() {
 void extractProfileData(const char* data, const BaseMatrix &subMat, const int offset, std::string &result) {
     size_t i = 0;
     while (data[i] != '\0'){
-        result.append(1, subMat.int2aa[(int)data[i + Sequence::PROFILE_AA_SIZE + offset]]);
+        result.append(1, subMat.num2aa[(int)data[i + Sequence::PROFILE_AA_SIZE + offset]]);
         i += Sequence::PROFILE_READIN_SIZE;
     }
 }

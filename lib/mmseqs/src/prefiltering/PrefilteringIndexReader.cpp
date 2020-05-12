@@ -202,7 +202,7 @@ void PrefilteringIndexReader::createIndexFile(const std::string &outDB,
                                    (maskMode == 1 || maskLowerCase == 1) ? &sequenceLookup : NULL,
                                    (maskMode == 0 ) ? &sequenceLookup : NULL,
                                    *subMat, &seq, dbr1, dbFrom, dbFrom + dbSize, kmerThr, maskMode, maskLowerCase);
-        indexTable.printStatistics(subMat->int2aa);
+        indexTable.printStatistics(subMat->num2aa);
 
         if (sequenceLookup == NULL) {
             Debug(Debug::ERROR) << "Invalid mask mode. No sequence lookup created!\n";
@@ -545,6 +545,21 @@ std::string PrefilteringIndexReader::searchForIndex(const std::string &pathToDB)
         return outIndexName;
     }
     return "";
+}
+
+std::string PrefilteringIndexReader::dbPathWithoutIndex(std::string & dbname) {
+    std::string rawname = dbname;
+    // check for .idx
+    size_t idxlastpos = dbname.rfind(".idx");
+    if(idxlastpos != std::string::npos && dbname.size() - idxlastpos == 4){
+        rawname  = dbname.substr(0, idxlastpos);
+    }
+    // check for .linidx
+    size_t linidxlastpos = dbname.rfind(".linidx");
+    if(linidxlastpos != std::string::npos && dbname.size() - linidxlastpos == 7){
+        rawname  = dbname.substr(0, linidxlastpos);
+    }
+    return rawname;
 }
 
 

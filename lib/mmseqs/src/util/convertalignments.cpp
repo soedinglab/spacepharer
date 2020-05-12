@@ -164,14 +164,16 @@ int convertalignments(int argc, const char **argv, const Command &command) {
     NcbiTaxonomy * t = NULL;
     std::vector<std::pair<unsigned int, unsigned int>> mapping;
     if(needTaxonomy){
-        t = NcbiTaxonomy::openTaxonomy(par.db2);
+        std::string db2NoIndexName = PrefilteringIndexReader::dbPathWithoutIndex(par.db2);
+        t = NcbiTaxonomy::openTaxonomy(db2NoIndexName);
     }
     if(needTaxonomy || needTaxonomyMapping){
-        if(FileUtil::fileExists(std::string(par.db2 + "_mapping").c_str()) == false){
-            Debug(Debug::ERROR) << par.db2 + "_mapping" << " does not exist. Please create the taxonomy mapping!\n";
+        std::string db2NoIndexName = PrefilteringIndexReader::dbPathWithoutIndex(par.db2);
+        if(FileUtil::fileExists(std::string(db2NoIndexName + "_mapping").c_str()) == false){
+            Debug(Debug::ERROR) << db2NoIndexName + "_mapping" << " does not exist. Please create the taxonomy mapping!\n";
             EXIT(EXIT_FAILURE);
         }
-        bool isSorted = Util::readMapping( par.db2 + "_mapping", mapping);
+        bool isSorted = Util::readMapping( db2NoIndexName + "_mapping", mapping);
         if(isSorted == false){
             std::stable_sort(mapping.begin(), mapping.end(), compareToFirstInt);
         }
@@ -212,8 +214,8 @@ int convertalignments(int argc, const char **argv, const Command &command) {
         tDbrHeader = new IndexReader(par.db2, par.threads, IndexReader::SRC_HEADERS, (touch) ? (IndexReader::PRELOAD_INDEX | IndexReader::PRELOAD_DATA) : 0);
     }
 
-    const bool queryNucs = Parameters::isEqualDbtype(qDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
-    const bool targetNucs = Parameters::isEqualDbtype(tDbr->sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
+    bool queryNucs = Parameters::isEqualDbtype(qDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
+    bool targetNucs = Parameters::isEqualDbtype(tDbr->sequenceReader->getDbtype(), Parameters::DBTYPE_NUCLEOTIDES);
     if (needSequenceDB) {
         // try to figure out if search was translated. This is can not be solved perfectly.
         bool seqtargetAA = false;
@@ -233,17 +235,16 @@ int convertalignments(int argc, const char **argv, const Command &command) {
         }
     }
 
+    int gapOpen, gapExtend;
     SubstitutionMatrix * subMat= NULL;
     if (targetNucs == true && queryNucs == true && isTranslatedSearch == false) {
         subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
-        if(par.PARAM_GAP_OPEN.wasSet==false){
-            par.gapOpen = 5;
-        }
-        if(par.PARAM_GAP_EXTEND.wasSet==false){
-            par.gapExtend = 2;
-        }
+        gapOpen = par.gapOpen.nucleotides;
+        gapExtend = par.gapExtend.nucleotides;
     }else{
         subMat = new SubstitutionMatrix(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
+        gapOpen = par.gapOpen.aminoacids;
+        gapExtend = par.gapExtend.aminoacids;
     }
     EvalueComputation *evaluer = NULL;
     bool queryProfile = false;
@@ -251,7 +252,7 @@ int convertalignments(int argc, const char **argv, const Command &command) {
     if (needSequenceDB) {
         queryProfile = Parameters::isEqualDbtype(qDbr.sequenceReader->getDbtype(), Parameters::DBTYPE_HMM_PROFILE);
         targetProfile = Parameters::isEqualDbtype(tDbr->sequenceReader->getDbtype(), Parameters::DBTYPE_HMM_PROFILE);
-        evaluer = new EvalueComputation(tDbr->sequenceReader->getAminoAcidDBSize(), subMat, par.gapOpen, par.gapExtend);
+        evaluer = new EvalueComputation(tDbr->sequenceReader->getAminoAcidDBSize(), subMat, gapOpen, gapExtend);
     }
 
     DBReader<unsigned int> alnDbr(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
@@ -324,7 +325,7 @@ int convertalignments(int argc, const char **argv, const Command &command) {
         queryProfData.reserve(1024);
 
         std::string queryBuffer;
-        queryProfData.reserve(1024);
+        queryBuffer.reserve(1024);
 
         std::string queryHeaderBuffer;
         queryHeaderBuffer.reserve(1024);
@@ -447,6 +448,7 @@ int convertalignments(int argc, const char **argv, const Command &command) {
                                 mappingIt = std::upper_bound(mapping.begin(), mapping.end(), val, compareToFirstInt);
                                 if (mappingIt == mapping.end() || mappingIt->first != val.first) {
                                     taxon = 0;
+                                    taxonNode = NULL;
                                 }else{
                                     taxon = mappingIt->second;
                                     if(needTaxonomy){
@@ -511,6 +513,10 @@ int convertalignments(int argc, const char **argv, const Command &command) {
                                         result.append(SSTR(res.score));
                                         break;
                                     case Parameters::OUTFMT_CIGAR:
+                                        if(isTranslatedSearch == true && targetNucs == true && queryNucs == true ){
+                                            Matcher::result_t::protein2nucl(res.backtrace, newBacktrace);
+                                            res.backtrace = newBacktrace;
+                                        }
                                         result.append(SSTR(res.backtrace));
                                         newBacktrace.clear();
                                         break;
@@ -631,7 +637,14 @@ int convertalignments(int argc, const char **argv, const Command &command) {
                             continue;
                         }
                         result.append(buffer, count);
-                        result.append(res.backtrace);
+                        if (isTranslatedSearch == true && targetNucs == true && queryNucs == true) {
+                            Matcher::result_t::protein2nucl(res.backtrace, newBacktrace);
+                            result.append(newBacktrace);
+                            newBacktrace.clear();
+
+                        } else {
+                            result.append(res.backtrace);
+                        }
                         result.append("\t*\t0\t0\t");
                         int start = std::min(res.qStartPos, res.qEndPos);
                         int end   = std::max(res.qStartPos, res.qEndPos);

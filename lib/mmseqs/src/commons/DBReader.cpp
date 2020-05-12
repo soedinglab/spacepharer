@@ -1,7 +1,5 @@
 #include "DBReader.h"
 
-#include <iostream>
-#include <fstream>
 #include <algorithm>
 #include <climits>
 #include <cstring>
@@ -18,6 +16,10 @@
 #include "Util.h"
 #include "FileUtil.h"
 #include "itoa.h"
+
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 template <typename T>
 DBReader<T>::DBReader(const char* dataFileName_, const char* indexFileName_, int threads, int dataMode) :
@@ -105,7 +107,7 @@ template <typename T> bool DBReader<T>::open(int accessType){
 
     if (dataMode & USE_DATA) {
         dataFileNames = FileUtil::findDatafiles(dataFileName);
-        if(dataFileNames.size() == 0){
+        if (dataFileNames.empty()) {
             Debug(Debug::ERROR) << "No datafile could be found for " << dataFileName << "!\n";
             EXIT(EXIT_FAILURE);
         }
@@ -433,6 +435,10 @@ template <typename T> void DBReader<T>::remapData(){
         unmapData();
         for(size_t fileIdx = 0; fileIdx < dataFileNames.size(); fileIdx++){
             FILE* dataFile = fopen(dataFileNames[fileIdx].c_str(), "r");
+            if (dataFile == NULL) {
+                Debug(Debug::ERROR) << "Can not open data file " << dataFileNames[fileIdx] << "!\n";
+                EXIT(EXIT_FAILURE);
+            }
             size_t dataSize = 0;
             dataFiles[fileIdx] = mmapData(dataFile, &dataSize);
             fclose(dataFile);
@@ -1022,6 +1028,10 @@ void DBReader<T>::removeDb(const std::string &databaseName){
     std::string dbTypeFile = databaseName + ".dbtype";
     if (FileUtil::fileExists(dbTypeFile.c_str())) {
         FileUtil::remove(dbTypeFile.c_str());
+    }
+    std::string sourceFile = databaseName + ".source";
+    if (FileUtil::fileExists(sourceFile.c_str())) {
+        FileUtil::remove(sourceFile.c_str());
     }
     std::string lookupFile = databaseName + ".lookup";
     if (FileUtil::fileExists(lookupFile.c_str())) {

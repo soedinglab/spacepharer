@@ -45,18 +45,18 @@ int computeSearchMode(int queryDbType, int targetDbType, int targetSrcDbType, in
             if(searchType == Parameters::SEARCH_TYPE_AUTO){
                 // WARNING because its not really an error, just a req. parameter
                 Debug(Debug::WARNING) << "It is unclear from the input if a translated or nucleotide search should be performed\n"
-                                         "Please provide the parameter --search-type 2 (translated) or 3 (nucleotide)\n";
+                                         "Please provide the parameter --search-type 2 (translated), 3 (nucleotide) or 4 (translated nucleotide backtrace)\n";
                 EXIT(EXIT_FAILURE);
             }
             // nucl/nucl
             // nucl/nucl translated
-            if(searchType == Parameters::SEARCH_TYPE_TRANSLATED){
+            if(searchType == Parameters::SEARCH_TYPE_TRANSLATED||searchType == Parameters::SEARCH_TYPE_TRANS_NUCL_ALN){
                 return Parameters::SEARCH_MODE_FLAG_QUERY_TRANSLATED| Parameters::SEARCH_MODE_FLAG_TARGET_TRANSLATED;
             }else if (searchType == Parameters::SEARCH_TYPE_NUCLEOTIDES ){
                 return Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE| Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE;
             } else {
                 Debug(Debug::ERROR) << "--search-type 1 (amino acid) can not used in combination with a nucleotide database\n "
-                                       "The only possible options --search-types 2 (translated) or 3 (nucleotide)\n";
+                                       "The only possible options --search-types 2 (translated), 3 (nucleotide) or 4 (translated nucleotide backtrace)\n";
                 EXIT(EXIT_FAILURE);
             }
         }
@@ -196,38 +196,26 @@ void setNuclSearchDefaults(Parameters *p) {
     if (  p->PARAM_MAX_SEQ_LEN.wasSet == false) {
         p->maxSeqLen = 10000;
     }
-    if( p->PARAM_GAP_OPEN.wasSet == false){
-        p->gapOpen = 5;
-    }
-    if( p->PARAM_GAP_EXTEND.wasSet  == false){
-        p->gapExtend = 2;
-    }
 }
 
 
 int search(int argc, const char **argv, const Command& command) {
     Parameters &par = Parameters::getInstance();
     setSearchDefaults(&par);
-    par.overrideParameterDescription((Command &) command, par.PARAM_COV_MODE.uniqid, NULL, NULL,
-                                     par.PARAM_COV_MODE.category | MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &) command, par.PARAM_C.uniqid, NULL, NULL,
-                                     par.PARAM_C.category | MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &) command, par.PARAM_MIN_SEQ_ID.uniqid, NULL, NULL,
-                                     par.PARAM_MIN_SEQ_ID.category | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MIN_SEQ_ID.addCategory(MMseqsParameter::COMMAND_EXPERT);
     for (size_t i = 0; i < par.extractorfs.size(); i++) {
-        par.overrideParameterDescription((Command &) command, par.extractorfs[i]->uniqid, NULL, NULL,
-                                         par.extractorfs[i]->category | MMseqsParameter::COMMAND_EXPERT);
+        par.extractorfs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
     for (size_t i = 0; i < par.translatenucs.size(); i++) {
-        par.overrideParameterDescription((Command &) command, par.translatenucs[i]->uniqid, NULL, NULL,
-                                         par.translatenucs[i]->category | MMseqsParameter::COMMAND_EXPERT);
+        par.translatenucs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
-    par.overrideParameterDescription((Command &) command, par.PARAM_THREADS.uniqid, NULL, NULL,
-                                     par.PARAM_THREADS.category & ~MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &) command, par.PARAM_V.uniqid, NULL, NULL,
-                                     par.PARAM_V.category & ~MMseqsParameter::COMMAND_EXPERT);
-    par.parseParameters(argc, argv, command, true, 0,
-                        MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_PREFILTER);
+    par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_V.removeCategory(MMseqsParameter::COMMAND_EXPERT);
+
+    par.parseParameters(argc, argv, command, false, 0, MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_PREFILTER);
 
     std::string indexStr = PrefilteringIndexReader::searchForIndex(par.db2);
 
@@ -251,11 +239,10 @@ int search(int argc, const char **argv, const Command& command) {
 
     int searchMode = computeSearchMode(queryDbType, targetDbType, targetSrcDbType, par.searchType);
 
-    if((searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE)  && (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE)) {
+    if ((searchMode & Parameters::SEARCH_MODE_FLAG_QUERY_NUCLEOTIDE) && (searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_NUCLEOTIDE)) {
         setNuclSearchDefaults(&par);
     } else{
-        par.overrideParameterDescription((Command &) command, par.PARAM_STRAND.uniqid, NULL, NULL,
-                                         par.PARAM_STRAND.category | MMseqsParameter::COMMAND_EXPERT);
+        par.PARAM_STRAND.addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
     // FIXME: use larger default k-mer size in target-profile case if memory is available
     // overwrite default kmerSize for target-profile searches and parse parameters again
@@ -315,11 +302,6 @@ int search(int argc, const char **argv, const Command& command) {
 //    cmd.addVariable("ALIGNMENT_DB_EXT", Parameters::isEqualDbtype(targetDbType, Parameters::DBTYPE_PROFILE_STATE_SEQ) ? ".255" : "");
     par.filenames[1] = targetDB;
     if (par.sliceSearch == true) {
-        if ((searchMode & Parameters::SEARCH_MODE_FLAG_TARGET_PROFILE) == false) {
-            par.printUsageMessage(command, MMseqsParameter::COMMAND_ALIGN|MMseqsParameter::COMMAND_PREFILTER);
-            Debug(Debug::ERROR) << "Sliced search only works with profiles as targets.\n";
-            EXIT(EXIT_FAILURE);
-        }
 
         // By default (0), diskSpaceLimit (in bytes) will be set in the workflow to use as much as possible
         cmd.addVariable("AVAIL_DISK", SSTR(static_cast<size_t>(par.diskSpaceLimit)).c_str());
@@ -342,7 +324,6 @@ int search(int argc, const char **argv, const Command& command) {
         cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
         cmd.addVariable("SORTRESULT_PAR", par.createParameterString(par.sortresult).c_str());
         par.covMode = originalCovMode;
-        cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
         program = tmpDir + "/searchslicedtargetprofile.sh";
         FileUtil::writeFile(program, searchslicedtargetprofile_sh, searchslicedtargetprofile_sh_len);
