@@ -4,6 +4,12 @@
 #include "Util.h"
 #include "Debug.h"
 
+#if defined(__CYGWIN__) || defined(WASM)
+int apply(int argc, const char **argv, const Command& command) {
+    Debug(Debug::ERROR) << "apply is not supported on Windows/Cygwin\n";
+    EXIT(EXIT_FAILURE);
+}
+#else
 #include <climits>
 #include <unistd.h>
 #include <fcntl.h>
@@ -342,7 +348,7 @@ int apply(int argc, const char **argv, const Command& command) {
                     unsigned int key = reader.getDbKey(i);
                     char *data = reader.getData(i, thread);
                     if (*data == '\0') {
-                        writer.writeData(NULL, 0, key, thread);
+                        writer.writeData(NULL, 0, key, 0);
                         continue;
                     }
 
@@ -410,4 +416,4 @@ int apply(int argc, const char **argv, const Command& command) {
 
     return EXIT_SUCCESS;
 }
-
+#endif

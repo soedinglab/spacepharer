@@ -67,7 +67,7 @@ int splitsequence(int argc, const char **argv, const Command& command) {
         if (querySize == 0) {
             queryFrom = 0;
         }
-        char buffer[LINE_MAX];
+        char buffer[1024];
 
         for (unsigned int i = queryFrom; i < (queryFrom + querySize); ++i){
             progress.updateProgress();
@@ -126,13 +126,12 @@ int splitsequence(int argc, const char **argv, const Command& command) {
         {
 #pragma omp task
             {
-                DBWriter::createRenumberedDB(par.hdr2, par.hdr2Index, "");
+                DBWriter::createRenumberedDB(par.hdr2, par.hdr2Index, "", "");
             }
 
 #pragma omp task
             {
-                std::string lookup = par.db1 + ".lookup";
-                DBWriter::createRenumberedDB(par.db2, par.db2Index, par.createLookup ? lookup : "");
+                DBWriter::createRenumberedDB(par.db2, par.db2Index, par.createLookup ? par.db1 : "", par.createLookup ? par.db1Index : "");
             }
         }
     }

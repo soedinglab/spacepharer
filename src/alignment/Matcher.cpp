@@ -7,14 +7,14 @@
 
 
 Matcher::Matcher(int querySeqType, int maxSeqLen, BaseMatrix *m, EvalueComputation * evaluer,
-                 bool aaBiasCorrection, int gapOpen, int gapExtend)
+                 bool aaBiasCorrection, int gapOpen, int gapExtend, int zdrop)
                  : gapOpen(gapOpen), gapExtend(gapExtend), m(m), evaluer(evaluer), tinySubMat(NULL) {
     if(Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_PROFILE_STATE_PROFILE) == false ) {
         setSubstitutionMatrix(m);
     }
 
     if (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)) {
-        nuclaligner = new BandedNucleotideAligner(m, maxSeqLen, gapOpen, gapExtend);
+        nuclaligner = new BandedNucleotideAligner(m, maxSeqLen, gapOpen, gapExtend, zdrop);
         aligner = NULL;
     } else {
         nuclaligner = NULL;
@@ -51,9 +51,9 @@ void Matcher::initQuery(Sequence* query){
     if(Parameters::isEqualDbtype(query->getSequenceType(), Parameters::DBTYPE_NUCLEOTIDES)){
         nuclaligner->initQuery(query);
     }else if(Parameters::isEqualDbtype(query->getSeqType(), Parameters::DBTYPE_HMM_PROFILE) || Parameters::isEqualDbtype(query->getSeqType(), Parameters::DBTYPE_PROFILE_STATE_PROFILE)){
-        aligner->ssw_init(query, query->getAlignmentProfile(), this->m, this->m->alphabetSize, 2);
+        aligner->ssw_init(query, query->getAlignmentProfile(), this->m, 2);
     }else{
-        aligner->ssw_init(query, this->tinySubMat, this->m, this->m->alphabetSize, 2);
+        aligner->ssw_init(query, this->tinySubMat, this->m, 2);
     }
 }
 
@@ -88,9 +88,9 @@ Matcher::result_t Matcher::getSWResult(Sequence* dbSeq, const int diagonal, bool
         alignment = nuclaligner->align(dbSeq, diagonal, isReverse, backtrace, aaIds, evaluer, wrappedScoring);
         alignmentMode = Matcher::SCORE_COV_SEQID;
     }else{ if(isIdentity==false){
-            alignment = aligner->ssw_align(dbSeq->int_sequence, dbSeq->L, gapOpen, gapExtend, alignmentMode, evalThr, evaluer, covMode, covThr, maskLen);
+            alignment = aligner->ssw_align(dbSeq->numSequence, dbSeq->L, gapOpen, gapExtend, alignmentMode, evalThr, evaluer, covMode, covThr, maskLen);
         }else{
-            alignment = aligner->scoreIdentical(dbSeq->int_sequence, dbSeq->L, evaluer, alignmentMode);
+            alignment = aligner->scoreIdentical(dbSeq->numSequence, dbSeq->L, evaluer, alignmentMode);
         }
         if(alignmentMode == Matcher::SCORE_COV_SEQID){
             if(isIdentity==false){
@@ -103,7 +103,7 @@ Matcher::result_t Matcher::getSWResult(Sequence* dbSeq, const int diagonal, bool
 
                         for (uint32_t i = 0; i < length; ++i){
                             if (letter == 'M') {
-                                if (dbSeq->int_sequence[targetPos] == currentQuery->int_sequence[queryPos]){
+                                if (dbSeq->numSequence[targetPos] == currentQuery->numSequence[queryPos]){
                                     aaIds++;
                                 }
                                 ++queryPos;
@@ -302,41 +302,8 @@ size_t Matcher::resultToBuffer(char * buff1, const result_t &result, bool addBac
     *(tmpBuff-1) = '\t';
     tmpBuff = Itoa::i32toa_sse2(result.score, tmpBuff);
     *(tmpBuff-1) = '\t';
-    float seqIdFlt = result.seqId;
-    //TODO seqid, evalue
-
-
-    if(seqIdFlt==1.0){
-        *(tmpBuff) = '1';
-        tmpBuff++;
-        *(tmpBuff) = '.';
-        tmpBuff++;
-        *(tmpBuff) = '0';
-        tmpBuff++;
-        *(tmpBuff) = '0';
-        tmpBuff++;
-        *(tmpBuff) = '0';
-        tmpBuff++;
-        *(tmpBuff) = '\t';
-        tmpBuff++;
-    }else{
-        *(tmpBuff) = '0';
-        tmpBuff++;
-        *(tmpBuff) = '.';
-        tmpBuff++;
-        if(seqIdFlt<0.10){
-            *(tmpBuff) = '0';
-            tmpBuff++;
-        }
-        if(seqIdFlt<0.01){
-            *(tmpBuff) = '0';
-            tmpBuff++;
-        }
-        int seqId = seqIdFlt*1000;
-        tmpBuff = Itoa::i32toa_sse2(seqId, tmpBuff);
-        *(tmpBuff-1) = '\t';
-    }
-
+    tmpBuff = Util::fastSeqIdToBuffer(result.seqId, tmpBuff);
+    *(tmpBuff-1) = '\t';
     tmpBuff += sprintf(tmpBuff,"%.3E",result.eval);
     tmpBuff++;
     *(tmpBuff-1) = '\t';

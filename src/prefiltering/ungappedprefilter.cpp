@@ -102,9 +102,9 @@ int doRescorealldiagonal(Parameters &par, DBReader<unsigned int> &qdbr, DBWriter
 //            qSeq.printProfileStatePSSM();
             if(Parameters::isEqualDbtype(qSeq.getSeqType(), Parameters::DBTYPE_HMM_PROFILE) ||
                Parameters::isEqualDbtype(qSeq.getSeqType(), Parameters::DBTYPE_PROFILE_STATE_PROFILE)){
-                aligner.ssw_init(&qSeq, qSeq.getAlignmentProfile(), subMat, subMat->alphabetSize, 0);
+                aligner.ssw_init(&qSeq, qSeq.getAlignmentProfile(), subMat, 0);
             }else{
-                aligner.ssw_init(&qSeq, tinySubMat, subMat, subMat->alphabetSize, 0);
+                aligner.ssw_init(&qSeq, tinySubMat, subMat, 0);
             }
 
             for (size_t tId = 0; tId < tdbr->getSize(); tId++) {
@@ -120,7 +120,7 @@ int doRescorealldiagonal(Parameters &par, DBReader<unsigned int> &qdbr, DBWriter
                     continue;
                 }
 
-                int score = aligner.ungapped_alignment(tSeq.int_sequence, tSeq.L);
+                int score = aligner.ungapped_alignment(tSeq.numSequence, tSeq.L);
                 bool hasDiagScore = (score > par.minDiagScoreThr);
                 double evalue = evaluer->computeEvalue(score, qSeq.L);
                 bool hasEvalue = (evalue <= par.evalThr);

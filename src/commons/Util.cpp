@@ -274,6 +274,37 @@ void Util::parseKey(const char *data, char *key) {
     key[keySize] = '\0';
 }
 
+char* Util::fastSeqIdToBuffer(float seqId, char* buffer) {
+    if (seqId == 1.0) {
+        *(buffer) = '1';
+        buffer++;
+        *(buffer) = '.';
+        buffer++;
+        *(buffer) = '0';
+        buffer++;
+        *(buffer) = '0';
+        buffer++;
+        *(buffer) = '0';
+        buffer++;
+        *(buffer) = '\0';
+    } else {
+        *(buffer) = '0';
+        buffer++;
+        *(buffer) = '.';
+        buffer++;
+        if (seqId < 0.10) {
+            *(buffer) = '0';
+            buffer++;
+        }
+        if (seqId < 0.01) {
+            *(buffer) = '0';
+            buffer++;
+        }
+        buffer = Itoa::i32toa_sse2((int)(seqId * 1000), buffer);
+    }
+    return buffer;
+}
+
 std::vector<std::string> Util::split(const std::string &str, const std::string &sep) {
     std::vector<std::string> arr;
 
@@ -505,8 +536,7 @@ bool Util::canBeCovered(const float covThr, const int covMode, float queryLength
         case Parameters::COV_MODE_QUERY:
             return ((targetLength / queryLength) >= covThr);
         case Parameters::COV_MODE_TARGET:
-            // No assumptions possible without the alignment length
-            return true;
+            return ((queryLength/targetLength) >= covThr) ;
         case Parameters::COV_MODE_LENGTH_QUERY:
             return ((targetLength / queryLength) >= covThr) && (targetLength / queryLength) <= 1.0;
         case Parameters::COV_MODE_LENGTH_TARGET:
@@ -573,7 +603,7 @@ uint64_t Util::revComplement(const uint64_t kmer, const int k) {
     // create lookup (set 16 bytes in 128 bit)
     // a lookup entry at the index of two nucleotides (4 bit) describes the reverse
     // complement of these two nucleotide in the higher 4 bits (lookup1) or in the lower 4 bits (lookup2)
-#define c (char)
+#define c (signed char)
     __m128i lookup1 = _mm_set_epi8(c(0x50),c(0x10),c(0xD0),c(0x90),c(0x40),c(0x00),c(0xC0),c(0x80),
                                    c(0x70),c(0x30),c(0xF0),c(0xB0),c(0x60),c(0x20),c(0xE0),c(0xA0));
     __m128i lookup2 = _mm_set_epi8(c(0x05),c(0x01),c(0x0D),c(0x09),c(0x04),c(0x00),c(0x0C),c(0x08),
@@ -589,30 +619,14 @@ uint64_t Util::revComplement(const uint64_t kmer, const int k) {
 #undef c
 
     // use _mm_shuffle_epi8 to look up reverse complement
-#ifdef NEON
-    kmer1 = vreinterpretq_m128i_u8(vqtbl1q_u8(vreinterpretq_u8_m128i(lookup1),vreinterpretq_u8_m128i(kmer1)));
-#else
-    kmer1 =_mm_shuffle_epi8(lookup1, kmer1);
-#endif
-
-
-#ifdef NEON
-    kmer2 = vreinterpretq_m128i_u8(vqtbl1q_u8(vreinterpretq_u8_m128i(lookup2),vreinterpretq_u8_m128i(kmer2)));
-#else
+    kmer1 = _mm_shuffle_epi8(lookup1, kmer1);
     kmer2 = _mm_shuffle_epi8(lookup2, kmer2);
-#endif
-
 
     // _mm_or_si128: bitwise OR
     x = _mm_or_si128(kmer1, kmer2);
 
     // set upper 8 bytes to 0 and revert order of lower 8 bytes
-
-#ifdef NEON
-    x = vreinterpretq_m128i_u8(vqtbl1q_u8(vreinterpretq_u8_m128i(x),vreinterpretq_u8_m128i(upper)));
-#else
     x = _mm_shuffle_epi8(x, upper);
-#endif
 
     // shift out the unused nucleotide positions (1 <= k <=32 )
     // broadcast 128 bit to 64 bit

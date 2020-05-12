@@ -3,6 +3,8 @@
 #include "ReducedMatrix.h"
 #include "ExtendedSubstitutionMatrix.h"
 #include "SubstitutionMatrixProfileStates.h"
+#include "DBWriter.h"
+
 #include "PatternCompiler.h"
 #include "FileUtil.h"
 #include "IndexBuilder.h"
@@ -10,10 +12,7 @@
 #include "ByteParser.h"
 #include "Parameters.h"
 #include "MemoryMapped.h"
-
-namespace prefilter {
-#include "ExpOpt3_8_polished.cs32.lib.h"
-}
+#include <sys/mman.h>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -34,7 +33,6 @@ Prefiltering::Prefiltering(const std::string &queryDB,
         spacedKmerPattern(par.spacedKmerPattern),
         localTmp(par.localTmp),
         spacedKmer(par.spacedKmer != 0),
-        alphabetSize(par.alphabetSize),
         maskMode(par.maskMode),
         maskLowerCaseMode(par.maskLowerCaseMode),
         splitMode(par.splitMode),
@@ -57,23 +55,24 @@ Prefiltering::Prefiltering(const std::string &queryDB,
     // init the substitution matrices
     switch (querySeqType & 0x7FFFFFFF) {
         case Parameters::DBTYPE_NUCLEOTIDES:
-            kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, alphabetSize, 1.0, false, true);
+            kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 1.0, false, true);
             ungappedSubMat = kmerSubMat;
             alphabetSize = kmerSubMat->alphabetSize;
             break;
         case Parameters::DBTYPE_AMINO_ACIDS:
-            kmerSubMat = getSubstitutionMatrix(seedScoringMatrixFile, alphabetSize, 8.0, false, false);
-            ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, alphabetSize, 2.0, false, false);
+            kmerSubMat = getSubstitutionMatrix(seedScoringMatrixFile, par.alphabetSize, 8.0, false, false);
+            ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 2.0, false, false);
             alphabetSize = kmerSubMat->alphabetSize;
             break;
         case Parameters::DBTYPE_HMM_PROFILE:
             // needed for Background distributions
-            kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, alphabetSize, 8.0, false, false);
-            ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, alphabetSize, 2.0, false, false);
+            kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 8.0, false, false);
+            ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 2.0, false, false);
+            alphabetSize = kmerSubMat->alphabetSize;
             break;
         case Parameters::DBTYPE_PROFILE_STATE_PROFILE:
-            kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, alphabetSize, 8.0, true, false);
-            ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, alphabetSize, 2.0, false, false);
+            kmerSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 8.0, true, false);
+            ungappedSubMat = getSubstitutionMatrix(scoringMatrixFile, par.alphabetSize, 2.0, false, false);
             alphabetSize = kmerSubMat->alphabetSize;
             break;
         default:
@@ -154,7 +153,7 @@ Prefiltering::Prefiltering(const std::string &queryDB,
             }
             spacedKmer = data.spacedKmer != 0;
             spacedKmerPattern = PrefilteringIndexReader::getSpacedPattern(tidxdbr);
-            seedScoringMatrixFile = ScoreMatrixFile(PrefilteringIndexReader::getSubstitutionMatrix(tidxdbr));
+            seedScoringMatrixFile = MultiParam<char*>(PrefilteringIndexReader::getSubstitutionMatrix(tidxdbr));
         } else {
             Debug(Debug::ERROR) << "Outdated index version. Please recompute it with 'createindex'!\n";
             EXIT(EXIT_FAILURE);
@@ -258,27 +257,6 @@ Prefiltering::~Prefiltering() {
         delete ungappedSubMat;
     }
     delete kmerSubMat;
-}
-
-void Prefiltering::reopenTargetDb() {
-    if (templateDBIsIndex == true) {
-        tidxdbr->close();
-        delete tidxdbr;
-        tidxdbr = NULL;
-    }
-
-    tdbr->close();
-    delete tdbr;
-
-    Debug(Debug::INFO) << "Index table not compatible with chosen settings. Compute index.\n";
-    tdbr = new DBReader<unsigned int>(targetDB.c_str(), targetDBIndex.c_str(), threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
-    tdbr->open(DBReader<unsigned int>::NOSORT);
-    if (preloadMode != Parameters::PRELOAD_MODE_MMAP) {
-        tdbr->readMmapedDataInMemory();
-        tdbr->mlock();
-    }
-
-    templateDBIsIndex = false;
 }
 
 void Prefiltering::setupSplit(DBReader<unsigned int>& tdbr, const int alphabetSize, const unsigned int querySeqTyp, const int threads,
@@ -424,70 +402,54 @@ void Prefiltering::mergeTargetSplits(const std::string &outDB, const std::string
     }
     reader1.setDataSize(totalSize);
 
-    size_t *starts = new size_t[threads];
-    size_t *lengths = new size_t[threads];
-    size_t **offsetStart = new size_t*[threads];
-    for (size_t i = 0; i < threads; ++i) {
-        reader1.decomposeDomainByAminoAcid(i, threads, &starts[i], &lengths[i]);
-        offsetStart[i] = new size_t[splits];
-    }
-
-    for (size_t s = 0; s < splits; ++s) {
-        DBReader<unsigned int> reader2(fileNames[s].first.c_str(), fileNames[s].second.c_str(), 1, DBReader<unsigned int>::USE_INDEX);
-        reader2.open(DBReader<unsigned int>::NOSORT);
-        DBReader<unsigned int>::Index *index2 = reader2.getIndex();
-        for (size_t t = 0; t < threads; t++) {
-            offsetStart[t][s] = index2[starts[t]].offset;
+    FILE ** files = new FILE*[fileNames.size()];
+    char ** dataFile = new char*[fileNames.size()];
+    size_t * dataFileSize = new size_t[fileNames.size()];
+    size_t globalIdOffset = 0;
+    for (size_t i = 0; i < splits; ++i) {
+        files[i] = FileUtil::openFileOrDie(fileNames[i].first.c_str(), "r", true);
+        dataFile[i] = static_cast<char*>(FileUtil::mmapFile(files[i], &dataFileSize[i]));
+#ifdef HAVE_POSIX_MADVISE
+        if (posix_madvise (dataFile[i], dataFileSize[i], POSIX_MADV_SEQUENTIAL) != 0){
+            Debug(Debug::ERROR) << "posix_madvise returned an error " << fileNames[i].first << "\n";
         }
-        reader2.close();
-    }
+#endif
 
+    }
     Debug(Debug::INFO) << "Preparing offsets for merging: " << timer.lap() << "\n";
     // merge target splits data files and sort the hits at the same time
     // TODO: compressed?
     DBWriter writer(outDB.c_str(), outDBIndex.c_str(), threads, 0, Parameters::DBTYPE_PREFILTER_RES);
     writer.open();
 
-    Debug::Progress pregress(reader1.getSize());
+    Debug::Progress progress(reader1.getSize());
 #pragma omp parallel num_threads(threads)
     {
         unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-
         std::string result;
         result.reserve(1024);
-
         std::vector<hit_t> hits;
         hits.reserve(300);
-
         char buffer[1024];
-
-        size_t id = starts[thread_idx];
-        size_t lastId = id + lengths[thread_idx];
-        FILE** files = new FILE*[splits];
-        for (size_t i = 0; i < splits; ++i) {
-            files[i] = fopen(fileNames[i].first.c_str(), "rb");
-            fseek(files[i], offsetStart[thread_idx][i], SEEK_SET);
-        }
-
-        while (id < lastId) {
-            pregress.updateProgress();
-            for (size_t i = 0; i < splits; ++i) {
-                int c1 = EOF;
-                size_t pos = 0;
-                while ((c1 = getc_unlocked(files[i])) != EOF) {
-                    buffer[pos++] = (char)c1;
-                    if (c1 == '\n') {
-                        hits.emplace_back(QueryMatcher::parsePrefilterHit(buffer));
-                        pos = 0;
-                    } else if (c1 == '\0') {
-                        break;
-                    }
+        size_t * currentDataFileOffset = new size_t[splits];
+        memset(currentDataFileOffset, 0, sizeof(size_t)*splits);
+        size_t currentId = __sync_fetch_and_add(&(globalIdOffset), 1);
+        size_t prevId = 0;
+        while(currentId < reader1.getSize()){
+            progress.updateProgress();
+            for(size_t file = 0; file < splits; file++){
+                size_t tmpId = prevId;
+                size_t pos;
+                for(pos = currentDataFileOffset[file]; pos < dataFileSize[file] && tmpId != currentId; pos++){
+                    tmpId += (dataFile[file][pos] == '\0');
+                    currentDataFileOffset[file] = pos;
                 }
+                currentDataFileOffset[file] = pos;
+                QueryMatcher::parsePrefilterHits(&dataFile[file][pos], hits);
             }
-
             if (hits.size() > 1) {
                 std::sort(hits.begin(), hits.end(), hit_t::compareHitsByScoreAndId);
             }
@@ -495,27 +457,26 @@ void Prefiltering::mergeTargetSplits(const std::string &outDB, const std::string
                 int len = QueryMatcher::prefilterHitToBuffer(buffer, hits[i]);
                 result.append(buffer, len);
             }
-            writer.writeData(result.c_str(), result.size(), reader1.getDbKey(id), thread_idx);
+            writer.writeData(result.c_str(), result.size(), reader1.getDbKey(currentId), thread_idx);
             hits.clear();
             result.clear();
-            id++;
+            prevId = currentId;
+            currentId = __sync_fetch_and_add(&(globalIdOffset), 1);
         }
 
-        for (size_t i = 0; i < splits; ++i) {
-            fclose(files[i]);
-        }
-        delete[] files;
-        delete[] offsetStart[thread_idx];
+            delete[] currentDataFileOffset;
     }
     writer.close();
     reader1.close();
 
     for (size_t i = 0; i < splits; ++i) {
         DBReader<unsigned int>::removeDb(fileNames[i].first);
+        FileUtil::munmapData(dataFile[i], dataFileSize[i]);
+        fclose(files[i]);
     }
-    delete[] offsetStart;
-    delete[] lengths;
-    delete[] starts;
+    delete [] dataFile;
+    delete [] dataFileSize;
+    delete [] files;
 
     Debug(Debug::INFO) << "Time for merging target splits: " << timer.lap() << "\n";
 }
@@ -570,7 +531,7 @@ void Prefiltering::getIndexTable(int split, size_t dbFrom, size_t dbSize) {
             sequenceLookup = NULL;
         }
 
-        indexTable->printStatistics(kmerSubMat->int2aa);
+        indexTable->printStatistics(kmerSubMat->num2aa);
         tdbr->remapData();
         Debug(Debug::INFO) << "Time for index table init: " << timer.lap() << "\n";
     }
@@ -783,6 +744,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
     size_t resSize = 0;
     size_t realResSize = 0;
     size_t diagonalOverflow = 0;
+    size_t trancatedCounter = 0;
     size_t totalQueryDBSize = querySize;
 
     unsigned int localThreads = 1;
@@ -813,10 +775,9 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
-        Sequence seq(maxSeqLen, querySeqType, kmerSubMat, kmerSize, spacedKmer, aaBiasCorrection, true, spacedKmerPattern);
-
+        Sequence seq(qdbr->getMaxSeqLen(), querySeqType, kmerSubMat, kmerSize, spacedKmer, aaBiasCorrection, true, spacedKmerPattern);
         QueryMatcher matcher(indexTable, sequenceLookup, kmerSubMat,  ungappedSubMat,
-                             kmerThr, kmerSize, dbSize, maxSeqLen, maxResListLen, aaBiasCorrection,
+                             kmerThr, kmerSize, dbSize, std::max(tdbr->getMaxSeqLen(),qdbr->getMaxSeqLen()), maxResListLen, aaBiasCorrection,
                              diagonalScoring, minDiagScoreThr, takeOnlyBestKmer);
 
         if (seq.profile_matrix != NULL) {
@@ -831,7 +792,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
         std::string result;
         result.reserve(1000000);
 
-#pragma omp for schedule(dynamic, 2) reduction (+: kmersPerPos, resSize, dbMatches, doubleMatches, querySeqLenSum, diagonalOverflow)
+#pragma omp for schedule(dynamic, 2) reduction (+: kmersPerPos, resSize, dbMatches, doubleMatches, querySeqLenSum, diagonalOverflow, trancatedCounter)
         for (size_t id = queryFrom; id < queryFrom + querySize; id++) {
             progress.updateProgress();
             // get query sequence
@@ -894,6 +855,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
                 doubleMatches += matcher.getStatistics()->doubleMatches;
                 querySeqLenSum += seq.L;
                 diagonalOverflow += matcher.getStatistics()->diagonalOverflow;
+                trancatedCounter += matcher.getStatistics()->truncated;
                 resSize += resultSize;
                 realResSize += std::min(resultSize, maxResListLen);
                 reslens[thread_idx]->emplace_back(resultSize);
@@ -906,7 +868,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
                            dbMatches / totalQueryDBSize,
                            doubleMatches / totalQueryDBSize,
                            querySeqLenSum, diagonalOverflow,
-                           resSize / totalQueryDBSize);
+                           resSize / totalQueryDBSize, trancatedCounter);
 
         size_t empty = 0;
         for (size_t id = 0; id < querySize; id++) {
@@ -933,10 +895,14 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
     // needed to speed up merge later on
     // sorts this datafile according to the index file
     if (splitMode == Parameters::TARGET_DB_SPLIT && splits > 1) {
-        // delete indexTable to free memory:
+        // free memory early since the merge might need quite a bit of memory
         if (indexTable != NULL) {
             delete indexTable;
             indexTable = NULL;
+        }
+        if (sequenceLookup != NULL) {
+            delete sequenceLookup;
+            sequenceLookup = NULL;
         }
         DBReader<unsigned int> resultReader(tmpDbw.getDataFileName(), tmpDbw.getIndexFileName(), threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
         resultReader.open(DBReader<unsigned int>::NOSORT);
@@ -972,6 +938,7 @@ void Prefiltering::printStatistics(const statistics_t &stats, std::list<int> **r
     Debug(Debug::INFO) << "\n" << stats.kmersPerPos << " k-mers per position\n";
     Debug(Debug::INFO) << stats.dbMatches << " DB matches per sequence\n";
     Debug(Debug::INFO) << stats.diagonalOverflow << " overflows\n";
+    Debug(Debug::INFO) << stats.truncated << " queries produce too much hits (truncated result)\n";
     Debug(Debug::INFO) << stats.resultsPassedPrefPerSeq << " sequences passed prefiltering per query sequence";
     if (stats.resultsPassedPrefPerSeq > maxResults)
         Debug(Debug::WARNING) << " (ATTENTION: max. " << maxResults
@@ -986,14 +953,14 @@ void Prefiltering::printStatistics(const statistics_t &stats, std::list<int> **r
 }
 
 
-BaseMatrix *Prefiltering::getSubstitutionMatrix(const ScoreMatrixFile &scoringMatrixFile, size_t alphabetSize, float bitFactor, bool profileState, bool isNucl) {
+BaseMatrix *Prefiltering::getSubstitutionMatrix(const MultiParam<char*> &scoringMatrixFile, MultiParam<int> alphabetSize, float bitFactor, bool profileState, bool isNucl) {
     BaseMatrix *subMat;
 
     if (isNucl){
         subMat = new NucleotideMatrix(scoringMatrixFile.nucleotides, bitFactor, 0.0);
-    } else if (alphabetSize < 21) {
+    } else if (alphabetSize.aminoacids < 21) {
         SubstitutionMatrix sMat(scoringMatrixFile.aminoacids, bitFactor, -0.2f);
-        subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, sMat.aa2int, sMat.int2aa, sMat.alphabetSize, alphabetSize, bitFactor);
+        subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, sMat.aa2num, sMat.num2aa, sMat.alphabetSize, alphabetSize.aminoacids, bitFactor);
     }else if(profileState == true){
         SubstitutionMatrix sMat(scoringMatrixFile.aminoacids, bitFactor, -0.2f);
         subMat = new SubstitutionMatrixProfileStates(sMat.matrixName, sMat.probMatrix, sMat.pBack,
@@ -1098,7 +1065,7 @@ std::pair<int, int> Prefiltering::optimizeSplit(size_t totalMemoryInByte, DBRead
         endKmerSize   = (externalKmerSize == 0) ? 15 : externalKmerSize;
     }
 
-    for (int optKmerSize = startKmerSize; optKmerSize <= endKmerSize ; optKmerSize++) {
+    for (int optKmerSize = endKmerSize; optKmerSize >= startKmerSize ; optKmerSize--) {
         size_t aaUpperBoundForKmerSize = (SIZE_MAX - 1);
         if(externalKmerSize == 0){
             if(Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)) {

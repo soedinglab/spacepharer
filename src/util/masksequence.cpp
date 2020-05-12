@@ -1,6 +1,3 @@
-#include <string>
-#include <fstream>
-#include <climits>
 #include "NucleotideMatrix.h"
 #include "SubstitutionMatrix.h"
 #include "tantan.h"
@@ -9,7 +6,6 @@
 #include "Debug.h"
 #include "Util.h"
 #include "FileUtil.h"
-
 
 #ifdef OPENMP
 #include <omp.h>
@@ -54,7 +50,7 @@ int masksequence(int argc, const char **argv, const Command& command) {
             char *seqData = reader.getData(id, thread_idx);
             unsigned int seqLen = 0;
             while (seqData[seqLen] != '\0') {
-                charSequence[seqLen] = (char) subMat->aa2int[(int) seqData[seqLen]];
+                charSequence[seqLen] = (char) subMat->aa2num[static_cast<int>(seqData[seqLen])];
                 seqLen++;
             }
             tantan::maskSequences(charSequence,

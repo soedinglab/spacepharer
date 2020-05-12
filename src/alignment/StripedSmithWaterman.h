@@ -35,7 +35,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 
 #if !defined(__APPLE__) && !defined(__llvm__)
 #include <malloc.h>
@@ -131,7 +130,7 @@ public:
      while bit 8 is not, the function will return cigar only when both criteria are fulfilled. All returned positions are
      0-based coordinate.
      */
-    s_align  ssw_align (const int*db_sequence,
+    s_align  ssw_align (const unsigned char*db_sequence,
                         int32_t db_length,
                         const uint8_t gap_open,
                         const uint8_t gap_extend,
@@ -150,7 +149,7 @@ public:
    @param	db_length	length of the target sequence
    @return	max diagonal score
    */
-   int ungapped_alignment(const int *db_sequence,
+   int ungapped_alignment(const unsigned char *db_sequence,
                           int32_t db_length);
 
   /*!	@function	Create the query profile using the query sequence.
@@ -171,8 +170,7 @@ public:
    -2 -2 -2  2 //T
    mat is the pointer to the array {2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2, -2, -2, -2, -2, 2}
    */
-    void ssw_init(const Sequence *q, const int8_t *mat, const BaseMatrix *m, const int32_t alphabetSize,
-                  const int8_t score_size);
+    void ssw_init(const Sequence *q, const int8_t *mat, const BaseMatrix *m, const int8_t score_size);
 
 
     static char cigar_int_to_op (uint32_t cigar_int);
@@ -182,7 +180,7 @@ public:
 
     static float computeCov(unsigned int startPos, unsigned int endPos, unsigned int len);
 
-    s_align scoreIdentical(int *dbSeq, int L, EvalueComputation * evaluer, int alignmentMode);
+    s_align scoreIdentical(unsigned char *dbSeq, int L, EvalueComputation * evaluer, int alignmentMode);
 
     static void seq_reverse(int8_t * reverse, const int8_t* seq, int32_t end)	/* end is 0-based alignment ending position */
     {
@@ -209,7 +207,7 @@ private:
         int8_t* composition_bias_rev;
         int8_t* mat;
         // Memory layout of if mat + queryProfile is qL * AA
-        //    Query lenght
+        //    Query length
         // A  -1  -3  -2  -1  -4  -2  -2  -3  -1  -3  -2  -2   7  -1  -2  -1  -1  -2  -5  -3
         // C  -1  -4   2   5  -3  -2   0  -3   1  -3  -2   0  -1   2   0   0  -1  -3  -4  -2
         // ...
@@ -252,7 +250,7 @@ private:
      wight_match > 0, all other weights < 0.
      The returned positions are 0-based.
      */
-    std::pair<alignment_end, alignment_end> sw_sse2_byte (const int*db_sequence,
+    std::pair<alignment_end, alignment_end> sw_sse2_byte (const unsigned char*db_sequence,
                                  int8_t ref_dir,	// 0: forward ref; 1: reverse ref
                                  int32_t db_length,
                                  int32_t query_length,
@@ -266,10 +264,10 @@ private:
                                  uint8_t bias,  /* Shift 0 point to a positive value. */
                                  int32_t maskLen);
 
-    std::pair<alignment_end, alignment_end> sw_sse2_word (const int* db_sequence,
+    std::pair<alignment_end, alignment_end> sw_sse2_word (const unsigned char* db_sequence,
                                  int8_t ref_dir,	// 0: forward ref; 1: reverse ref
                                  int32_t db_length,
-                                 int32_t query_lenght,
+                                 int32_t query_length,
                                  const uint8_t gap_open, /* will be used as - */
                                  const uint8_t gap_extend, /* will be used as - */
                                  const simd_int*query_profile_byte,
@@ -277,7 +275,7 @@ private:
                                  int32_t maskLen);
 
     template <const unsigned int type>
-    SmithWaterman::cigar *banded_sw(const int *db_sequence, const int8_t *query_sequence, const int8_t * compositionBias, int32_t db_length, int32_t query_length, int32_t queryStart, int32_t score, const uint32_t gap_open, const uint32_t gap_extend, int32_t band_width, const int8_t *mat, int32_t n);
+    SmithWaterman::cigar *banded_sw(const unsigned char *db_sequence, const int8_t *query_sequence, const int8_t * compositionBias, int32_t db_length, int32_t query_length, int32_t queryStart, int32_t score, const uint32_t gap_open, const uint32_t gap_extend, int32_t band_width, const int8_t *mat, int32_t n);
 
     /*!	@function		Produce CIGAR 32-bit unsigned integer from CIGAR operation and CIGAR length
      @param	length		length of CIGAR

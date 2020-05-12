@@ -22,6 +22,7 @@ set(commons_header_files
         commons/MathUtil.h
         commons/MemoryMapped.h
         commons/MMseqsMPI.h
+        commons/MultiParam.h
         commons/NucleotideMatrix.h
         commons/Orf.h
         commons/ProfileStates.h
@@ -29,7 +30,6 @@ set(commons_header_files
         commons/Parameters.h
         commons/PatternCompiler.h
         commons/ScoreMatrix.h
-        commons/ScoreMatrixFile.h
         commons/Sequence.h
         commons/SubstitutionMatrix.h
         commons/SubstitutionMatrixProfileStates.h
@@ -57,12 +57,12 @@ set(commons_source_files
         commons/KSeqWrapper.cpp
         commons/MemoryMapped.cpp
         commons/MMseqsMPI.cpp
+        commons/MultiParam.cpp
         commons/NucleotideMatrix.cpp
         commons/Orf.cpp
         commons/Parameters.cpp
         commons/ProfileStates.cpp
         commons/LibraryReader.cpp
-        commons/ScoreMatrixFile.cpp
         commons/Sequence.cpp
         commons/SubstitutionMatrix.cpp
         commons/tantan.cpp

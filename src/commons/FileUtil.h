@@ -20,7 +20,7 @@ public:
 
     static size_t countLines(const char *name);
 
-    static bool makeDir(const char *dirName, const int mode = 0700);
+    static bool makeDir(const char *dirName, const int mode = 0777);
 
     static void deleteTempFiles(const std::list<std::string> &tmpFiles);
 
@@ -39,6 +39,8 @@ public:
     static std::string baseName(const std::string &file);
 
     static size_t getFreeSpace(const char *dir);
+
+    static std::string getCurrentWorkingDirectory();
 
     static void symlinkAlias(const std::string &file, const std::string &alias);
     static void symlinkAbs(const std::string &target, const std::string &link);

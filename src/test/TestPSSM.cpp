@@ -20,7 +20,7 @@ int main (int, const char**) {
     Parameters& par = Parameters::getInstance();
     SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
     std::cout << "Subustitution matrix:";
-    SubstitutionMatrix::print(subMat.subMatrix,subMat.int2aa,subMat.alphabetSize);
+    SubstitutionMatrix::print(subMat.subMatrix,subMat.num2aa,subMat.alphabetSize);
     //   BaseMatrix::print(subMat.subMatrix, subMat.alphabetSize);
     const char *seqs[1001];
     int counter = 0;
@@ -1577,19 +1577,16 @@ int main (int, const char**) {
     for (int k = 0; k < counter; ++k) {
         seqsCpy[k] = MultipleAlignment::initX(122);
         for (int pos = 0; pos < 122; ++pos) {
-//            seqs[k][pos] = (seqs[k][pos] == '-') ? MultipleAlignment::GAP : subMat.aa2int[(int) seqs[k][pos]];
-            seqsCpy[k][pos] = (seqs[k][pos] == '-') ? MultipleAlignment::GAP : subMat.aa2int[(int) seqs[k][pos]];
+//            seqs[k][pos] = (seqs[k][pos] == '-') ? MultipleAlignment::GAP : subMat.aa2num[(int) seqs[k][pos]];
+            seqsCpy[k][pos] = (seqs[k][pos] == '-') ? MultipleAlignment::GAP : static_cast<int>(subMat.aa2num[(int) seqs[k][pos]]);
         }
     }
 
     MultipleAlignment::MSAResult res(122, 122, counter, seqsCpy);
     MultipleAlignment::print(res, &subMat);
 
-    MsaFilter msaFilter(10000, counter, &subMat, par.gapOpen, par.gapExtend);
-    size_t filterSetSize = res.setSize;
-    msaFilter.filter(res.setSize, res.centerLength, 0, 0, -20.0f, 90, 100,
-                     (const char**)res.msaSequence, &filterSetSize);
-    msaFilter.shuffleSequences((const char**)res.msaSequence, res.setSize);
+    MsaFilter msaFilter(10000, counter, &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
+    size_t filterSetSize = msaFilter.filter(res, 0, 0, -20.0f, 90, 100);
     std::cout << "Filtered:" << filterSetSize << std::endl;
 //    for(size_t k = 0; k < res.setSize; k++){
 //        std::cout << "k=" << k << "\t" << (int)filterResult.keep[k] << std::endl;
@@ -1599,7 +1596,7 @@ int main (int, const char**) {
         printf("k=%.3zu ", k);
         for (size_t pos = 0; pos < res.centerLength; pos++) {
             char aa = res.msaSequence[k][pos];
-            printf("%c", (aa < MultipleAlignment::NAA) ? subMat.int2aa[(int) aa] : '-');
+            printf("%c", (aa < MultipleAlignment::NAA) ? subMat.num2aa[(int) aa] : '-');
         }
         printf("\n");
     }

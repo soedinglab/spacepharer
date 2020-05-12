@@ -7,7 +7,6 @@
 #include "PSSMCalculator.h"
 #include "DBWriter.h"
 #include "DBReader.h"
-#include "DBConcat.h"
 #include "HeaderSummarizer.h"
 #include "CompressedA3M.h"
 #include "Debug.h"
@@ -17,7 +16,6 @@
 #include "SubstitutionMatrix.h"
 #include <string>
 #include <vector>
-#include <sstream>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -240,7 +238,7 @@ int computeProfileProfile(Parameters &par,const std::string &outpath,
                 //std::cout<<std::endl;
                 
                 // write query, consensus sequence and neffM
-                result.push_back(static_cast<unsigned char>(queryProfile.int_sequence[l]));
+                result.push_back(queryProfile.numSequence[l]);
                 result.push_back(consensus[l]);
                 unsigned char neff = MathUtil::convertNeffToChar(neffM[l]);
                 result.push_back(neff);
@@ -315,7 +313,6 @@ int computeProfileProfile(Parameters &par,const unsigned int mpiRank, const unsi
             splitFiles.push_back(std::make_pair(tmpFile.first ,  tmpFile.first + ".index"));
 
         }
-        // merge output ffindex databases
         DBWriter::mergeResults(outname , outname + ".index", splitFiles);
     }
 

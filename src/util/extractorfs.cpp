@@ -60,6 +60,7 @@ int extractorfs(int argc, const char **argv, const Command& command) {
             queryFrom = 0;
         }
         char* aa = new char[par.maxSeqLen + 3 + 1];
+        char buffer[1024];
 
         std::vector<Orf::SequenceLocation> res;
         res.reserve(1000);
@@ -86,8 +87,6 @@ int extractorfs(int argc, const char **argv, const Command& command) {
                 if (par.contigEndMode   < 2 && (loc.hasIncompleteEnd   == par.contigEndMode)) {
                     continue;
                 }
-
-                char buffer[LINE_MAX];
 
                 std::pair<const char*, size_t> sequence = orf.getSequence(loc);
                 size_t fromPos = loc.from;
@@ -139,13 +138,12 @@ int extractorfs(int argc, const char **argv, const Command& command) {
         {
 #pragma omp task
             {
-                DBWriter::createRenumberedDB(par.hdr2, par.hdr2Index, "");
+                DBWriter::createRenumberedDB(par.hdr2, par.hdr2Index, "", "");
             }
 
 #pragma omp task
             {
-                std::string lookup = par.db1 + ".lookup";
-                DBWriter::createRenumberedDB(par.db2, par.db2Index, par.createLookup ? lookup : "");
+                DBWriter::createRenumberedDB(par.db2, par.db2Index, par.createLookup ? par.db1 : "", par.createLookup ? par.db1Index : "");
             }
         }
     }

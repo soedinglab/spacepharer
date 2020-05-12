@@ -22,7 +22,7 @@ int main (int, const char**) {
 
     SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0, 0);
     std::cout << "Subustitution matrix:\n";
-    SubstitutionMatrix::print(subMat.subMatrix,subMat.int2aa,subMat.alphabetSize);
+    SubstitutionMatrix::print(subMat.subMatrix,subMat.num2aa,subMat.alphabetSize);
     //   BaseMatrix::print(subMat.subMatrix, subMat.alphabetSize);
     std::cout << "\n";
 
@@ -62,15 +62,12 @@ int main (int, const char**) {
     seqSet.push_back(&s3);
     seqSet.push_back(&s4);
     //seqSet.push_back(s5);
-    EvalueComputation evaluer(100000, &subMat, par.gapOpen, par.gapExtend);
-    Matcher * aligner = new Matcher(Parameters::DBTYPE_AMINO_ACIDS, 10000, &subMat, &evaluer, false, par.gapOpen, par.gapExtend);
+    EvalueComputation evaluer(100000, &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
+    Matcher * aligner = new Matcher(Parameters::DBTYPE_AMINO_ACIDS, 10000, &subMat, &evaluer, false, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
     MultipleAlignment msaAligner(1000, 10, &subMat, aligner);
     MultipleAlignment::MSAResult res = msaAligner.computeMSA(&s1, seqSet, true);
-    MsaFilter filter(1000, 10000, &subMat, par.gapOpen, par.gapExtend);
-    size_t filterSetSize = res.setSize;
-    filter.filter(res.setSize, res.centerLength, 0, 0, -20.0, 50, 100,
-                     (const char**)res.msaSequence, &filterSetSize);
-    filter.shuffleSequences((const char**)res.msaSequence, res.setSize);
+    MsaFilter filter(1000, 10000, &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
+    size_t filterSetSize = filter.filter(res, 0, 0, -20.0, 50, 100);
     std::cout << "Filtered:" << filterSetSize << std::endl;
     MultipleAlignment::print(res, &subMat);
     PSSMCalculator pssm(&subMat, 1000, 5, 1.0, 1.5);

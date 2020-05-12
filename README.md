@@ -1,4 +1,4 @@
-# MMseqs2: ultra fast and sensitive protein search and clustering suite
+# MMseqs2: ultra fast and sensitive sequence search and clustering suite
 MMseqs2 (Many-against-Many sequence searching) is a software suite to search and cluster huge protein and nucleotide sequence sets. MMseqs2 is open source GPL-licensed software implemented in C++ for Linux, MacOS, and (as beta version, via cygwin) Windows. The software is designed to run on multiple cores and servers and exhibits very good scalability. MMseqs2 can run 10000 times faster than BLAST. At 100 times its speed it achieves almost the same sensitivity. It can perform profile searches with the same sensitivity as PSI-BLAST at over 400 times its speed.
 
 ##  Publications
@@ -14,14 +14,13 @@ MMseqs2 (Many-against-Many sequence searching) is a software suite to search and
 [![Docker Pulls](https://img.shields.io/docker/pulls/soedinglab/mmseqs2.svg)](https://hub.docker.com/r/soedinglab/mmseqs2)
 [![Build Status](https://dev.azure.com/themartinsteinegger/mmseqs2/_apis/build/status/soedinglab.MMseqs2?branchName=master)](https://dev.azure.com/themartinsteinegger/mmseqs2/_build/latest?definitionId=2&branchName=master)
 [![Travis CI](https://travis-ci.org/soedinglab/MMseqs2.svg?branch=master)](https://travis-ci.org/soedinglab/MMseqs2)
-[![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.840208.svg)](https://zenodo.org/record/1718312)
+<a href="https://chat.mmseqs.com/"><img src="https://chat.mmseqs.com/api/v1/shield.svg?type=online&name=chat&icon=false" /></a>
 
 <p align="center"><img src="https://raw.githubusercontent.com/soedinglab/mmseqs2/master/.github/mmseqs2_logo.png" height="256" /></p>
 
 
 ## Documentation
-The MMseqs2 user guide is available in our [GitHub Wiki](https://github.com/soedinglab/mmseqs2/wiki) or as a [PDF file](https://mmseqs.com/latest/userguide.pdf) (Thanks to [pandoc](https://github.com/jgm/pandoc)!). The wiki also contains [tutorials](https://github.com/soedinglab/MMseqs2/wiki/Tutorials) to learn how to use MMseqs2 with real data.
-
+The MMseqs2 user guide is available in our [GitHub Wiki](https://github.com/soedinglab/mmseqs2/wiki) or as a [PDF file](https://mmseqs.com/latest/userguide.pdf) (Thanks to [pandoc](https://github.com/jgm/pandoc)!). The wiki also contains [tutorials](https://github.com/soedinglab/MMseqs2/wiki/Tutorials) to learn how to use MMseqs2 with real data. For questions please open an issue on [GitHub](https://github.com/soedinglab/MMseqs2/issues) or ask in our [chat](https://chat.mmseqs.com). 
 Keep posted about MMseqs2/Linclust updates by following Martin on [Twitter](https://twitter.com/thesteinegger).
 
 ## Installation
@@ -30,7 +29,7 @@ MMseqs2 can be used by compiling from source, downloading a statically compiled 
      # install by brew
      brew install mmseqs2
      # install via conda
-     conda install -c bioconda mmseqs2
+     conda install -c conda-forge -c bioconda mmseqs2
      # install docker
      docker pull soedinglab/mmseqs2
      # static build with SSE4.1
@@ -39,7 +38,7 @@ MMseqs2 can be used by compiling from source, downloading a statically compiled 
      wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
 
 The AVX2 version is faster than SSE4.1, check if AVX2 is supported by executing `cat /proc/cpuinfo | grep avx2` on Linux and `sysctl -a | grep machdep.cpu.leaf7_features | grep AVX2` on MacOS).
-We also provide static binaries for MacOS and Windows at [mmseqs.com/latest](https://mmseqs.com/latest).
+We also provide static binaries for all supported platforms at [mmseqs.com/latest](https://mmseqs.com/latest).
 
 MMseqs2 comes with a bash command and parameter auto completion, which can be activated by adding the following lines to your $HOME/.bash_profile:
 
@@ -85,29 +84,34 @@ Please adjust the [clustering criteria](https://github.com/soedinglab/MMseqs2/wi
 
 ### Search
          
-The `easy-search` searches directly with a FASTA/FASTQ files against either another FASTA/FASTQ file or an already existing MMseqs2 database.
+The `easy-search` workflow searches directly with a FASTA/FASTQ files against either another FASTA/FASTQ file or an already existing MMseqs2 database.
         
-        mmseqs easy-search examples/QUERY.fasta DB.fasta alnRes tmp
+        mmseqs easy-search examples/QUERY.fasta examples/DB.fasta alnRes.m8 tmp
  
-It is also possible to pre-compute the index for the target database:
+It is also possible to pre-compute the index for the target database. This reduces overhead when searching repeatedly against the same database.
 
         mmseqs createdb examples/DB.fasta targetDB
         mmseqs createindex targetDB tmp
-        mmseqs easy-search examples/QUERY.fasta targetDB alnRes tmp
+        mmseqs easy-search examples/QUERY.fasta targetDB alnRes.m8 tmp
+        
+The `databases` workflow provides download and setup procedures for many public reference databases, such as the Uniref, NR, NT, PFAM and many more (see [Downloading databases](https://github.com/soedinglab/mmseqs2/wiki#downloading-databases)). For example, to download and search against a database containing the Swiss-Prot reference proteins run: 
+
+        mmseqs databases UniProtKB/Swiss-Prot swissprot tmp
+        mmseqs easy-search examples/QUERY.fasta swissprot alnRes.m8 tmp
         
 The speed and sensitivity of the `search` can be adjusted with `-s` parameter and should be adapted based on your use case (see [setting sensitivity -s parameter](https://github.com/soedinglab/mmseqs2/wiki#set-sensitivity--s-parameter)). A very fast search would use a sensitivity of `-s 1.0`, while a very sensitive search would use a sensitivity of up to `-s 7.0`. A detailed guide how to speed up searches is [here](https://github.com/soedinglab/MMseqs2/wiki#how-to-control-the-speed-of-the-search).
 
 The output can be customized with the `--format-output` option e.g. `--format-output "query,target,qaln,taln"` returns the query and target accession and the pairwise alignments in tab separated format. You can choose many different [output columns](https://github.com/soedinglab/mmseqs2/wiki#custom-alignment-format-with-convertalis).
 
 ### Taxonomy
-The `easy-taxonomy` workflow can be used assign sequences taxonomical labels. It performs a search against a target sequence databases and computes the lowest common ancestor of all equal scoring top hits (default). Other assignment options are available through `--lca-mode`.
+The `easy-taxonomy` workflow can be used to assign sequences taxonomical labels. It performs a search against a sequence database with taxonomy information (seqTaxDb), chooses the most representative sets of aligned target sequences according to different strategies (according to `--lca-mode`) and computes the lowest common ancestor among those.
 
         mmseqs createdb examples/DB.fasta targetDB
         mmseqs createtaxdb targetDB tmp
         mmseqs createindex targetDB tmp
         mmseqs easy-taxonomy examples/QUERY.fasta targetDB alnRes tmp
 
-In default `createtaxdb` assigns every sequence with a Uniprot accession to a taxonomical identifier and downloads the NCBI taxonomy. We also support [BLAST](https://github.com/soedinglab/MMseqs2/wiki#create-a-sequence-database-with-taxonomic-information-from-an-existing-blast-database), [SILVA](https://github.com/soedinglab/MMseqs2/wiki#create-a-sequence-database-with-taxonomic-information-for-silva) or [custom taxonomical](https://github.com/soedinglab/MMseqs2/wiki#manually-annotate-a-sequence-database-with-taxonomic-information) databases.
+By default, `createtaxdb` assigns a Uniprot accession to a taxonomical identifier to every sequence and downloads the NCBI taxonomy. We also support [BLAST](https://github.com/soedinglab/MMseqs2/wiki#create-a-sequence-database-with-taxonomic-information-from-an-existing-blast-database), [SILVA](https://github.com/soedinglab/MMseqs2/wiki#create-a-sequence-database-with-taxonomic-information-for-silva) or [custom taxonomical](https://github.com/soedinglab/MMseqs2/wiki#manually-annotate-a-sequence-database-with-taxonomic-information) databases. Many common taxonomic reference databases can be easily downloaded and set up by the [`databases` workflow](https://github.com/soedinglab/mmseqs2/wiki#downloading-databases).
 
 Read more about the [taxonomy format](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-format) and the [classification](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-assignment-using-mmseqs-taxonomy) in our user guide.
 
@@ -140,3 +144,9 @@ To search with multiple servers, call the `search` or `cluster` workflow with th
 
         RUNNER="mpirun -pernode -np 42" mmseqs search queryDB targetDB resultDB tmp
 
+## Contributors
+
+MMseqs2 exists thanks to all the people who contribute. 
+<a href="https://github.com/soedinglab/mmseqs2/graphs/contributors">
+  <img src="https://contributors-img.firebaseapp.com/image?repo=soedinglab/mmseqs2" />
+</a>

@@ -8,12 +8,12 @@
 #include "MathUtil.h"
 #include "BaseMatrix.h"
 #include "Parameters.h"
+#include "ScoreMatrix.h"
 
 #include <cstdint>
 #include <cstddef>
 #include <utility>
-
-struct ScoreMatrix;
+#include <simd/simd.h>
 
 const int8_t seed_4[]        = {1, 1, 1, 1};
 const int8_t spaced_seed_4[] = {1, 1, 1, 0, 1};
@@ -86,29 +86,34 @@ public:
     void mapSequence(size_t id, unsigned int dbKey, std::pair<const unsigned char *, const unsigned int> data);
 
     // map profile HMM, *data points to start position of Profile
-    void mapProfile(const char *sequence, bool mapScores,  unsigned int seqLen);
+    void mapProfile(const char *profileData, bool mapScores,  unsigned int seqLen);
 
     // mixture of library and profile prob
     template <int T>
-    void mapProfileState(const char *sequence, unsigned int seqLen);
+    void mapProfileState(const char *profileState, unsigned int seqLen);
 
     // map the profile state sequence
-    void mapProfileStateSequence(const char *sequence, unsigned int seqLen);
+    void mapProfileStateSequence(const char *profileStateSeq, unsigned int seqLen);
 
     // checks if there is still a k-mer left
     bool hasNextKmer() {
         return (((currItPos + 1) + this->spacedPatternSize) <= this->L);
     }
 
+    // k-mer contains x, is only field aftter nextKmer
+    inline bool kmerContainsX(){
+        return kmerHasX != 0;
+    }
+
     // returns next k-mer
-    inline const int * nextKmer() {
+    inline const unsigned char * nextKmer() {
         if (hasNextKmer() == false) {
             return 0;
         }
 
         currItPos++;
-        const int *posToRead = int_sequence + currItPos;
-        int *currWindowPos = kmerWindow;
+        const unsigned char *posToRead = numSequence + currItPos;
+        unsigned char *currWindowPos = kmerWindow;
         switch (this->kmerSize){
             case 6:
                 kmerWindow[0] = posToRead[aaPosInSpacedPattern[0]];
@@ -126,6 +131,45 @@ public:
                 kmerWindow[4] = posToRead[aaPosInSpacedPattern[4]];
                 kmerWindow[5] = posToRead[aaPosInSpacedPattern[5]];
                 kmerWindow[6] = posToRead[aaPosInSpacedPattern[6]];
+                break;
+            case 10:
+                kmerWindow[0] = posToRead[aaPosInSpacedPattern[0]];
+                kmerWindow[1] = posToRead[aaPosInSpacedPattern[1]];
+                kmerWindow[2] = posToRead[aaPosInSpacedPattern[2]];
+                kmerWindow[3] = posToRead[aaPosInSpacedPattern[3]];
+                kmerWindow[4] = posToRead[aaPosInSpacedPattern[4]];
+                kmerWindow[5] = posToRead[aaPosInSpacedPattern[5]];
+                kmerWindow[6] = posToRead[aaPosInSpacedPattern[6]];
+                kmerWindow[7] = posToRead[aaPosInSpacedPattern[7]];
+                kmerWindow[8] = posToRead[aaPosInSpacedPattern[8]];
+                kmerWindow[9] = posToRead[aaPosInSpacedPattern[9]];
+                break;
+            case 11:
+                kmerWindow[0] = posToRead[aaPosInSpacedPattern[0]];
+                kmerWindow[1] = posToRead[aaPosInSpacedPattern[1]];
+                kmerWindow[2] = posToRead[aaPosInSpacedPattern[2]];
+                kmerWindow[3] = posToRead[aaPosInSpacedPattern[3]];
+                kmerWindow[4] = posToRead[aaPosInSpacedPattern[4]];
+                kmerWindow[5] = posToRead[aaPosInSpacedPattern[5]];
+                kmerWindow[6] = posToRead[aaPosInSpacedPattern[6]];
+                kmerWindow[7] = posToRead[aaPosInSpacedPattern[7]];
+                kmerWindow[8] = posToRead[aaPosInSpacedPattern[8]];
+                kmerWindow[9] = posToRead[aaPosInSpacedPattern[9]];
+                kmerWindow[10] = posToRead[aaPosInSpacedPattern[10]];
+                break;
+            case 12:
+                kmerWindow[0] = posToRead[aaPosInSpacedPattern[0]];
+                kmerWindow[1] = posToRead[aaPosInSpacedPattern[1]];
+                kmerWindow[2] = posToRead[aaPosInSpacedPattern[2]];
+                kmerWindow[3] = posToRead[aaPosInSpacedPattern[3]];
+                kmerWindow[4] = posToRead[aaPosInSpacedPattern[4]];
+                kmerWindow[5] = posToRead[aaPosInSpacedPattern[5]];
+                kmerWindow[6] = posToRead[aaPosInSpacedPattern[6]];
+                kmerWindow[7] = posToRead[aaPosInSpacedPattern[7]];
+                kmerWindow[8] = posToRead[aaPosInSpacedPattern[8]];
+                kmerWindow[9] = posToRead[aaPosInSpacedPattern[9]];
+                kmerWindow[10] = posToRead[aaPosInSpacedPattern[10]];
+                kmerWindow[11] = posToRead[aaPosInSpacedPattern[11]];
                 break;
             case 13:
                 kmerWindow[0] = posToRead[aaPosInSpacedPattern[0]];
@@ -357,7 +401,13 @@ public:
                 }
                 break;
         }
+        kmerHasX = 0;
 
+        const simd_int xChar = simdi8_set(subMat->aa2num[static_cast<int>('X')]);
+        for(size_t i = 0; i < simdKmerRegisterCnt; i++){
+            simd_int kmer = simdi_load((((simd_int *) kmerWindow) + i));
+            kmerHasX |= static_cast<unsigned int>(simdi8_movemask(simdi8_eq(kmer, xChar)));
+        }
         if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_HMM_PROFILE) ||
             Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_PROFILE_STATE_PROFILE)) {
             nextProfileKmer();
@@ -367,7 +417,7 @@ public:
             return kmerWindow;
         }
 
-        return (const int *)kmerWindow;
+        return (const unsigned char *)kmerWindow;
     }
 
     // resets the sequence position pointer to the start of the sequence
@@ -402,10 +452,10 @@ public:
     int L;
 
     // each amino acid coded as integer
-    int *int_sequence;
+    unsigned char *numSequence;
 
     // each consensus amino acid as integer (PROFILE ONLY)
-    int *int_consensus_sequence;
+    unsigned char *numConsensusSequence;
 
     // Contains profile information
     short           *profile_score;
@@ -421,7 +471,7 @@ public:
     static const size_t PROFILE_READIN_SIZE = 23;
     ScoreMatrix **profile_matrix;
     // Memory layout of this profile is qL * AA
-    //   Query lenght
+    //   Query length
     // A  -1  -3  -2  -1  -4  -2  -2  -3  -1  -3  -2  -2   7  -1  -2  -1  -1  -2  -5  -3
     // C  -1  -4   2   5  -3  -2   0  -3   1  -3  -2   0  -1   2   0   0  -1  -3  -4  -2
     // ...
@@ -505,8 +555,14 @@ private:
     // kmer Size
     unsigned int kmerSize;
 
+    // simd kmer size
+    unsigned int simdKmerRegisterCnt;
+
     // sequence window will be filled by newxtKmer (needed for spaced patterns)
-    int *kmerWindow;
+    unsigned char *kmerWindow;
+
+    // set if kmer contains X
+    unsigned int kmerHasX;
 
     // stores position of residues in sequence
     unsigned char *aaPosInSpacedPattern;

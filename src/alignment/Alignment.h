@@ -37,6 +37,7 @@ public:
 
     static bool checkCriteria(Matcher::result_t &res, bool isIdentity, double evalThr, double seqIdThr, int alnLenThr, int covMode, float covThr);
 
+    static unsigned int initSWMode(unsigned int alignmentMode, float covThr, float seqIdThr);
 
 private:
     // sequence coverage threshold
@@ -95,6 +96,8 @@ private:
     int gapOpen;
     // costs to extend a gap
     int gapExtend;
+    // score difference to break alignment
+    int zdrop;
 
 
     // needed for realignment
@@ -109,8 +112,6 @@ private:
     DBReader<unsigned int> *prefdbr;
 
     bool reversePrefilterResult;
-
-    void initSWMode(unsigned int alignmentMode);
 
     static size_t estimateHDDMemoryConsumption(int dbSize, int maxSeqs);
 
