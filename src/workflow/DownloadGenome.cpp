@@ -8,6 +8,7 @@
 
 #include "downloadgenome.sh.h"
 #include "genbank_phages_2018_09.tsv.h"
+#include "genbank_eukviruses_2018_09.tsv.h"
 
 struct GenomesDownload {
     const char *name;
@@ -19,10 +20,16 @@ struct GenomesDownload {
 
 std::vector<GenomesDownload> genomesDownloads = {
     {
-       "GenBank_2018_09",
-       "GenBank viral genomes from September 2018",
+       "GenBank_phage_2018_09",
+       "GenBank phage genomes from September 2018",
        "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
        genbank_phages_2018_09_tsv, genbank_phages_2018_09_tsv_len,
+    },
+    {
+       "GenBank_eukvir_2018_09",
+       "GenBank eukaryotic viral genomes from September 2018",
+       "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
+       genbank_eukviruses_2018_09_tsv, genbank_eukviruses_2018_09_tsv_len,
     }
 };
 
