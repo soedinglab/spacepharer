@@ -26,26 +26,21 @@ hasCommand () {
 }
 
 hasCommand wget
-hasCommand touch
 
-GENOME_FTP="$1"
-OUT_PATH="$2"
-OUTDB="$3"
-TMP_PATH="$4"
+OUTDB="$2"
+TMP_PATH="$3"
 
 #change path
-if notExists "${OUT_PATH}/phage_download.complete"; then
+if notExists "${TMP_PATH}/download.done"; then
     echo "Download phage genomes"
     while read -r NAME URL; do
-        wget -nv -O "${OUT_PATH}/${NAME}" "${URL}"
-        push_back "${OUT_PATH}/${NAME}"
-    done <  "${GENOME_FTP}"
-    touch "${OUT_PATH}/phage_download.complete" \
-        || fail "download failed"
-    
+        wget -nv -O "${TMP_PATH}/${NAME}" "${URL}"
+        push_back "${TMP_PATH}/${NAME}"
+    done < "${GENOME_FTP}"
+    touch "${TMP_PATH}/download.done"
 else
     while read -r NAME URL; do
-        push_back "${OUT_PATH}/${NAME}"
+        push_back "${TMP_PATH}/${NAME}"
     done < "${GENOME_FTP}"
 fi
 

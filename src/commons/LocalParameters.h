@@ -53,6 +53,8 @@ private:
         PARAM_REPORT_PAM(PARAM_REPORT_PAM_ID,"--report-pam", "Report PAM", "Report protospacer adjacent motifs up and downstream of hits [0,1]", typeid(int), (void *) &reportPam, "^[0-1]{1}$")
        
     {
+        downloadgenome.push_back(&PARAM_HELP);
+        downloadgenome.push_back(&PARAM_HELP_LONG);
         downloadgenome.push_back(&PARAM_REVERSE_SETDB);
         downloadgenome.push_back(&PARAM_V);
 
