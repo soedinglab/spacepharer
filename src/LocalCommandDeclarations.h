@@ -3,6 +3,7 @@
 
 #include "Command.h"
 
+extern int easypredict(int argc, const char **argv, const Command& command);
 extern int predictmatch(int argc, const char **argv, const Command& command);
 extern int createsetdb(int argc, const char **argv, const Command& command);
 extern int parsespacer(int argc, const char **argv, const Command& command);

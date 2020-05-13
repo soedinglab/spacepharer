@@ -106,26 +106,19 @@ if notExists "${TMP_PATH}/aln_merge.index"; then
         || fail "mergeresultsbyset failed"
 fi
 
+ALN_RES="${TMP_PATH}/aln_merge"
 if [ -n "$REPORT_PAM" ]; then
     if notExists "${TMP_PATH}/aln_merge_pam.index"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" findpam "${TARGET}_nucl" "${TMP_PATH}/aln_merge" "${TMP_PATH}/aln_merge_pam" ${THREADS_PAR} \
             || fail "findpam failed"
     fi
-
-    if notExists "${OUTPUT}.tsv"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${TMP_PATH}/aln_merge_pam" "${OUTPUT}.tsv" ${SUMMARIZERESULTS_PAR} \
-            || fail "summarizeresults failed"
-    fi
-
-else
-    if notExists "${OUTPUT}.tsv"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${TMP_PATH}/aln_merge" "${OUTPUT}.tsv" ${SUMMARIZERESULTS_PAR} \
-            || fail "summarizeresults failed"
-    fi
+    ALN_RES="${TMP_PATH}/aln_merge_pam"
 fi
+
+# shellcheck disable=SC2086
+"${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${ALN_RES}" "${OUTPUT}" ${SUMMARIZERESULTS_PAR} \
+    || fail "summarizeresults failed"
 
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
@@ -146,7 +139,5 @@ if [ -n "${REMOVE_TMP}" ]; then
     if [ -n "$REPORT_PAM" ]; then 
         "$MMSEQS" rmdb "${TMP_PATH}/aln_merge_pam"
     fi
-    "$MMSEQS" rmdb "${TMP_PATH}/output"
-    rm -f "${TMP_PATH}/output.tsv"
     rm -f "${TMP_PATH}/predictmatch.sh"
 fi

@@ -21,6 +21,7 @@ public:
     std::vector<MMseqsParameter*> filtermatchbyfdr; 
     std::vector<MMseqsParameter*> summarizeresults;    
     std::vector<MMseqsParameter*> predictmatchworkflow;
+    std::vector<MMseqsParameter*> createsetdbonlycombined;
     std::vector<MMseqsParameter*> createsetdbworkflow;
     std::vector<MMseqsParameter*> downloadgenome;
 
@@ -69,8 +70,10 @@ private:
         summarizeresults.push_back(&PARAM_V);
 
 
-        createsetdbworkflow = combineList(createdb, translatenucs);
-        createsetdbworkflow = combineList(createsetdbworkflow, result2stats);
+        createsetdbonlycombined = combineList(createdb, translatenucs);
+        createsetdbonlycombined = combineList(createsetdbonlycombined, result2stats);
+
+        createsetdbworkflow = createsetdbonlycombined;
         createsetdbworkflow.push_back(&PARAM_REVERSE_FRAGMENTS);
         createsetdbworkflow.push_back(&PARAM_EXTRACTORF_SPACER);
     
