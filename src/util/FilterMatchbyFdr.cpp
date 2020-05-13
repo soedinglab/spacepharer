@@ -144,34 +144,36 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         while (currentFDR <= par.fdrCutoff) {
             currentFDR = x[idxList[i]] * pi0/ y[idxList[i]];
             i++;
-        } 
-        size_t j = idxList[i-2];
-        double TPFP = y[j];
-        double FP = x[j]* pi0;
-        currentFDR = 0;
-        while (currentFDR <= par.fdrCutoff){
-            j++;
-            deltaX = x[j] - x[j-1];
-            TPFP += deltaX * slopeList[i-1];
-            FP += deltaX * pi0;
-            currentFDR = FP / TPFP;
         }
 
-        
-        threshold = uniqueScoreList[j];
-        
-        Debug(Debug::INFO) << "Combined score threshold is " << threshold << " with FDR of " << par.fdrCutoff << ".\n"; 
-        Debug(Debug::INFO) <<  y[j]* posToSort.size() << " matches passed combined score threshold.\n"; 
+        if (i < 2) {
+            threshold = posToSort[posToSort.size()];
+            Debug(Debug::WARNING) << "Combined score list too short. Using threshold " << threshold << "\n";
+        } else {
+            size_t j = idxList[i-2];
+            double TPFP = y[j];
+            double FP = x[j]* pi0;
+            currentFDR = 0;
+            while (currentFDR <= par.fdrCutoff){
+                j++;
+                deltaX = x[j] - x[j-1];
+                TPFP += deltaX * slopeList[i-1];
+                FP += deltaX * pi0;
+                currentFDR = FP / TPFP;
+            }
 
-
+            threshold = uniqueScoreList[j];
+            Debug(Debug::INFO) << "Combined score threshold is " << threshold << " with FDR of " << par.fdrCutoff << ".\n";
+            Debug(Debug::INFO) <<  y[j]* posToSort.size() << " matches passed combined score threshold.\n";
+        }
     } else {
-        Debug(Debug::WARNING) << "Combined score list of control set is empty" << "\n";  
+        Debug(Debug::WARNING) << "Combined score list of control set is empty\n";
         threshold = posToSort[posToSort.size()];
     }
     negScoreDb.close();
     posToSort.clear();
 
-    DBWriter writer(par.db3.c_str(), par.db3Index.c_str(),par.threads, par.compressed, Parameters::DBTYPE_GENERIC_DB);
+    DBWriter writer(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_GENERIC_DB);
     writer.open();
     progress.reset(posScoreDb.getSize());
     #pragma omp parallel
