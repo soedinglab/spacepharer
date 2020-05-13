@@ -13,6 +13,15 @@ bool hide_base_commands = true;
 
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<Command> commands = {
+        {"easy-predict",             easypredict,           &localPar.predictmatchworkflow,              COMMAND_EASY,
+                "Predict phage-host matches from common spacer files (PILER-CR, CRISPRDetect and CRT)",
+                NULL,
+                "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
+                "<i:spacerFile1[.txt]> ... <i:spacerFileN[.txt]> <i:targetDB> <o:output[.tsv]> <tmpDir>",
+                CITATION_SPACEPHARER, {{"spacerFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfile},
+                                       {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
+                                       {"result", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
+                                       {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
         {"parsespacer",             parsespacer,            &localPar.threadsandcompression,    COMMAND_MAIN,
                 "Parse spacer files (PILER-CR, CRISPRDetect and CRT) and create sequence database",
                 NULL,
@@ -38,7 +47,7 @@ std::vector<Command> commands = {
                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
         {"predictmatch",            predictmatch,           &localPar.predictmatchworkflow,     COMMAND_MAIN,
                 "Predict phage-host matches",
-                "Search with a query set DB of sequences against target set DB, output a .tsv file report on predicted matches",
+                NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
                 "<i:queryDB> <i:targetDB> <i:controltargetDB> <o:output[.tsv]> <tmpDir>",
                 CITATION_SPACEPHARER, {{"queryDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},

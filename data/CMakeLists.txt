@@ -1,6 +1,7 @@
 include(MMseqsResourceCompiler)
 
 set(COMPILED_RESOURCES
+        easypredict.sh
         predictmatch.sh
         createsetdb.sh
         downloadgenome.sh
