@@ -43,35 +43,74 @@ hasCommand wget
 
 OUTDB="$(abspath "$2")"
 TMP_PATH="$(abspath "$3")"
-GENOME_FTP="$(abspath "${GENOME_FTP}")"
 MMSEQS="$(abspath "${MMSEQS}")"
+if [ -n "${GENOME_FTP}" ]; then
+  GENOME_FTP="$(abspath "${GENOME_FTP}")"
+fi
 
 cd "${TMP_PATH}"
-if notExists downloaded.tsv; then
-    : > downloaded.tsv.tmp
-    while read -r URL; do
-        NAME="$(basename "${URL}")"
-        if wget -N -np -nv "${URL}"; then
-            push_back "${NAME}"
-            echo "${NAME}" >> downloaded.tsv.tmp
-        fi
-    done < "${GENOME_FTP}"
-    mv -f downloaded.tsv.tmp downloaded.tsv
+if [ -n "${GENOME_FTP}" ]; then
+  if notExists downloaded.tsv; then
+      : > downloaded.tsv.tmp
+      while read -r URL; do
+          NAME="$(basename "${URL}")"
+          if wget -N -np -nv "${URL}"; then
+              push_back "${NAME}"
+              echo "${NAME}" >> downloaded.tsv.tmp
+          fi
+      done < "${GENOME_FTP}"
+      mv -f downloaded.tsv.tmp downloaded.tsv
+  else
+      while read -r NAME; do
+          push_back "${NAME}"
+      done < downloaded.tsv
+  fi
+  eval "set -- $ARR"
+  if notExists "${OUTDB}.index"; then
+      # shellcheck disable=SC2086
+      "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" ${VERBOSITY_PAR} \
+          || fail "createsetdb failed"
+  fi
+
+  if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then
+      # shellcheck disable=SC2086
+      "${MMSEQS}" createsetdb "${@}" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${VERBOSITY_PAR} \
+          || fail "create reverse setdb failed"
+  fi
 else
-    while read -r NAME; do
-        push_back "${NAME}"
-    done < downloaded.tsv
+  case "${DBNAME}" in
+    "GenBank_phage_2018_09")
+        wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/genbank_phages_2018_09.tar";
+        IN_TAR="genbank_phages_2018_09.tar"
+    ;;
+    "GenBank_eukvir_2018_09")
+        wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/genbank_eukvir_2018_09.tar";
+        IN_TAR="genbank_eukvir_2018_09.tar"
+    ;;
+  esac
+
+  if notExists "${TMP_PATH}/tardb.index"; then
+      # shellcheck disable=SC2086
+      "${MMSEQS}" tar2db "${IN_TAR}" "${TMP_PATH}/tardb" ${VERBOSITY_PAR} \
+          || fail "createsetdb failed"
+  fi
+
+  if notExists "${TMP_PATH}/seqdb.index"; then
+      # shellcheck disable=SC2086
+      tr -d '\000' < "${TMP_PATH}/tardb" | "${MMSEQS}" createdb "stdin" "${TMP_PATH}/seqdb" ${VERBOSITY_PAR} \
+          || fail "createsetdb failed"
+  fi
+
+  if notExists "${OUTDB}.index"; then
+      # shellcheck disable=SC2086
+      "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" ${VERBOSITY_PAR} \
+          || fail "createsetdb failed"
+  fi
+
+  if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then
+      # shellcheck disable=SC2086
+      "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${VERBOSITY_PAR} \
+          || fail "create reverse setdb failed"
+  fi
 fi
 
-eval "set -- $ARR"
-if notExists "${OUTDB}.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" ${VERBOSITY_PAR} \
-        || fail "createsetdb failed"
-fi
-
-if [ -n "$CREATE_REVERSE_SETDB" ] && notExists "${OUTDB}_rev.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" createsetdb "${@}" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${VERBOSITY_PAR} \
-        || fail "create reverse setdb failed"
-fi

@@ -5,8 +5,6 @@ set(COMPILED_RESOURCES
         predictmatch.sh
         createsetdb.sh
         downloadgenome.sh
-        genbank_phages_2018_09.tsv
-        genbank_eukviruses_2018_09.tsv
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
