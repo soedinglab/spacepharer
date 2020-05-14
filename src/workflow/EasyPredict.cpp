@@ -46,7 +46,8 @@ int easypredict(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("PREDICTMATCH_PAR", par.createParameterString(par.predictmatchworkflow, true).c_str());
-    cmd.addVariable("CREATESETDB_PAR", par.createParameterString(par.createsetdbonlycombined).c_str());
+    par.extractorfsSpacer = 1;
+    cmd.addVariable("CREATESETDB_PAR", par.createParameterString(par.createsetdbworkflow).c_str());
     cmd.addVariable("THREADS_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());

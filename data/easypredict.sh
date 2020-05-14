@@ -16,7 +16,7 @@ fi
 
 if notExists "${TMP_PATH}/qsetdb.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createsetdb "${TMP_PATH}/qdb" "${TMP_PATH}/qsetdb" "${TMP_PATH}/createsetdb" --extractorf-spacer 1 --reverse-fragments 1 ${CREATESETDB_PAR} \
+    "$MMSEQS" createsetdb "${TMP_PATH}/qdb" "${TMP_PATH}/qsetdb" "${TMP_PATH}/createsetdb" ${CREATESETDB_PAR} \
         || fail "createsetdb failed"
 fi
 
