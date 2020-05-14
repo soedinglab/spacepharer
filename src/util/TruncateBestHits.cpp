@@ -87,7 +87,7 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
                 buffer.append(columns[10]);
                 buffer.append("\n");
             }
-            dbw.writeData(buffer.c_str(), buffer.length(), resultReader.getDbKey(i), thread_idx);
+            dbw.writeData(buffer.c_str(), buffer.length(), resultKey, thread_idx);
             buffer.clear();
         }
     }
