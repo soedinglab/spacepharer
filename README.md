@@ -35,18 +35,33 @@ SpacePHARER will search with six-frame translated CRISPR spacer sequences to set
 
 ## Running SpacePHARER
 
+
 ### Main Modules
 
-      createsetdb       Extract and translate ORFs and create sequence database and associated metadata
-      predictmatch      Predict host-phage matches based on sets of protein-sequence-level similarity
+      easy-predict      Predict phage-host matches from multiFASTA and common spacer files (PILER-CR, CRISPRDetect and CRT)
+      createsetdb       Create sequence database from FASTA input
+      predictmatch      Predict host-phage matches
       parsespacer       Parse a file containing CRISPR array in supported formats (CRT,PILER-CR and CRISPRDetect)
-      downloadgenome    Download GenBank (phage) genomes from NCBI ftp site and create setDB
+      downloadgenome    Download GenBank (phage) genomes and create sequence database
 
 ### Important parameters
 
      --reverse-fragments      reverse AA fragments (ORFs) to generate control setDB
-     --fdr                    false discovery rate cutoff to determine E_comb threshold of predictions
+     --fdr                    false discovery rate cutoff to determine S_comb threshold of predictions
      --fmt                    output format for predictmatch. (0: short (only matches); 1: long (matches and hits); 2: long with nucleotide alignment)
+
+### Easy workflow
+
+We provide an `easy-predict` workflow, which deals directly with (multi)FASTA or supported CRISPR array file(.txt) as query, and outputs a tab-separated(.tsv) file. To start, you need to create a `targetSetDB` and a reversed target setDB (`targetSetDB_rev`) in the same path. 
+
+      spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB tmpFolder
+      spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB_rev tmpFolder --reverse-fragments 1
+      spacepharer easy-predict Query1.fasta|.txt [...QueryN.fasta|.txt] targetSetDB outputFileName.tsv tmpFolder 
+
+Alternatively, you can use `downloadgenome` to download a list of genomes from NCBI ftp site which automatically creates additionally `targetSetDB_rev`.
+
+      spacepharer downloadgenome GenBank_2018_09 targetSetDB tmpFolder
+      spacepharer easy-predict Query1.fasta [...QueryN.fasta] targetSetDB outputFileName.tsv tmpFolder       
 
 ### Creating setDB
 
@@ -64,6 +79,8 @@ You will also need to generate a control target set DB. One of the options is wi
 As an alternative of creating target and control setDB, this module will download all available phage genomes from the NCBI GenBank FTP and create a target SetDB in the provided path. ```--reverse-setdb``` will additionally create control target setDB with the name targetSetDB_rev in the same path.
 
       spacepharer downloadgenome GenBank_2018_09 targetSetDB tmpFolder
+
+
 
 ### Parsing spacer files
 
@@ -89,6 +106,8 @@ MinCED:
 CRISPRDetect:
 
 CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
+
+
 
 ### Searching and predicting matches
 
