@@ -39,10 +39,10 @@ SpacePHARER will search with six-frame translated CRISPR spacer sequences to set
 ### Main Modules
 
       easy-predict      Predict phage-host matches from multiFASTA and common spacer files (PILER-CR, CRISPRDetect and CRT)
+      downloadgenome    Download GenBank (phage) genomes and create sequence database
       createsetdb       Create sequence database from FASTA input
       predictmatch      Predict host-phage matches
       parsespacer       Parse a file containing CRISPR array in supported formats (CRT,PILER-CR and CRISPRDetect)
-      downloadgenome    Download GenBank (phage) genomes and create sequence database
 
 ### Important parameters
 
@@ -52,15 +52,15 @@ SpacePHARER will search with six-frame translated CRISPR spacer sequences to set
 
 ### Easy workflow
 
-We provide an `easy-predict` workflow, which deals directly with (multi)FASTA or supported CRISPR array file(.txt) as query, and outputs a tab-separated(.tsv) file. To start, you need to create a `targetSetDB` and a reversed target setDB (`targetSetDB_rev`) in the same path. 
+The `easy-predict` workflow deals directly with (multi)FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) as query, and outputs a tab-separated (.tsv) file containing the phage-host predictions. To start, you need to create a database of the phage genomes `targetSetDB` and known non-coding control sequences `targetSetDB_rev`. Here we create control sequences by reversing the extracted ORFs.
 
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB tmpFolder
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB_rev tmpFolder --reverse-fragments 1
       spacepharer easy-predict Query1.fasta|.txt [...QueryN.fasta|.txt] targetSetDB outputFileName.tsv tmpFolder 
 
-Alternatively, you can use `downloadgenome` to download a list of genomes from NCBI ftp site which automatically creates additionally `targetSetDB_rev`.
+Alternatively, you can use `downloadgenome` to download a list of phage genomes. Here, the reversed control sequences are automatically created.
 
-      spacepharer downloadgenome GenBank_2018_09 targetSetDB tmpFolder
+      spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmpFolder
       spacepharer easy-predict Query1.fasta [...QueryN.fasta] targetSetDB outputFileName.tsv tmpFolder       
 
 ### Creating setDB
@@ -76,15 +76,17 @@ You will also need to generate a control target set DB. One of the options is wi
 
 ### Downloading phage genomes
 
-As an alternative of creating target and control setDB, this module will download all available phage genomes from the NCBI GenBank FTP and create a target SetDB in the provided path. ```--reverse-setdb``` will additionally create control target setDB with the name targetSetDB_rev in the same path.
+As an alternative of creating target and control setDB, the `downloadgenome` module will download the provided list of URLs to phage genomes or a predefined list of phage genomes and create a target SetDB in the provided path. ```--reverse-setdb``` will additionally create a control target setDB with the name targetSetDB_rev in the same path.
 
-      spacepharer downloadgenome GenBank_2018_09 targetSetDB tmpFolder
+      spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmpFolder
 
+A list of predefined phage catalogues can be shown by executing `downloadgenome` without additional parameters:
 
+      spacepharer downloadgenome
 
 ### Parsing spacer files
 
-If you wish to provide spacer files (CRT,PILER-CR or CRISPRDetect) as query, parsespacer will extract spacer sequences from each file and create a MMseqs2 sequence DB. Then use createsetdb to generate associated metadata.
+If you wish to provide spacer files (CRT/MinCED, PILER-CR or CRISPRDetect) as query, parsespacer will extract spacer sequences from each file and create a sequence DB. Then use createsetdb to generate associated metadata.
 
     spacepharer parsespacer spacerFile1.txt [...spacerFileN.txt] queryDB 
     spacepharer createsetdb queryDB querySetDB tmpFolder --extractorf-spacer 1
@@ -106,8 +108,6 @@ MinCED:
 CRISPRDetect:
 
 CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
-
-
 
 ### Searching and predicting matches
 
