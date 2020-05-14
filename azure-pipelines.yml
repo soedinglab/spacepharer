@@ -3,8 +3,8 @@
 trigger:
   - master
 
-#variables:
-#    regression: 1
+variables:
+    regression: 1
 
 jobs:
   - job: build_ubuntu_1604
@@ -48,11 +48,14 @@ jobs:
 
           make -j $(nproc --all)
         displayName: Build SpacePHARER
-        #- script: |
-        #  cd ${BUILD_SOURCESDIRECTORY}/tests
-        #  ./run.sh "${BUILD_SOURCESDIRECTORY}/build/src/spacepharer"
-        #displayName: Run Regression Suite
-        #condition: eq(variables['regression'], 1)
+        - script: |
+          cd ${BUILD_SOURCESDIRECTORY}
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
+          ./build/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp
+          awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 7) exit 1; }' result.tsv
+        displayName: Run Regression Suite
+        condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         condition: eq(variables['STATIC'], 1)
         inputs:
@@ -72,11 +75,14 @@ jobs:
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build spacepharer
         displayName: Build SpacePHARER
-      #- script: |
-      #    cd ${BUILD_SOURCESDIRECTORY}/tests
-      #    ./run.sh "${BUILD_SOURCESDIRECTORY}/build/build_sse41/src/spacepharer"
-      #  displayName: Run Regression Suite
-      #  condition: eq(variables['regression'], 1)
+      - script: |
+          cd ${BUILD_SOURCESDIRECTORY}
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
+          ./build/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp
+          awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 7) exit 1; }' result.tsv
+        displayName: Run Regression Suite
+        condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         inputs:
           targetPath: $(Build.SourcesDirectory)/build/build_sse41/src/spacepharer
