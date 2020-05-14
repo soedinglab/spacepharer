@@ -330,12 +330,11 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                     }
                     delete kseq;
                 // process next file instead of continuing with the loop
-                char null = '\0';
-                data = &null;
-                break;
+                goto next;
             }
         }
         input.close();
+        next:;
     }
     fclose(lookup);
     fclose(source);
