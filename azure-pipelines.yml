@@ -48,7 +48,7 @@ jobs:
 
           make -j $(nproc --all)
         displayName: Build SpacePHARER
-        - script: |
+      - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
           ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
