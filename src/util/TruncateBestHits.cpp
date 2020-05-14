@@ -45,7 +45,10 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < resultReader.getSize(); ++i) {
             progress.updateProgress();
             char *data = resultReader.getData(i, thread_idx);
-            while (*data != '\0'){
+            unsigned int resultKey = resultReader.getDbKey(i);
+            size_t setKey = Util::fast_atoi<size_t>(setReader.getDataByDBKey(resultKey, thread_idx));
+            unsigned int setSize = Util::fast_atoi<unsigned int>(sizeReader.getDataByDBKey(setKey, thread_idx));
+            while (*data != '\0') {
                 char *current = data;
                 data = Util::skipLine(data);
                 size_t length = data - current;
@@ -53,40 +56,36 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
                 if (line.empty() == true) {
                     continue;
                 }
+
                 std::vector<std::string> columns = Util::split(line, "\t");
+                //compute besthit P-val, column [3] now at positon [1]
                 double logPval = strtod(columns[1].c_str(), NULL);
-                //compute besthit P-val, column [3] now at positon [1] and reappend all other columns back to line
-                line.clear();
-                line.append(columns[0]);
-                line.append("\t");
-                line.append(columns[3]);
-                line.append("\t");
-                line.append(columns[2]);
-                line.append("\t");
-                line.append(SSTR(exp(logPval)));
-                line.append("\t");
-                line.append(columns[4]);
-                line.append("\t");
-                line.append(columns[5]);
-                line.append("\t");
-                line.append(columns[6]);
-                line.append("\t");
-                line.append(columns[7]);
-                line.append("\t");
-                line.append(columns[8]);
-                line.append("\t");
-                line.append(columns[9]);
-                line.append("\t");
-                line.append(columns[10]);
-                size_t setKey = Util::fast_atoi<size_t>(setReader.getDataByDBKey(i, thread_idx));
-                unsigned int setSize = Util::fast_atoi<unsigned int>(sizeReader.getDataByDBKey(setKey, thread_idx));
                 double logPvalThr = log(1.0/(setSize + 1));
-                if(logPval < logPvalThr) {
-                    buffer.append(line);
-                    if (buffer.back() != '\n'){
-                        buffer.append("\n");
-                    }
+                if (logPval >= logPvalThr) {
+                    continue;
                 }
+                buffer.append(columns[0]);
+                buffer.append("\t");
+                buffer.append(columns[3]);
+                buffer.append("\t");
+                buffer.append(columns[2]);
+                buffer.append("\t");
+                buffer.append(SSTR(exp(logPval)));
+                buffer.append("\t");
+                buffer.append(columns[4]);
+                buffer.append("\t");
+                buffer.append(columns[5]);
+                buffer.append("\t");
+                buffer.append(columns[6]);
+                buffer.append("\t");
+                buffer.append(columns[7]);
+                buffer.append("\t");
+                buffer.append(columns[8]);
+                buffer.append("\t");
+                buffer.append(columns[9]);
+                buffer.append("\t");
+                buffer.append(columns[10]);
+                buffer.append("\n");
             }
             dbw.writeData(buffer.c_str(), buffer.length(), resultReader.getDbKey(i), thread_idx);
             buffer.clear();
