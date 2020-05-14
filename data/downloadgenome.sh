@@ -25,23 +25,42 @@ hasCommand () {
     command -v "$1" >/dev/null 2>&1 || { echo "Please make sure that $1 is in \$PATH."; exit 1; }
 }
 
+abspath() {
+    if [ -d "$1" ]; then
+        (cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+        if [ -z "${1##*/*}" ]; then
+            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+        else
+            echo "$(pwd)/$1"
+        fi
+    elif [ -d "$(dirname "$1")" ]; then
+        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
+
 hasCommand wget
 
-OUTDB="$2"
-TMP_PATH="$3"
+OUTDB="$(abspath "$2")"
+TMP_PATH="$(abspath "$3")"
+GENOME_FTP="$(abspath "${GENOME_FTP}")"
+MMSEQS="$(abspath "${MMSEQS}")"
 
-#change path
-if notExists "${TMP_PATH}/download.done"; then
-    echo "Download phage genomes"
-    while read -r NAME URL; do
-        wget -nv -O "${TMP_PATH}/${NAME}" "${URL}"
-        push_back "${TMP_PATH}/${NAME}"
+cd "${TMP_PATH}"
+if notExists downloaded.tsv; then
+    : > downloaded.tsv.tmp
+    while read -r URL; do
+        NAME="$(basename "${URL}")"
+        if wget -N -np -nv "${URL}"; then
+            push_back "${NAME}"
+            echo "${NAME}" >> downloaded.tsv.tmp
+        fi
     done < "${GENOME_FTP}"
-    touch "${TMP_PATH}/download.done"
+    mv -f downloaded.tsv.tmp downloaded.tsv
 else
-    while read -r NAME URL; do
-        push_back "${TMP_PATH}/${NAME}"
-    done < "${GENOME_FTP}"
+    while read -r NAME; do
+        push_back "${NAME}"
+    done < downloaded.tsv
 fi
 
 eval "set -- $ARR"
