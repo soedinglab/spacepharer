@@ -97,7 +97,7 @@ else
 
   if notExists "${TMP_PATH}/seqdb.index"; then
       # shellcheck disable=SC2086
-      tr -d '\000' < "${TMP_PATH}/tardb" | "${MMSEQS}" createdb "stdin" "${TMP_PATH}/seqdb" ${VERBOSITY_PAR} \
+      "${MMSEQS}" createdb "${TMP_PATH}/tardb" "${TMP_PATH}/seqdb" ${VERBOSITY_PAR} \
           || fail "createsetdb failed"
   fi
 
