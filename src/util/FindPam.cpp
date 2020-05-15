@@ -144,7 +144,6 @@ int findpam(int argc, const char **argv, const Command& command) {
                 }
                 std::vector<std::string> columns = Util::split(line, "\t");
                 size_t tsetid = Util::fast_atoi<size_t>(columns[0].c_str());
-                // should we not call getId first? is this not a key?
                 size_t contigid = Util::fast_atoi<size_t>(setReader.getDataByDBKey(tsetid, thread_idx));
                 char *data = targetReader.getDataByDBKey(contigid, thread_idx);
                 size_t qstart = Util::fast_atoi<size_t>(columns[5].c_str()) - 1;
