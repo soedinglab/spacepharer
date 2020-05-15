@@ -1,6 +1,6 @@
 # SpacePHARER: CRISPR Spacer Phage-Host pAiRs findER
 
-SpacePHARER is a modular toolkit for sensitive phage-host interaction identification using CRISPR spacers. SpacePHARER combines the fast and sensitive homology search capabilities of [MMseqs2](https://github.com/soedinglab/MMseqs2) with a novel approach of searching sets of sequences. SpacePHARER is GPLv3-licensed open source software implemented in C++ and available for Linux and macOS. The software is designed to run efficiently on multiple cores.
+SpacePHARER is a modular toolkit for sensitive phage-host interaction identification using CRISPR spacers. SpacePHARER adapts the fast homology search capabilities of [MMseqs2](https://github.com/soedinglab/MMseqs2) to sensitively query short spacer sequences. It introduces a novel approach of aggregating sets of spacer-based hits to discover phage-host matches. SpacePHARER is GPLv3-licensed open source software implemented in C++ and available for Linux and macOS. The software is designed to run efficiently on multiple cores.
 
 <p align="center"><img src="https://github.com/soedinglab/spacepharer/blob/master/.github/SpacePHARER.png" height="250"/></p>
 
@@ -15,7 +15,7 @@ SpacePHARER can be used by compiling from source (see below) or downloading a st
 
 ### Compile from source
 
-Compiling SpacePHARER from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.8 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
+Compiling SpacePHARER from source has the advantage of system-specific optimizations, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.8 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
 
       git clone https://github.com/soedinglab/spacepharer.git
       cd spacepharer
@@ -32,7 +32,7 @@ Compiling SpacePHARER from source has the advantage that it will be optimized to
 
 ## Input
 
-SpacePHARER will search with six-frame translated CRISPR spacer sequences to sets of phage **ORFs** (open reading frames) based on similarity, combining multiple evidences (**hits**) found between two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are FASTA files of nucleotide sequences (`.fasta` or `.fasta.gz`). Spacers should be provided in multi-FASTA files each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/), [MinCED](https://github.com/ctSkennerton/minced) (derived from CRT format) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
+SpacePHARER will conduct a similarity search between six-frame translated CRISPR spacer sequences and sets of phage **ORFs** (open reading frames), combine multiple evidences (**hits**) found between the two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are FASTA files of nucleotide sequences (`.fasta` or `.fasta.gz`). Spacers should be provided in multiple FASTA files, each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/), [MinCED](https://github.com/ctSkennerton/minced) (derived from CRT format) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html).
 
 ## Running SpacePHARER
 
@@ -52,7 +52,7 @@ SpacePHARER will search with six-frame translated CRISPR spacer sequences to set
 
 ### Quick start
 
-To start, you need to create a database of the phage genomes `targetSetDB` and known non-coding control sequences `targetSetDB_rev`. Here we create control sequences by reversing the extracted ORFs.
+To start, you need to create a database of the phage genomes `targetSetDB` and control sequences `targetSetDB_rev`, against which no true match is expected. Here we create control sequences by reversing the extracted ORFs.
 
       spacepharer createsetdb examples/GCA*.fna.gz targetSetDB tmpFolder
       spacepharer createsetdb examples/GCA*.fna.gz targetSetDB_rev tmpFolder --reverse-fragments 1
@@ -65,24 +65,24 @@ Alternatively, you can use `downloadgenome` to download a list of phage genomes.
       # Alternatively you can pass a list of URLs to downloadgenome
       spacepharer downloadgenome examples/genome_list.tsv targetSetDB tmpFolder
 
-The `easy-predict` workflow directly returns a tab-separated (.tsv) file containing phage-host predictions from (multi)FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
+The `easy-predict` workflow directly returns a tab-separated (.tsv) file containing phage-host predictions from (multiple) FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
 
       spacepharer easy-predict examples/*.fas targetSetDB predictions.tsv tmpFolder
 
-### Creating databases manually
+### Creating databases
 
-Before search, query or target sequences contained in Fasta files will need to be converted by calling `createsetdb`: This first creates a sequence DB, then extracts and translates all putative protein fragments (ORFs), and finally generates associated metadata. For spacer sequences, `--extractorf-spacer 1` will use a different set of parameters for extracting protein fragments.
+Before search, query or target sequences contained in FASTA files need to be converted to database format by calling `createsetdb`. This command first creates a sequence DB, then extracts and translates all putative protein fragments (ORFs), and finally generates associated metadata. For spacer sequences, setting the parameter `--extractorf-spacer 1` is important to properly extract putative protein fragments from the spacers, which are usually a short partial ORF, not necessarily in frame.
 
       spacepharer createsetdb Query1.fasta [...QueryN.fasta] querySetDB tmpFolder --extractorf-spacer 1
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB tmpFolder
 
-You will also need to generate a control target set DB. One of the options is with reversed protein fragments of target DB using ```--reverse-fragments 1```
+You will also need to generate a control target set DB to allow SpacePHARER to calibrate the cutoff for reporting matches. SpacePHARER enables generating such control by reversing the protein fragments of your provided target DB using the parameter ```--reverse-fragments 1```:
 
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] controlSetDB tmpFolder --reverse-fragments 1
 
 ### Downloading target genomes
 
-As an alternative of creating target and control setDB, the `downloadgenome` module will download the provided list of URLs to phage genomes or a predefined list of phage genomes and create a target SetDB in the provided path.
+As an alternative to creating target and control setDB, the `downloadgenome` module will download the provided list of URLs to phage genomes or a predefined list of phage genomes and create a target setDB in the provided path.
 
       spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmpFolder
       
@@ -102,7 +102,9 @@ If you wish to provide spacer files (CRT/MinCED, PILER-CR or CRISPRDetect) as qu
 
 #### Sample commands for running spacer extraction tools
 
-PILER-CR: Use of `-noinfo` is a must. Otherwise, the format cannot be read.
+Below are sample commands for common spacer extraction tools whose format is accepted by SpacePHARER. If you use any of these tools, it is advisable to follow any updates to their commands on their user manuals.
+
+PILER-CR: Use of `-noinfo` is mandatory. Otherwise, the format cannot be read.
 
       pilercr -noinfo -quiet -in prok.fasta -out prok.txt
 
@@ -120,7 +122,7 @@ CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CR
 
 ### Searching and predicting matches
 
-The `predictmatch` workflow gives more control about the execution of the prediction. Here the a seperate control sequence set DB `controlSetDB` can be used. For example, we can assume that any spacer hit towards an eukoryota targeting virus is a false positive:
+The `predictmatch` workflow gives more control of the execution of the prediction. Here a seperate control sequence set DB `controlSetDB` can be used. For example, we can assume that any spacer hit towards a eukoryota-targeting virus is a false positive:
 
     spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmp --reverse-setdb 0
     spacepharer downloadgenome GenBank_eukvir_2018_09 controlSetDB tmp --reverse-setdb 0
