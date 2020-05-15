@@ -1,7 +1,19 @@
 set(workflow_source_files
-        workflow/EasyPredict.cpp
-        workflow/PredictMatch.cpp
-        workflow/CreateSetDb.cpp
-        workflow/DownloadGenome.cpp
+        workflow/Cluster.cpp
+        workflow/ClusterUpdate.cpp
+        workflow/Databases.cpp
+        workflow/Linclust.cpp
+        workflow/EasySearch.cpp
+        workflow/EasyRbh.cpp
+        workflow/EasyCluster.cpp
+        workflow/EasyLinclust.cpp
+        workflow/Enrich.cpp
+        workflow/Linsearch.cpp
+        workflow/Map.cpp
+        workflow/Rbh.cpp
+        workflow/Search.cpp
+        workflow/Taxonomy.cpp
+        workflow/EasyTaxonomy.cpp
+        workflow/CreateIndex.cpp
         PARENT_SCOPE
         )
