@@ -8,6 +8,10 @@ SpacePHARER is a modular toolkit for sensitive phage-host interaction identifica
 
 SpacePHARER can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux or `sysctl -a | grep machdep.cpu.features | grep SSE4.1` on MacOS).
 
+     # install from bioconda
+     conda install -c conda-forge -c bioconda spacepharer
+     # pull docker container
+     docker pull soedinglab/spacepharer
      # static SSE4.1 build
      wget https://mmseqs.com/spacepharer/spacepharer-linux-sse41.tar.gz; tar xvzf spacepharer-linux-sse41.tar.gz; export PATH=$(pwd)/spacepharer/bin/:$PATH
      # static AVX2 build
