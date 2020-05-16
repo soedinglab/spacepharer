@@ -18,7 +18,7 @@ RUN cmake -DHAVE_AVX2=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -
     make -j $(nproc --all) && make install;
 
 FROM debian:stable-slim
-MAINTAINER Eli Levy Karin <eli.levy.karin@gmail.com>
+MAINTAINER Milot Mirdita <milot@mirdita.de>
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
      gawk bash grep wget libstdc++6 libgomp1 zlib1g libbz2-1.0 \
