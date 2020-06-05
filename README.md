@@ -137,13 +137,13 @@ The `predictmatch` workflow gives more control of the execution of the predictio
 Upon completion, SpacePHARER outputs a tab-separated text file (.tsv). Each prokaryotic-phage match spans two or more lines:
 
     #prok_acc  phage_acc   S_comb      num_hits
-    >spacer_acc      phage_acc   p_adjust    spacer_start      spacer_end  phage_start phage_end   putative_5'_PAM|putative_3'_PAM
+    >spacer_acc      phage_acc   p_bh    spacer_start      spacer_end  phage_start phage_end   putative_5'_PAM|putative_3'_PAM
     *NUCL_SEQ_ALN_SPACER*
     *NUCL_SEQ_ALN_PHAGE*
 
 The first line starts with `#`: prokaryotic accession, phage accession, combined score and number of hits in the match.
 
-Each following line describes an individual hit: spacer accession, phage accession, p adjust, spacer start and end, phage start and end, putative 5’ PAM|putative 3’ PAM.
+Each following line describes an individual hit: spacer accession, phage accession, p besthit, spacer start and end, phage start and end, putative 5’ PAM|putative 3’ PAM.
 
 Optionally, the aligned spacer and phage sequences can be printed in two additional lines following each hit line, using `--fmt 2`
 
