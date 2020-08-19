@@ -12,5 +12,6 @@ extern int findpam(int argc, const char **argv, const Command& command);
 extern int truncatebesthits(int argc, const char **argv, const Command& command);
 extern int summarizeresults(int argc, const char **argv, const Command& command);
 extern int downloadgenome(int argc, const char **argv, const Command& command);
+extern int combinescore(int argc, const char **argv, const Command& command);
 
 #endif

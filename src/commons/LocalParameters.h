@@ -23,6 +23,7 @@ public:
     std::vector<MMseqsParameter*> predictmatchworkflow;
     std::vector<MMseqsParameter*> createsetdbworkflow;
     std::vector<MMseqsParameter*> downloadgenome;
+    std::vector<MMseqsParameter*> combinescore;
 
     PARAMETER(PARAM_REVERSE_FRAGMENTS)
     PARAMETER(PARAM_REVERSE_SETDB)
@@ -67,7 +68,10 @@ private:
         summarizeresults.push_back(&PARAM_COMPRESSED);
         summarizeresults.push_back(&PARAM_THREADS);
         summarizeresults.push_back(&PARAM_V);
-
+        
+        combinescore.push_back(&PARAM_COMPRESSED);
+        combinescore.push_back(&PARAM_THREADS);
+        combinescore.push_back(&PARAM_V);
 
         createsetdbworkflow = combineList(createdb, translatenucs);
         createsetdbworkflow = combineList(createsetdbworkflow, result2stats);

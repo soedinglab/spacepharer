@@ -87,6 +87,16 @@ std::vector<Command> commands = {
                 "<i:matchDB> <i:alnDB> <o:output[.tsv]>",
                 CITATION_SPACEPHARER, {{"matchDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::genericDb},
                                        {"alnDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}, //&DbValidator::resultDb},
-                                       {"output", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}}
+                                       {"output", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
+       {"combinescore",         combinescore,       &localPar.combinescore,         COMMAND_SPECIAL | COMMAND_EXPERT,
+                "Compute a combined score for each query-target set pair",
+                NULL,
+                "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
+                "<i:querySetDB> <i:targetSetDB> <i:resultDB> <o:pvalDB>",
+                CITATION_SPACEPHARER, {{"querySetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"targetSetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                                           {"pvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}}
 };
 

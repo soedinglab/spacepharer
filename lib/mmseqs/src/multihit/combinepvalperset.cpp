@@ -176,6 +176,18 @@ public:
             size_t k = 0;
             for (size_t i = 0; i < dataToAggregate.size(); ++i) {
                 double logPvalue = std::strtod(dataToAggregate[i][1].c_str(), NULL);
+                double seqId = strtod(dataToAggregate[i][2].c_str(), NULL);
+                int qStart = Util::fast_atoi<int>(dataToAggregate[i][4].c_str());
+                int qEnd = Util::fast_atoi<int>(dataToAggregate[i][5].c_str());
+                int qLen = Util::fast_atoi<int>(dataToAggregate[i][6].c_str());
+                double qCov = 1.0* (qEnd - qStart + 1) / qLen;
+                if(seqId == 1.0 && qCov == 1.0){
+                    logPvalThreshold = (logPvalue < logPvalThreshold) ? logPvalThreshold : logPvalue;
+                };
+
+            }
+            for (size_t i = 0; i < dataToAggregate.size(); ++i) {
+                double logPvalue = std::strtod(dataToAggregate[i][1].c_str(), NULL);
                 if (logPvalue < minLogPval) {
                     if (logPvalue == 0) {
                         //to avoid -0.0

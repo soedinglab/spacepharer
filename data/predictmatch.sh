@@ -44,7 +44,7 @@ fi
 
 if notExists "${TMP_PATH}/cScore.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" combinepvalperset "${QUERY}" "${TARGET}" "${TMP_PATH}/aggregate_merged" "${TMP_PATH}/cScore" "${TMP_PATH}" ${COMBINEPVALPERSET_PAR} \
+    "${MMSEQS}" combinescore "${QUERY}" "${TARGET}" "${TMP_PATH}/aggregate_merged" "${TMP_PATH}/cScore" "${TMP_PATH}" ${THREADS_PAR} \
         || fail "combinepvalperset failed"
 fi
 
@@ -69,7 +69,7 @@ fi
 
 if notExists "${TMP_PATH}/cScore_rev.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" combinepvalperset "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/aggregate_merged_rev" "${TMP_PATH}/cScore_rev" "${TMP_PATH}" ${COMBINEPVALPERSET_PAR} \
+    "${MMSEQS}" combinescore "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/aggregate_merged_rev" "${TMP_PATH}/cScore_rev" "${TMP_PATH}" ${THREADS_PAR} \
         || fail "combinepvalperset failed"
 fi
 
