@@ -43,7 +43,7 @@ downloadFile() {
             aria2c --max-connection-per-server="$ARIA_NUM_CONN" --allow-overwrite=true -o "$FILENAME" -d "$DIR" "$URL" && return 0
             ;;
         CURL)
-            curl -o "$OUTPUT" "$URL" && return 0
+            curl -L -o "$OUTPUT" "$URL" && return 0
             ;;
         WGET)
             wget -O "$OUTPUT" "$URL" && return 0
@@ -118,6 +118,10 @@ case "${SELECTION}" in
         if notExists "${TMP_PATH}/nr.gz"; then
             date "+%s" > "${TMP_PATH}/version"
             downloadFile "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz" "${TMP_PATH}/nr.gz"
+            downloadFile "https://ftp.ncbi.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz" "${TMP_PATH}/prot.accession2taxid.gz"
+            gunzip "${TMP_PATH}/prot.accession2taxid.gz"
+            downloadFile "https://ftp.ncbi.nih.gov/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz" "${TMP_PATH}/pdb.accession2taxid.gz"
+            gunzip "${TMP_PATH}/pdb.accession2taxid.gz"
         fi
         push_back "${TMP_PATH}/nr.gz"
         INPUT_TYPE="FASTA_LIST"
@@ -152,22 +156,29 @@ case "${SELECTION}" in
             downloadFile "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam.version.gz" "${TMP_PATH}/version"
             downloadFile "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.full.gz" "${TMP_PATH}/db.msa.gz"
         fi
-        INPUT_TYPE="MSA"
+        INPUT_TYPE="STOCKHOLM_MSA"
     ;;
     "Pfam-A.seed")
         if notExists "${TMP_PATH}/db.msa.gz"; then
             downloadFile "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam.version.gz" "${TMP_PATH}/version"
             downloadFile "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.seed.gz" "${TMP_PATH}/db.msa.gz"
         fi
-        INPUT_TYPE="MSA"
+        INPUT_TYPE="STOCKHOLM_MSA"
+    ;;
+    "Pfam-B")
+        if notExists "${TMP_PATH}/msa.tar.gz"; then
+            downloadFile "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam.version.gz" "${TMP_PATH}/version"
+            downloadFile "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-B.tgz" "${TMP_PATH}/msa.tar.gz"
+        fi
+        INPUT_TYPE="FASTA_MSA"
     ;;
     "eggNOG")
         if notExists "${TMP_PATH}/download.done"; then
             date "+%s" > "${TMP_PATH}/version"
-            downloadFile "http://eggnogdb.embl.de/download/eggnog_5.0/per_tax_level/2/2_raw_algs.tar" "${TMP_PATH}/bacteria"
-            downloadFile "http://eggnogdb.embl.de/download/eggnog_5.0/per_tax_level/2157/2157_raw_algs.tar" "${TMP_PATH}/archea"
-            downloadFile "http://eggnogdb.embl.de/download/eggnog_5.0/per_tax_level/2759/2759_raw_algs.tar" "${TMP_PATH}/eukaryota"
-            downloadFile "http://eggnogdb.embl.de/download/eggnog_5.0/per_tax_level/10239/10239_raw_algs.tar" "${TMP_PATH}/viruses"
+            downloadFile "http://eggnog5.embl.de/download/eggnog_5.0/per_tax_level/2/2_raw_algs.tar" "${TMP_PATH}/bacteria"
+            downloadFile "http://eggnog5.embl.de/download/eggnog_5.0/per_tax_level/2157/2157_raw_algs.tar" "${TMP_PATH}/archea"
+            downloadFile "http://eggnog5.embl.de/download/eggnog_5.0/per_tax_level/2759/2759_raw_algs.tar" "${TMP_PATH}/eukaryota"
+            downloadFile "http://eggnog5.embl.de/download/eggnog_5.0/per_tax_level/10239/10239_raw_algs.tar" "${TMP_PATH}/viruses"
             touch "${TMP_PATH}/download.done"
         fi
         INPUT_TYPE="eggNOG"
@@ -181,6 +192,27 @@ case "${SELECTION}" in
             touch "${TMP_PATH}/download.done"
         fi
         INPUT_TYPE="FSA"
+    ;;
+    "dbCAN2")
+        if notExists "${TMP_PATH}/download.done"; then
+            downloadFile "http://bcb.unl.edu/dbCAN2/download/dbCAN-fam-aln-V8.tar.gz" "${TMP_PATH}/msa.tar.gz"
+            printf "8 %s\n" "$(date "+%s")" > "${TMP_PATH}/version"
+            touch "${TMP_PATH}/download.done"
+        fi
+        INPUT_TYPE="FASTA_MSA"
+    ;;
+    "SILVA")
+       if notExists "${TMP_PATH}/download.done"; then
+         downloadFile "https://ftp.arb-silva.de/release_${SILVA_REL}/Exports/README.txt" "${TMP_PATH}/version"
+         downloadFile "https://ftp.arb-silva.de/release_${SILVA_REL}/Exports/SILVA_${SILVA_REL}_SSURef_NR99_tax_silva.fasta.gz" "${TMP_PATH}/silva.fasta.gz"
+         downloadFile "https://ftp.arb-silva.de/release_${SILVA_REL}/Exports/taxonomy/tax_slv_ssu_${SILVA_REL}.txt.gz" "${TMP_PATH}/silva_tax.txt.gz"
+         gunzip "${TMP_PATH}/silva_tax.txt.gz"
+         downloadFile "https://ftp.arb-silva.de/release_${SILVA_REL}/Exports/taxonomy/tax_slv_ssu_${SILVA_REL}.acc_taxid.gz" "${TMP_PATH}/silva.acc_taxid.gz"
+         gunzip "${TMP_PATH}/silva.acc_taxid.gz"
+         touch "${TMP_PATH}/download.done"
+      fi
+      push_back "${TMP_PATH}/silva.fasta.gz"
+      INPUT_TYPE="FASTA_LIST"
     ;;
     "Kalamari")
         if notExists "${TMP_PATH}/kalamari.tsv"; then
@@ -242,7 +274,7 @@ case "${INPUT_TYPE}" in
         "${MMSEQS}" msa2profile "${TMP_PATH}/msa" "${OUTDB}" --match-mode 1 --match-ratio 0.5 --msa-type 1 ${THREADS_PAR} \
             || fail "msa2profile died"
     ;;
-    "MSA")
+    "STOCKHOLM_MSA")
         # shellcheck disable=SC2086
         "${MMSEQS}" convertmsa "${TMP_PATH}/db.msa.gz" "${TMP_PATH}/msa" ${VERB_PAR} \
             || fail "convertmsa died"
@@ -250,8 +282,23 @@ case "${INPUT_TYPE}" in
         # shellcheck disable=SC2086
         "${MMSEQS}" msa2profile "${TMP_PATH}/msa" "${OUTDB}" --match-mode 1 --match-ratio 0.5 ${THREADS_PAR} \
             || fail "msa2profile died"
-        "${MMSEQS}" rmdb "${TMP_PATH}/msa" \
-            || fail "rmdb died"
+        if [ -n "${REMOVE_TMP}" ]; then
+          "${MMSEQS}" rmdb "${TMP_PATH}/msa" \
+              || fail "rmdb died"
+        fi
+    ;;
+    "FASTA_MSA")
+        # shellcheck disable=SC2086
+        "${MMSEQS}" tar2db "${TMP_PATH}/msa.tar.gz" "${TMP_PATH}/msa" ${VERB_PAR} --output-dbtype 11 \
+            || fail "tar2db died"
+        rm -f "${TMP_PATH}/msa.tar.gz"
+        # shellcheck disable=SC2086
+        "${MMSEQS}" msa2profile "${TMP_PATH}/msa" "${OUTDB}" --match-mode 1 --match-ratio 0.5 ${THREADS_PAR} \
+            || fail "msa2profile died"
+        if [ -n "${REMOVE_TMP}" ]; then
+            "${MMSEQS}" rmdb "${TMP_PATH}/msa" \
+                || fail "rmdb died"
+        fi
     ;;
     "eggNOG")
         # shellcheck disable=SC2086
@@ -272,15 +319,55 @@ esac
 fi
 
 if [ -n "${TAXONOMY}" ] && notExists "${OUTDB}_mapping"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" prefixid "${OUTDB}_h" "${TMP_PATH}/header_pref.tsv" --tsv ${THREADS_PAR} \
-        || fail "prefixid died"
-    awk '{ match($0, / OX=[0-9]+ /); if (RLENGTH != -1) { print $1"\t"substr($0, RSTART+4, RLENGTH-5); next; } match($0, / TaxID=[0-9]+ /); print $1"\t"substr($0, RSTART+7, RLENGTH-8); }' "${TMP_PATH}/header_pref.tsv" \
-        | LC_ALL=C sort -n > "${OUTDB}_mapping"
-    rm -f "${TMP_PATH}/header_pref.tsv"
-    # shellcheck disable=SC2086
-    "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
-        || fail "createtaxdb died"
+    case "${SELECTION}" in
+      "SILVA")
+        mkdir -p "${TMP_PATH}/taxonomy"
+        # shellcheck disable=SC2016
+        CMD='BEGIN {
+              ids["root"] = 1;
+              print "1\t|\t1\t|\tno rank\t|\t-\t|" > taxdir"/nodes.dmp";
+              print "1\t|\troot\t|\t-\t|\tscientific name\t|" > taxdir"/names.dmp";
+          }
+          {
+              n = split($1, a, ";");
+              gsub("domain", "superkingdom", $3);
+              ids[$1] = $2;
+              gsub(/[^,;]*;$/, "", $1);
+              pname = $1;
+              if (n == 2) {
+                pname = "root";
+              }
+              pid = ids[pname];
+              printf("%s\t|\t%s\t|\t%s\t|\t-\t|\n", $2, pid, $3) > taxdir"/nodes.dmp";
+              printf("%s\t|\t%s\t|\t-\t|\tscientific name\t|\n", $2, a[n-1]) > taxdir"/names.dmp";
+          }'
+        awk -v taxdir="${TMP_PATH}/taxonomy" -F'\t' "$CMD" "${TMP_PATH}/silva_tax.txt"
+        touch "${TMP_PATH}/taxonomy/merged.dmp"
+        touch "${TMP_PATH}/taxonomy/delnodes.dmp"
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxdb" --ncbi-tax-dump "${TMP_PATH}/taxonomy" --tax-mapping-file "${TMP_PATH}/silva.acc_taxid" ${THREADS_PAR}
+       ;;
+     "NR")
+        touch "${OUTDB}_mapping"
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
+            || fail "createtaxdb died"
+        # shellcheck disable=SC2086
+        "${MMSEQS}" nrtotaxmapping "${TMP_PATH}/pdb.accession2taxid" "${TMP_PATH}/prot.accession2taxid" "${OUTDB}" "${OUTDB}_mapping" ${THREADS_PAR} \
+            || fail "nrtotaxmapping died"
+       ;;
+     *)
+       # shellcheck disable=SC2086
+       "${MMSEQS}" prefixid "${OUTDB}_h" "${TMP_PATH}/header_pref.tsv" --tsv ${THREADS_PAR} \
+           || fail "prefixid died"
+       awk '{ match($0, / OX=[0-9]+ /); if (RLENGTH != -1) { print $1"\t"substr($0, RSTART+4, RLENGTH-5); next; } match($0, / TaxID=[0-9]+ /); print $1"\t"substr($0, RSTART+7, RLENGTH-8); }' "${TMP_PATH}/header_pref.tsv" \
+           | LC_ALL=C sort -n > "${OUTDB}_mapping"
+       rm -f "${TMP_PATH}/header_pref.tsv"
+       # shellcheck disable=SC2086
+       "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
+           || fail "createtaxdb died"
+       ;;
+     esac
 fi
 
 if notExists "${OUTDB}.version"; then

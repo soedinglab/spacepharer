@@ -1,6 +1,6 @@
 /*
  * createdb
- * written by Martin Steinegger <martin.steinegger@mpibpc.mpg.de>.
+ * written by Martin Steinegger <martin.steinegger@snu.ac.kr>.
  * modified by Maria Hauser <mhauser@genzentrum.lmu.de> (splitting into sequences/headers databases)
  * modified by Milot Mirdita <milot@mirdita.de>
  */
@@ -129,6 +129,23 @@ int createdb(int argc, const char **argv, const Command& command) {
         } else {
             kseq = KSeqFactory(filenames[fileIdx].c_str());
         }
+        if (par.createdbMode == Parameters::SEQUENCE_SPLIT_MODE_SOFT && kseq->type != KSeqWrapper::KSEQ_FILE) {
+            Debug(Debug::WARNING) << "Only uncompressed fasta files can be used with --createdb-mode 0.\n";
+            Debug(Debug::WARNING) << "We recompute with --createdb-mode 1.\n";
+            par.createdbMode = Parameters::SEQUENCE_SPLIT_MODE_HARD;
+            progress.reset(SIZE_MAX);
+            hdrWriter.close();
+            seqWriter.close();
+            delete kseq;
+            if (fclose(source) != 0) {
+                Debug(Debug::ERROR) << "Cannot close file " << sourceFile << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+            for (size_t i = 0; i < shuffleSplits; ++i) {
+                sourceLookup[i].clear();
+            }
+            goto redoComputation;
+        }
         while (kseq->ReadEntry()) {
             progress.updateProgress();
             const KSeqWrapper::KSeqEntry &e = kseq->entry;
@@ -185,7 +202,10 @@ int createdb(int argc, const char **argv, const Command& command) {
                     hdrWriter.close();
                     seqWriter.close();
                     delete kseq;
-                    fclose(source);
+                    if (fclose(source) != 0) {
+                        Debug(Debug::ERROR) << "Cannot close file " << sourceFile << "\n";
+                        EXIT(EXIT_FAILURE);
+                    }
                     for (size_t i = 0; i < shuffleSplits; ++i) {
                         sourceLookup[i].clear();
                     }
@@ -220,9 +240,12 @@ int createdb(int argc, const char **argv, const Command& command) {
         }
     }
     Debug(Debug::INFO) << "\n";
-    fclose(source);
-    hdrWriter.close(true);
-    seqWriter.close(true);
+    if (fclose(source) != 0) {
+        Debug(Debug::ERROR) << "Cannot close file " << sourceFile << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+    hdrWriter.close(true, false);
+    seqWriter.close(true, false);
     if (dbType == -1) {
         if (isNuclCnt == sampleCount) {
             dbType = Parameters::DBTYPE_NUCLEOTIDES;
@@ -262,40 +285,46 @@ int createdb(int argc, const char **argv, const Command& command) {
             }
         }
     }
-    DBReader<unsigned int> readerHeader(hdrDataFile.c_str(), hdrIndexFile.c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
-    readerHeader.open(DBReader<unsigned int>::NOSORT);
 
-    // create lookup file
-    std::string lookupDataFile = dataFile + ".lookup";
-    std::string lookupIndexFile = lookupDataFile + ".index";
-    DBWriter lookupFile(lookupDataFile.c_str(), lookupIndexFile.c_str(), 1, Parameters::WRITER_ASCII_MODE, Parameters::DBTYPE_OMIT_FILE);
-    lookupFile.open();
-
-    char lookupBuffer[32768];
-    unsigned int splitIdx = 0;
-    unsigned int splitCounter = 0;
-    DBReader<unsigned int>::LookupEntry entry;
-    for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
-        size_t splitSize = sourceLookup[splitIdx].size();
-        if (splitSize == 0 || splitCounter > sourceLookup[splitIdx].size() - 1) {
-            splitIdx++;
-            splitCounter = 0;
+    if (par.writeLookup == true) {
+        DBReader<unsigned int> readerHeader(hdrDataFile.c_str(), hdrIndexFile.c_str(), 1, DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_INDEX);
+        readerHeader.open(DBReader<unsigned int>::NOSORT);
+        // create lookup file
+        std::string lookupFile = dataFile + ".lookup";
+        FILE* file = FileUtil::openAndDelete(lookupFile.c_str(), "w");
+        std::string buffer;
+        buffer.reserve(2048);
+        unsigned int splitIdx = 0;
+        unsigned int splitCounter = 0;
+        DBReader<unsigned int>::LookupEntry entry;
+        for (unsigned int id = 0; id < readerHeader.getSize(); id++) {
+            size_t splitSize = sourceLookup[splitIdx].size();
+            if (splitSize == 0 || splitCounter > sourceLookup[splitIdx].size() - 1) {
+                splitIdx++;
+                splitCounter = 0;
+            }
+            char *header = readerHeader.getData(id, 0);
+            entry.id = id;
+            entry.entryName = Util::parseFastaHeader(header);
+            if (entry.entryName.empty()) {
+                Debug(Debug::WARNING) << "Cannot extract identifier from entry " << entries_num << "\n";
+            }
+            entry.fileNumber = sourceLookup[splitIdx][splitCounter];
+            readerHeader.lookupEntryToBuffer(buffer, entry);
+            int written = fwrite(buffer.c_str(), sizeof(char), buffer.size(), file);
+            if (written != (int)buffer.size()) {
+                Debug(Debug::ERROR) << "Cannot write to lookup file " << lookupFile << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+            buffer.clear();
+            splitCounter++;
         }
-        char *header = readerHeader.getData(id, 0);
-        entry.id = id;
-        entry.entryName = Util::parseFastaHeader(header);
-        entry.fileNumber = sourceLookup[splitIdx][splitCounter];
-        if (entry.entryName.empty()) {
-            // An identifier is necessary for these two cases, so we should just give up
-            Debug(Debug::WARNING) << "Cannot extract identifier from entry " << entries_num << "\n";
+        if (fclose(file) != 0) {
+            Debug(Debug::ERROR) << "Cannot close file " << lookupFile << "\n";
+            EXIT(EXIT_FAILURE);
         }
-        size_t len = readerHeader.lookupEntryToBuffer(lookupBuffer, entry);
-        lookupFile.writeData(lookupBuffer, len, 0, 0, false, false);
-        splitCounter++;
+        readerHeader.close();
     }
-    lookupFile.close(true);
-    FileUtil::remove(lookupIndexFile.c_str());
-    readerHeader.close();
     delete[] sourceLookup;
 
     return EXIT_SUCCESS;

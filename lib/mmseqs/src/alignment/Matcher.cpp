@@ -250,7 +250,7 @@ std::string Matcher::uncompressAlignment(const std::string &cbt) {
 Matcher::result_t Matcher::parseAlignmentRecord(const char *data, bool readCompressed) {
     const char *entry[255];
     size_t columns = Util::getWordsOfLine(data, entry, 255);
-    if (columns < ALN_RES_WITH_OUT_BT_COL_CNT) {
+    if (columns < ALN_RES_WITHOUT_BT_COL_CNT) {
         Debug(Debug::ERROR) << "Invalid alignment result record.\n";
         EXIT(EXIT_FAILURE);
     }
@@ -277,26 +277,52 @@ Matcher::result_t Matcher::parseAlignmentRecord(const char *data, bool readCompr
     double dbCov = SmithWaterman::computeCov(adjustDBstart, dbEnd, dbLen);
     size_t alnLength = Matcher::computeAlnLength(adjustQstart, qEnd, adjustDBstart, dbEnd);
 
-    if (columns < ALN_RES_WITH_BT_COL_CNT) {
-        return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
-                                 alnLength, qStart, qEnd, qLen, dbStart, dbEnd, dbLen, "");
-
-    } else {
-        size_t len = entry[11] - entry[10];
-        if (readCompressed) {
+    switch(columns) {
+        // 10 no backtrace
+        case ALN_RES_WITHOUT_BT_COL_CNT:
+            return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
+                                 alnLength, qStart, qEnd, qLen, dbStart, dbEnd, dbLen, -1, -1, -1, -1, "");
+        // 11 with backtrace
+        case ALN_RES_WITH_BT_COL_CNT:
+            if (readCompressed) {
+                return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
+                                         alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
+                                         dbLen, -1, -1, -1, -1, std::string(entry[10], entry[11] - entry[10]));
+            } else {
+                return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
+                                         alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
+                                         dbLen, -1, -1, -1, -1,
+                                         uncompressAlignment(std::string(entry[10], entry[11] - entry[10])));
+            }
+        // 12 without backtrace but qOrfStart dbOrfStart
+        case ALN_RES_WITH_ORF_POS_WITHOUT_BT_COL_CNT:
             return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
                                      alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
-                                     dbLen, std::string(entry[10], len));
-        } else {
-            return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
-                                     alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
-                                     dbLen, uncompressAlignment(std::string(entry[10], len)));
-        }
+                                     dbLen, Util::fast_atoi<int>(entry[10]), Util::fast_atoi<int>(entry[11]),
+                                     Util::fast_atoi<int>(entry[12]), Util::fast_atoi<int>(entry[13]), "");
+        // 13 without backtrace but qOrfStart dbOrfStart
+        case ALN_RES_WITH_ORF_AND_BT_COL_CNT:
+            if (readCompressed) {
+                return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
+                                         alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
+                                         dbLen, Util::fast_atoi<int>(entry[10]), Util::fast_atoi<int>(entry[11]),
+                                         Util::fast_atoi<int>(entry[12]), Util::fast_atoi<int>(entry[13]),
+                                         std::string(entry[14], entry[15] - entry[14]));
+            } else {
+                return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
+                                         alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
+                                         dbLen, Util::fast_atoi<int>(entry[10]), Util::fast_atoi<int>(entry[11]),
+                                         Util::fast_atoi<int>(entry[12]), Util::fast_atoi<int>(entry[13]),
+                                         uncompressAlignment(std::string(entry[14], entry[15] - entry[14])));
+            }
+        default:
+            Debug(Debug::ERROR) << "Invalid column count in alignment.\n";
+            EXIT(EXIT_FAILURE);
     }
 }
 
 
-size_t Matcher::resultToBuffer(char * buff1, const result_t &result, bool addBacktrace, bool compress) {
+size_t Matcher::resultToBuffer(char * buff1, const result_t &result, bool addBacktrace, bool compress, bool addOrfPosition) {
     char * basePos = buff1;
     char * tmpBuff = Itoa::u32toa_sse2((uint32_t) result.dbKey, buff1);
     *(tmpBuff-1) = '\t';
@@ -316,27 +342,103 @@ size_t Matcher::resultToBuffer(char * buff1, const result_t &result, bool addBac
     tmpBuff = Itoa::i32toa_sse2(result.dbStartPos, tmpBuff);
     *(tmpBuff-1) = '\t';
     tmpBuff = Itoa::i32toa_sse2(result.dbEndPos, tmpBuff);
-    if(addBacktrace == true){
+    *(tmpBuff-1) = '\t';
+    tmpBuff = Itoa::i32toa_sse2(result.dbLen, tmpBuff);
+    if(addOrfPosition){
         *(tmpBuff-1) = '\t';
-        tmpBuff = Itoa::i32toa_sse2(result.dbLen, tmpBuff);
+        tmpBuff = Itoa::i32toa_sse2(result.queryOrfStartPos, tmpBuff);
+        *(tmpBuff-1) = '\t';
+        tmpBuff = Itoa::i32toa_sse2(result.queryOrfEndPos, tmpBuff);
+        *(tmpBuff-1) = '\t';
+        tmpBuff = Itoa::i32toa_sse2(result.dbOrfStartPos, tmpBuff);
+        *(tmpBuff-1) = '\t';
+        tmpBuff = Itoa::i32toa_sse2(result.dbOrfEndPos, tmpBuff);
+    }
+    if(addBacktrace == true){
         if(compress){
             *(tmpBuff-1) = '\t';
             std::string compressedCigar = Matcher::compressAlignment(result.backtrace);
             tmpBuff = strncpy(tmpBuff, compressedCigar.c_str(), compressedCigar.length());
-            tmpBuff+= compressedCigar.length()+1;
+            tmpBuff += compressedCigar.length()+1;
         }else{
             *(tmpBuff-1) = '\t';
             tmpBuff = strncpy(tmpBuff, result.backtrace.c_str(), result.backtrace.length());
-            tmpBuff+= result.backtrace.length()+1;
+            tmpBuff += result.backtrace.length()+1;
         }
-    }else{
-        *(tmpBuff-1) = '\t';
-        tmpBuff = Itoa::i32toa_sse2(result.dbLen, tmpBuff);
     }
-
     *(tmpBuff-1) = '\n';
     *(tmpBuff) = '\0';
     return tmpBuff - basePos;
+}
+
+void Matcher::updateResultByRescoringBacktrace(const char *querySeq, const char *targetSeq, const char **subMat, EvalueComputation &evaluer,
+                                                int gapOpen, int gapExtend, result_t &result) {
+    int maxScore = 0;
+    int maxBtEndPos = 0;
+    int maxBtStartPos = 0;
+    int maxQueryEndPos = 0;
+    int maxQueryStartPos = 0;
+    int maxTargetStartPos = 0;
+    int maxTargetEndPos = 0;
+    int minPos = -1;
+    int minQueryPos = result.qStartPos-1;
+    int minTargetPos = result.dbStartPos-1;
+    int score = 0;
+    int identicalAAs = 0;
+    int maxIdAaCnt = 0;
+    int queryPos = result.qStartPos;
+    int targetPos = result.dbStartPos;
+    bool isGapOpen = false;
+
+    for(unsigned int pos = 0; pos < result.backtrace.size(); pos++){
+        char letter = result.backtrace[pos];
+        int curr;
+        if (letter == 'M') {
+            curr = subMat[static_cast<int>(querySeq[queryPos])][static_cast<int>(targetSeq[targetPos])];
+            identicalAAs += (querySeq[queryPos] == targetSeq[targetPos]);
+            isGapOpen = false;
+        } else {
+            curr = (isGapOpen) ? -gapExtend : -gapOpen;
+            isGapOpen = (isGapOpen == false) ? true : isGapOpen;
+        }
+        score = curr + score;
+        // minimum
+        const bool isMinScore = (score <= 0);
+        score = (isMinScore) ? 0 : score;
+        identicalAAs = (isMinScore) ? 0 : identicalAAs;
+        if(isMinScore){
+            minPos = pos;
+            minQueryPos = (letter == 'D') ? queryPos - 1 : queryPos;
+            minTargetPos = (letter == 'I') ? targetPos - 1 : targetPos;
+        }
+        // new max
+        const bool isNewMaxScore = (score > maxScore);
+        if(isNewMaxScore){
+            maxBtEndPos = pos;
+            maxQueryEndPos = queryPos;
+            maxTargetEndPos = targetPos;
+            maxBtStartPos = minPos + 1;
+            maxQueryStartPos = minQueryPos + 1;
+            maxTargetStartPos = minTargetPos + 1;
+            maxScore = score;
+            maxIdAaCnt = identicalAAs;
+        }
+        queryPos += (letter == 'M' || letter == 'I') ? 1 : 0;
+        targetPos += (letter == 'M' || letter == 'D') ? 1 : 0;
+    }
+
+    result.qStartPos = maxQueryStartPos;
+    result.qEndPos = maxQueryEndPos;
+    result.dbStartPos = maxTargetStartPos;
+    result.dbEndPos = maxTargetEndPos;
+    double bitScore = evaluer.computeBitScore(maxScore);
+    double evalue = evaluer.computeEvalue(maxScore, result.qLen);
+    result.score = bitScore;
+    result.eval = evalue;
+    result.alnLength = (maxBtEndPos - maxBtStartPos) + 1;
+    result.seqId = static_cast<float>(maxIdAaCnt) / static_cast<float>(result.alnLength);
+    result.backtrace = result.backtrace.substr(maxBtStartPos, result.alnLength);
+
 }
 
 

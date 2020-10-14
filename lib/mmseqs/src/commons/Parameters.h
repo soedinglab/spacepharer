@@ -1,4 +1,4 @@
-// Written by Martin Steinegger martin.steinegger@mpibpc.mpg.de
+// Written by Martin Steinegger martin.steinegger@snu.ac.kr
 //
 // Represents parameters of MMseqs2
 //
@@ -107,6 +107,9 @@ public:
     static const unsigned int ALIGNMENT_MODE_SCORE_COV_SEQID = 3;
     static const unsigned int ALIGNMENT_MODE_UNGAPPED = 4;
 
+    static const unsigned int EXPAND_TRANSFER_EVALUE = 0;
+    static const unsigned int EXPAND_RESCORE_BACKTRACE = 1;
+
     static const unsigned int WRITER_ASCII_MODE = 0;
     static const unsigned int WRITER_COMPRESSED_MODE = 1;
     static const unsigned int WRITER_LEXICOGRAPHIC_MODE = 2;
@@ -115,6 +118,7 @@ public:
     static const int FORMAT_ALIGNMENT_BLAST_TAB = 0;
     static const int FORMAT_ALIGNMENT_SAM = 1;
     static const int FORMAT_ALIGNMENT_BLAST_WITH_LEN = 2;
+    static const int FORMAT_ALIGNMENT_HTML = 3;
 
     // outfmt
     static const int OUTFMT_QUERY = 0;
@@ -152,9 +156,16 @@ public:
     static const int OUTFMT_TAXID = 32;
     static const int OUTFMT_TAXNAME = 33;
     static const int OUTFMT_TAXLIN = 34;
+    static const int OUTFMT_QORFSTART = 35;
+    static const int OUTFMT_QORFEND = 36;
+    static const int OUTFMT_TORFSTART = 37;
+    static const int OUTFMT_TORFEND = 38;
+    static const int OUTFMT_FIDENT = 39;
 
 
-    static std::vector<int> getOutputFormat(const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
+
+
+    static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy);
 
     // clustering
@@ -174,6 +185,11 @@ public:
     // taxonomy output
     static const int TAXONOMY_OUTPUT_LCA = 0;
     static const int TAXONOMY_OUTPUT_ALIGNMENT = 1;
+    static const int TAXONOMY_OUTPUT_BOTH = 2;
+
+    // aggregate taxonomy
+    static const int AGG_TAX_UNIFORM = 0;
+    static const int AGG_TAX_MINUS_LOG_EVAL = 1;
 
     // taxonomy search strategy
     static const int TAXONOMY_SINGLE_SEARCH = 1;
@@ -385,6 +401,7 @@ public:
     int sensSteps;
     bool sliceSearch;
     int strand;
+    int orfFilter;
 
     // easysearch
     bool greedyBestHits;
@@ -486,6 +503,7 @@ public:
 
     // convert2fasta
     bool useHeaderFile;
+    int writeLookup;
 
     // result2flat
     bool useHeader;
@@ -551,7 +569,7 @@ public:
     // diff
     bool useSequenceId;
 
-    //prefixid
+    // prefixid
     std::string prefix;
     bool tsvOut;
 
@@ -571,11 +589,12 @@ public:
     // lca
     int pickIdFrom;
     std::string lcaRanks;
-    bool showTaxLineage;
+    int showTaxLineage;
     std::string blacklist;
 
     // aggregatetax
     float majorityThr;
+    int voteMode;
 
     // taxonomyreport
     int reportMode;
@@ -702,7 +721,6 @@ public:
 
     // result2msa
     PARAMETER(PARAM_ALLOW_DELETION)
-    PARAMETER(PARAM_ADD_INTERNAL_ID)
     PARAMETER(PARAM_COMPRESS_MSA)
     PARAMETER(PARAM_SUMMARIZE_HEADER)
     PARAMETER(PARAM_SUMMARY_PREFIX)
@@ -761,7 +779,7 @@ public:
     PARAMETER(PARAM_SENS_STEPS)
     PARAMETER(PARAM_SLICE_SEARCH)
     PARAMETER(PARAM_STRAND)
-
+    PARAMETER(PARAM_ORF_FILTER)
 
     // easysearch
     PARAMETER(PARAM_GREEDY_BEST_HITS)
@@ -789,6 +807,7 @@ public:
     PARAMETER(PARAM_DB_TYPE)
     PARAMETER(PARAM_CREATEDB_MODE)
     PARAMETER(PARAM_SHUFFLE)
+    PARAMETER(PARAM_WRITE_LOOKUP)
 
     // convert2fasta
     PARAMETER(PARAM_USE_HEADER_FILE)
@@ -886,6 +905,7 @@ public:
 
     // aggregatetax
     PARAMETER(PARAM_MAJORITY)
+    PARAMETER(PARAM_VOTE_MODE)
 
     // taxonomyreport
     PARAMETER(PARAM_REPORT_MODE)
@@ -930,6 +950,7 @@ public:
     std::vector<MMseqsParameter*> result2pp;
     std::vector<MMseqsParameter*> result2msa;
     std::vector<MMseqsParameter*> result2dnamsa;
+    std::vector<MMseqsParameter*> filterresult;
     std::vector<MMseqsParameter*> convertmsa;
     std::vector<MMseqsParameter*> msa2profile;
     std::vector<MMseqsParameter*> createtsv;
@@ -948,6 +969,7 @@ public:
     std::vector<MMseqsParameter*> createdb;
     std::vector<MMseqsParameter*> convert2fasta;
     std::vector<MMseqsParameter*> result2flat;
+    std::vector<MMseqsParameter*> result2repseq;
     std::vector<MMseqsParameter*> gff2db;
     std::vector<MMseqsParameter*> clusthash;
     std::vector<MMseqsParameter*> kmermatcher;
@@ -972,6 +994,7 @@ public:
     std::vector<MMseqsParameter*> createseqfiledb;
     std::vector<MMseqsParameter*> filterDb;
     std::vector<MMseqsParameter*> offsetalignment;
+    std::vector<MMseqsParameter*> proteinaln2nucl;
     std::vector<MMseqsParameter*> subtractdbs;
     std::vector<MMseqsParameter*> diff;
     std::vector<MMseqsParameter*> concatdbs;
@@ -991,8 +1014,10 @@ public:
     std::vector<MMseqsParameter*> filtertaxseqdb;
     std::vector<MMseqsParameter*> aggregatetax;
     std::vector<MMseqsParameter*> taxonomy;
+    std::vector<MMseqsParameter*> taxpercontig;
     std::vector<MMseqsParameter*> easytaxonomy;
     std::vector<MMseqsParameter*> createsubdb;
+    std::vector<MMseqsParameter*> renamedbkeys;
     std::vector<MMseqsParameter*> createtaxdb;
     std::vector<MMseqsParameter*> profile2pssm;
     std::vector<MMseqsParameter*> profile2seq;
@@ -1002,6 +1027,7 @@ public:
     std::vector<MMseqsParameter*> multihitdb;
     std::vector<MMseqsParameter*> multihitsearch;
     std::vector<MMseqsParameter*> expandaln;
+    std::vector<MMseqsParameter*> expand2profile;
     std::vector<MMseqsParameter*> sortresult;
     std::vector<MMseqsParameter*> enrichworkflow;
     std::vector<MMseqsParameter*> databases;

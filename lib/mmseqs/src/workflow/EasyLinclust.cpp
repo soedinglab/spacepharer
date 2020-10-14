@@ -16,6 +16,7 @@ void setEasyLinclustDefaults(Parameters *p) {
     p->covThr = 0.8;
     p->evalThr = 0.001;
     p->createdbMode = Parameters::SEQUENCE_SPLIT_MODE_SOFT;
+    p->writeLookup = false;
     //p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
     p->orfStartMode = 1;
     p->orfMinLength = 10;
@@ -73,6 +74,7 @@ int easylinclust(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.linclustworkflow, true).c_str());
     cmd.addVariable("CLUSTER_MODULE", "linclust");
+    cmd.addVariable("RESULT2REPSEQ_PAR", par.createParameterString(par.result2repseq).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
