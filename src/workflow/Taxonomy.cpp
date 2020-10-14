@@ -67,6 +67,8 @@ int taxonomy(int argc, const char **argv, const Command& command) {
     CommandCaller cmd;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
+    cmd.addVariable("THREADS_COMP_PAR", par.createParameterString(par.threadsandcompression).c_str());
+    cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
 
     int alignmentMode = par.alignmentMode;
     if (par.taxonomySearchMode == Parameters::TAXONOMY_2BLCA || par.taxonomySearchMode == Parameters::TAXONOMY_2BLCA_APPROX) {
@@ -89,8 +91,13 @@ int taxonomy(int argc, const char **argv, const Command& command) {
     }
 
     if (par.taxonomyOutpuMode == Parameters::TAXONOMY_OUTPUT_LCA) {
-        cmd.addVariable("TAX_OUTPUT_LCA", "1" );
+        cmd.addVariable("TAX_OUTPUT", "0" );
         cmd.addVariable("LCA_PAR", par.createParameterString(par.lca).c_str());
+    } else if (par.taxonomyOutpuMode == Parameters::TAXONOMY_OUTPUT_BOTH) {
+        cmd.addVariable("TAX_OUTPUT", "2" );
+        cmd.addVariable("LCA_PAR", par.createParameterString(par.lca).c_str());
+    } else {
+        cmd.addVariable("TAX_OUTPUT", "1" );
     }
 
     FileUtil::writeFile(tmpDir + "/taxonomy.sh", taxonomy_sh, taxonomy_sh_len);

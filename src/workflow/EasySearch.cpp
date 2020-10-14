@@ -14,8 +14,11 @@ void setEasySearchDefaults(Parameters *p, bool linsearch) {
     }
     p->sensitivity = 5.7;
     p->removeTmpFiles = true;
+    p->writeLookup = false;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV_SEQID;
+    p->orfFilter = 0;
 }
+
 void setEasySearchMustPassAlong(Parameters *p, bool linsearch) {
     if (linsearch) {
         p->PARAM_SHUFFLE.wasSet = true;
@@ -23,6 +26,7 @@ void setEasySearchMustPassAlong(Parameters *p, bool linsearch) {
     p->PARAM_S.wasSet = true;
     p->PARAM_REMOVE_TMP_FILES.wasSet = true;
     p->PARAM_ALIGNMENT_MODE.wasSet = true;
+    p->PARAM_ORF_FILTER.wasSet = true;
 }
 
 int doeasysearch(int argc, const char **argv, const Command &command, bool linsearch) {
@@ -57,13 +61,13 @@ int doeasysearch(int argc, const char **argv, const Command &command, bool linse
     bool needBacktrace = false;
     bool needTaxonomy = false;
     bool needTaxonomyMapping = false;
+    bool needLookup = false;
 
     {
         bool needSequenceDB = false;
         bool needFullHeaders = false;
-        bool needLookup = false;
         bool needSource = false;
-        Parameters::getOutputFormat(par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
+        Parameters::getOutputFormat(par.formatAlignmentMode, par.outfmt, needSequenceDB, needBacktrace, needFullHeaders,
                 needLookup, needSource, needTaxonomyMapping, needTaxonomy);
     }
 
@@ -74,6 +78,9 @@ int doeasysearch(int argc, const char **argv, const Command &command, bool linse
         Debug(Debug::INFO) << "Alignment backtraces will be computed, since they were requested by output format.\n";
         par.addBacktrace = true;
         par.PARAM_ADD_BACKTRACE.wasSet = true;
+    }
+    if(needLookup){
+        par.writeLookup = true;
     }
 
     std::string tmpDir = par.filenames.back();

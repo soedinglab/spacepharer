@@ -10,11 +10,13 @@ void setEasyTaxonomyDefaults(Parameters *p) {
     p->removeTmpFiles = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->createdbMode = Parameters::SEQUENCE_SPLIT_MODE_SOFT;
+    p->writeLookup = false;
     p->sensitivity = 5.7;
     p->evalThr = 1;
     p->orfStartMode = 1;
     p->orfMinLength = 30;
     p->orfMaxLength = 32734;
+    p->orfFilter = 0;
 }
 void setEasyTaxonomyMustPassAlong(Parameters *p) {
     p->PARAM_SPACED_KMER_MODE.wasSet = true;
@@ -25,6 +27,7 @@ void setEasyTaxonomyMustPassAlong(Parameters *p) {
     p->PARAM_ORF_START_MODE.wasSet = true;
     p->PARAM_ORF_MIN_LENGTH.wasSet = true;
     p->PARAM_ORF_MAX_LENGTH.wasSet = true;
+    p->PARAM_ORF_FILTER.wasSet = true;
 }
 
 int easytaxonomy(int argc, const char **argv, const Command& command) {
