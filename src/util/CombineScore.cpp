@@ -34,8 +34,7 @@ public:
         delete querySizeReader;
     }
 
-    void prepareInput(unsigned int querySetKey, unsigned int thread_idx) {
-        unsigned int orfCount = Util::fast_atoi<unsigned int>(querySizeReader->getDataByDBKey(querySetKey, thread_idx));
+    void prepareInput(unsigned int MAYBE_UNUSED(querySetKey), unsigned int MAYBE_UNUSED(thread_idx)) {
     }
 
     //Get all result of a single Query Set VS a Single Target Set and return the multiple-match p-value for it
@@ -56,18 +55,7 @@ public:
         double minLogPval = 0;
         double sumLogPval = 0; 
         size_t k = 0;
-        for (size_t i = 0; i < dataToAggregate.size(); ++i) {
-            double logPvalue = std::strtod(dataToAggregate[i][1].c_str(), NULL);
-            double seqId = strtod(dataToAggregate[i][2].c_str(), NULL);
-            int qStart = Util::fast_atoi<int>(dataToAggregate[i][4].c_str());
-            int qEnd = Util::fast_atoi<int>(dataToAggregate[i][5].c_str());
-            int qLen = Util::fast_atoi<int>(dataToAggregate[i][6].c_str());
-            double qCov = 1.0* (qEnd - qStart + 1) / qLen;
-            if(seqId == 1.0 && qCov == 1.0){
-                logPvalThreshold = (logPvalue < logPvalThreshold) ? logPvalThreshold : logPvalue;
-            };
 
-        }
         for (size_t i = 0; i < dataToAggregate.size(); ++i) {
             double logPvalue = std::strtod(dataToAggregate[i][1].c_str(), NULL);
             if (logPvalue < minLogPval) {

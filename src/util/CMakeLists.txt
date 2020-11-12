@@ -5,4 +5,7 @@ set(util_source_files
         util/TruncateBestHits.cpp
         util/SummarizeResults.cpp
         util/CombineScore.cpp
+        util/CombineProtNuclAln.cpp
+        util/EmpiricalPval.cpp
         PARENT_SCOPE)
+        

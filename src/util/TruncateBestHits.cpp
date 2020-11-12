@@ -60,14 +60,8 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
                 std::vector<std::string> columns = Util::split(line, "\t");
                 //compute besthit P-val, column [3] now at positon [1]
                 double logPval = strtod(columns[1].c_str(), NULL);
-                double seqId = strtod(columns[2].c_str(), NULL);
-                int qStart = Util::fast_atoi<int>(columns[4].c_str());
-                int qEnd = Util::fast_atoi<int>(columns[5].c_str());
-                int qLen = Util::fast_atoi<int>(columns[6].c_str());
-                double qCov = 1.0* (qEnd - qStart + 1) / qLen;
                 double logPvalThr = log(1.0/(setSize + 1));
-                bool isPerfectMatch = (seqId == 1.0) && (qCov == 1.0);
-                if (logPval >= logPvalThr && isPerfectMatch == false) {
+                if (logPval >= logPvalThr){
                     continue;
                 }
                 buffer.append(columns[0]);

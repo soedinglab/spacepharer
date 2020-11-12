@@ -23,11 +23,33 @@ CONTROLTARGET="$3"
 OUTPUT="$4"
 TMP_PATH="$5"
 
-#search in target db
-if notExists "${TMP_PATH}/result.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${SEARCH_PAR} \
-        || fail "search failed"
+
+if [ -n "${PERFORM_NUCLALN}" ]; then
+    #search in target db
+    if notExists "${TMP_PATH}/prot_result.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/prot_result" "${TMP_PATH}/search" ${SEARCH_PAR} \
+            || fail "search failed"
+    fi
+
+    if notExists "${TMP_PATH}/nucl_result.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" proteinaln2nucl "${QUERY}_nucl_orf" "${TARGET}_nucl_orf" "${QUERY}" "${TARGET}" "${TMP_PATH}/prot_result" "${TMP_PATH}/nucl_result" ${PROTALN2NUCL_PAR} \
+            || fail "proteinaln2nucl failed"
+    fi
+
+    if notExists "${TMP_PATH}/result.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" combineprotnuclaln "${TMP_PATH}/prot_result" "${TMP_PATH}/nucl_result" "${TMP_PATH}/result" ${THREADS_PAR} \
+            || fail "combineprotnuclaln failed"
+    fi
+else
+    #search in target db
+    if notExists "${TMP_PATH}/result.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${SEARCH_PAR} \
+            || fail "search failed"
+    fi
 fi
 
 if notExists "${TMP_PATH}/aggregate.index"; then
@@ -49,10 +71,31 @@ if notExists "${TMP_PATH}/cScore.index"; then
 fi
 
 #search in control target db
-if notExists "${TMP_PATH}/result_rev.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" search "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/result_rev" "${TMP_PATH}/search_rev" ${SEARCH_PAR} \
-        || fail "search failed"
+if [ -n "${PERFORM_NUCLALN}" ]; then
+    #search in target db
+    if notExists "${TMP_PATH}/prot_result_rev.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" search "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/prot_result_rev" "${TMP_PATH}/search_rev" ${SEARCH_PAR} \
+            || fail "search failed"
+    fi
+
+    if notExists "${TMP_PATH}/nucl_result_rev.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" proteinaln2nucl "${QUERY}_nucl_orf" "${CONTROLTARGET}_nucl_orf" "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/prot_result_rev" "${TMP_PATH}/nucl_result_rev" ${PROTALN2NUCL_PAR} \
+            || fail "proteinaln2nucl failed"
+    fi
+
+    if notExists "${TMP_PATH}/result_rev.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" combineprotnuclaln "${TMP_PATH}/prot_result_rev" "${TMP_PATH}/nucl_result_rev" "${TMP_PATH}/result_rev" ${THREADS_PAR} \
+            || fail "combineprotnuclaln failed"
+    fi
+else
+    if notExists "${TMP_PATH}/result_rev.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" search "${QUERY}" "${CONTROLTARGET}" "${TMP_PATH}/result_rev" "${TMP_PATH}/search_rev" ${SEARCH_PAR} \
+            || fail "search failed"
+    fi
 fi
 
 if notExists "${TMP_PATH}/aggregate_rev.index"; then
