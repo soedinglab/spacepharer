@@ -120,6 +120,13 @@ public:
     static const int FORMAT_ALIGNMENT_BLAST_WITH_LEN = 2;
     static const int FORMAT_ALIGNMENT_HTML = 3;
 
+    // result2msa
+    static const int FORMAT_MSA_CA3M = 0;
+    static const int FORMAT_MSA_CA3M_CONSENSUS = 1;
+    static const int FORMAT_MSA_FASTADB = 2;
+    static const int FORMAT_MSA_FASTADB_SUMMARY = 3;
+    static const int FORMAT_MSA_STOCKHOLM_FLAT = 4;
+
     // outfmt
     static const int OUTFMT_QUERY = 0;
     static const int OUTFMT_TARGET = 1;
@@ -194,7 +201,7 @@ public:
     // taxonomy search strategy
     static const int TAXONOMY_SINGLE_SEARCH = 1;
     static const int TAXONOMY_2BLCA = 2;
-    static const int TAXONOMY_2BLCA_APPROX = 3;
+    static const int TAXONOMY_ACCEL_2BLCA = 3;
     static const int TAXONOMY_TOP_HIT = 4;
 
     static const int PARSE_VARIADIC = 1;
@@ -363,6 +370,8 @@ public:
     bool   splitAA;                      // Split database by amino acid count instead
     int    preloadMode;                  // Preload mode of database
     float  scoreBias;                    // Add this bias to the score when computing the alignements
+    float  realignScoreBias;             // Add this bias additionally when realigning
+    int    realignMaxSeqs;               // Max alignments to realign
     std::string spacedKmerPattern;       // User-specified kmer pattern
     std::string localTmp;                // Local temporary path
 
@@ -402,6 +411,9 @@ public:
     bool sliceSearch;
     int strand;
     int orfFilter;
+    float orfFilterSens;
+    float orfFilterEval;
+    bool lcaSearch;
 
     // easysearch
     bool greedyBestHits;
@@ -424,7 +436,7 @@ public:
     int createLookup;
 
     // convertalis
-    int formatAlignmentMode;            // BLAST_TAB, PAIRWISE or SAM
+    int formatAlignmentMode;
     std::string outfmt;
     bool dbOut;
 
@@ -436,12 +448,9 @@ public:
     int sortResults;
 
     // result2msa
+    int msaFormatMode;
     bool allowDeletion;
-    bool addInternalId;
-    bool compressMSA;
-    bool summarizeHeader;
     std::string summaryPrefix;
-    bool omitConsensus;
     bool skipQuery;
 
     // convertmsa
@@ -500,6 +509,7 @@ public:
     // splitsequence
     int sequenceOverlap;
     int sequenceSplitMode;
+    int headerSplitMode;
 
     // convert2fasta
     bool useHeaderFile;
@@ -544,6 +554,7 @@ public:
 
     // mergedbs
     std::string mergePrefixes;
+    bool mergeStopEmpty;
 
     // summarizetabs
     float overlap;
@@ -689,6 +700,8 @@ public:
     PARAMETER(PARAM_MIN_SEQ_ID)
     PARAMETER(PARAM_MIN_ALN_LEN)
     PARAMETER(PARAM_SCORE_BIAS)
+    PARAMETER(PARAM_REALIGN_SCORE_BIAS)
+    PARAMETER(PARAM_REALIGN_MAX_SEQS)
     PARAMETER(PARAM_ALT_ALIGNMENT)
     PARAMETER(PARAM_GAP_OPEN)
     PARAMETER(PARAM_GAP_EXTEND)
@@ -720,11 +733,9 @@ public:
     PARAMETER(PARAM_SORT_RESULTS)
 
     // result2msa
+    PARAMETER(PARAM_MSA_FORMAT_MODE)
     PARAMETER(PARAM_ALLOW_DELETION)
-    PARAMETER(PARAM_COMPRESS_MSA)
-    PARAMETER(PARAM_SUMMARIZE_HEADER)
     PARAMETER(PARAM_SUMMARY_PREFIX)
-    PARAMETER(PARAM_OMIT_CONSENSUS)
     PARAMETER(PARAM_SKIP_QUERY)
 
     // convertmsa
@@ -780,6 +791,9 @@ public:
     PARAMETER(PARAM_SLICE_SEARCH)
     PARAMETER(PARAM_STRAND)
     PARAMETER(PARAM_ORF_FILTER)
+    PARAMETER(PARAM_ORF_FILTER_S)
+    PARAMETER(PARAM_ORF_FILTER_E)
+    PARAMETER(PARAM_LCA_SEARCH)
 
     // easysearch
     PARAMETER(PARAM_GREEDY_BEST_HITS)
@@ -815,6 +829,7 @@ public:
     // split sequence
     PARAMETER(PARAM_SEQUENCE_OVERLAP)
     PARAMETER(PARAM_SEQUENCE_SPLIT_MODE)
+    PARAMETER(PARAM_HEADER_SPLIT_MODE)
 
     // gff2db
     PARAMETER(PARAM_GFF_TYPE)
@@ -874,6 +889,7 @@ public:
 
     // mergedbs
     PARAMETER(PARAM_MERGE_PREFIXES)
+    PARAMETER(PARAM_MERGE_STOP_EMPTY)
 
     // summarizetabs
     PARAMETER(PARAM_OVERLAP)
@@ -1036,7 +1052,7 @@ public:
     std::vector<MMseqsParameter*> combineList(const std::vector<MMseqsParameter*> &par1,
                                              const std::vector<MMseqsParameter*> &par2);
 
-    size_t hashParameter(const std::vector<std::string> &filenames, const std::vector<MMseqsParameter*> &par);
+    size_t hashParameter(const std::vector<DbType> &dbtypes, const std::vector<std::string> &filenames, const std::vector<MMseqsParameter*> &par);
 
     std::string createParameterString(const std::vector<MMseqsParameter*> &vector, bool wasSet = false);
 
@@ -1067,6 +1083,7 @@ public:
             case DBTYPE_OFFSETDB: return "Offsetted headers";
             case DBTYPE_DIRECTORY: return "Directory";
             case DBTYPE_FLATFILE: return "Flatfile";
+            case DBTYPE_STDIN: return "stdin";
 
             default: return "Unknown";
         }
