@@ -51,7 +51,7 @@ int predictmatch(int argc, const char **argv, const Command& command) {
 
     // check if temp dir exists and if not, try to create it:
     std::string tmpDir = par.db5;
-    std::string hash = SSTR(par.hashParameter(par.filenames, par.predictmatchworkflow));
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.predictmatchworkflow));
     if (par.reuseLatest) {
         hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }

@@ -91,7 +91,7 @@ int downloadgenome(int argc, const char **argv, const Command &command) {
 
     par.printParameters(command.cmd, argc, argv, par.downloadgenome);
     std::string tmpDir = par.db3;
-    std::string hash = SSTR(par.hashParameter(par.filenames, par.downloadgenome));
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.downloadgenome));
     if (par.reuseLatest) {
         hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
