@@ -109,7 +109,16 @@ int downloadgenome(int argc, const char **argv, const Command &command) {
         cmd.addVariable("GENOME_FTP", NULL);
         cmd.addVariable("DBNAME", genomesDownloads[downloadIdx].name);
     }
+    std::vector<MMseqsParameter*> createsetdbWithoutRev;
+    for (size_t i = 0; i < par.createsetdbworkflow.size(); i++) {
+        if (par.createsetdbworkflow[i]->uniqid != par.PARAM_REVERSE_FRAGMENTS.uniqid) {
+            createsetdbWithoutRev.push_back(par.createsetdbworkflow[i]);
+        }
+    }
+
+    cmd.addVariable("CREATESETDB_PAR", par.createParameterString(createsetdbWithoutRev).c_str());
     cmd.addVariable("CREATE_REVERSE_SETDB", par.reverseSetDb == 1 ? "TRUE" : NULL);
+    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
     std::string program(tmpDir + "/downloadgenome.sh");
