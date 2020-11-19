@@ -86,7 +86,6 @@ private:
         combineprotnuclaln.push_back(&PARAM_V);
         
         createsetdbworkflow = combineList(createdb, translatenucs);
-        createsetdbworkflow = combineList(createsetdbworkflow, result2stats);
         createsetdbworkflow.push_back(&PARAM_REVERSE_FRAGMENTS);
         createsetdbworkflow.push_back(&PARAM_EXTRACTORF_SPACER);
     

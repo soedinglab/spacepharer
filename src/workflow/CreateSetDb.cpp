@@ -37,8 +37,6 @@ int createsetdb(int argc, const char **argv, const Command& command) {
     cmd.addVariable("EXTRACTORFS_PAR", par.createParameterString(par.extractorfs).c_str());
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
     cmd.addVariable("SWAPDB_PAR", par.createParameterString(par.swapdb).c_str());
-    par.stat = "linecount";
-    cmd.addVariable("RESULT2STATS_PAR", par.createParameterString(par.result2stats).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
