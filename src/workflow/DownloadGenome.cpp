@@ -12,19 +12,30 @@ struct GenomesDownload {
     const char *name;
     const char *description;
     const char *citation;
+    enum {
+        SPACER,
+        GENOME
+    } type;
 };
 
 std::vector<GenomesDownload> genomesDownloads = {
     {
-       "GenBank_phage_2018_09",
-       "GenBank phage genomes from September 2018",
-       "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
-
+        "GenBank_phage_2018_09",
+        "GenBank phage genomes from September 2018",
+        "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
+        GenomesDownload::GENOME,
     },
     {
-       "GenBank_eukvir_2018_09",
-       "GenBank eukaryotic viral genomes from September 2018",
-       "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
+        "GenBank_eukvir_2018_09",
+        "GenBank eukaryotic viral genomes from September 2018",
+        "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
+        GenomesDownload::GENOME,
+    },
+    {
+        "spacers_shmakov_et_al_2017",
+        "Spacers extracted from Shmakov et al",
+        "The CRISPR Spacer Space Is Dominated by Sequences from Species-Specific Mobilomes. mBio 8(5), e01397-17 (2017)",
+        GenomesDownload::SPACER,
     }
 };
 
@@ -108,6 +119,12 @@ int downloadgenome(int argc, const char **argv, const Command &command) {
     } else {
         cmd.addVariable("GENOME_FTP", NULL);
         cmd.addVariable("DBNAME", genomesDownloads[downloadIdx].name);
+        if (genomesDownloads[downloadIdx].type == GenomesDownload::SPACER) {
+            par.extractorfsSpacer = 1;
+            if (par.PARAM_REVERSE_SETDB.wasSet == false) {
+                par.reverseSetDb = 0;
+            }
+        }
     }
     std::vector<MMseqsParameter*> createsetdbWithoutRev;
     for (size_t i = 0; i < par.createsetdbworkflow.size(); i++) {

@@ -87,6 +87,10 @@ else
         wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/genbank_eukvir_2018_09.tar";
         IN_TAR="genbank_eukvir_2018_09.tar"
     ;;
+    "spacers_shmakov_et_al_2017")
+        wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_shmakov_et_al_2017.tar.gz";
+        IN_TAR="spacers_shmakov_et_al_2017.tar.gz"
+    ;;
   esac
 
   if notExists "${TMP_PATH}/tardb.index"; then
