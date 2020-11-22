@@ -7,5 +7,6 @@ set(util_source_files
         util/CombineScore.cpp
         util/CombineProtNuclAln.cpp
         util/EmpiricalPval.cpp
+        util/ReverseSeqByCodon.cpp
         PARENT_SCOPE)
         

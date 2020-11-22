@@ -81,6 +81,16 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
         fi
     fi
 
+    if [ -n "${REVERSE_FRAGMENTS}" ]; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" reverseseqbycodon "${OUTDB}_nucl_orf" "${OUTDB}_nucl_orf_reverse" ${THREADS_PAR} \
+            || fail "reverseseqbycodon died"
+        # TODO: check mvdb instead
+        mv -f "${OUTDB}_nucl_orf_reverse" "${OUTDB}_nucl_orf"
+        mv -f "${OUTDB}_nucl_orf_reverse.index" "${OUTDB}_nucl_orf.index"
+        mv -f "${OUTDB}_nucl_orf_reverse.dbtype" "${OUTDB}_nucl_orf.dbtype"
+    fi
+
     if notExists "${OUTDB}.index"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" translatenucs "${OUTDB}_nucl_orf" "${OUTDB}" ${TRANSLATENUCS_PAR} \
@@ -118,15 +128,6 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
             || fail "result2stats failed"
     fi
 
-    if [ -n "${REVERSE_FRAGMENTS}" ]; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" reverseseq "${OUTDB}" "${OUTDB}_reverse" ${THREADS_PAR} \
-            || fail "reverseseq died"
-        # TODO: check mvdb instead
-        mv -f "${OUTDB}_reverse" "${OUTDB}"
-        mv -f "${OUTDB}_reverse.index" "${OUTDB}.index"
-        mv -f "${OUTDB}_reverse.dbtype" "${OUTDB}.dbtype"
-    fi
 else
     fail "protein mode not implemented"
 fi
