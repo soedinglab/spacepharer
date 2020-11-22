@@ -68,13 +68,13 @@ if [ -n "${GENOME_FTP}" ]; then
   eval "set -- $ARR"
   if notExists "${OUTDB}.index"; then
       # shellcheck disable=SC2086
-      "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" ${VERBOSITY_PAR} \
+      "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
           || fail "createsetdb failed"
   fi
 
   if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then
       # shellcheck disable=SC2086
-      "${MMSEQS}" createsetdb "${@}" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${VERBOSITY_PAR} \
+      "${MMSEQS}" createsetdb "${@}" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${CREATESETDB_PAR} \
           || fail "create reverse setdb failed"
   fi
 else
@@ -87,29 +87,33 @@ else
         wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/genbank_eukvir_2018_09.tar";
         IN_TAR="genbank_eukvir_2018_09.tar"
     ;;
+    "spacers_shmakov_et_al_2017")
+        wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_shmakov_et_al_2017.tar.gz";
+        IN_TAR="spacers_shmakov_et_al_2017.tar.gz"
+    ;;
   esac
 
   if notExists "${TMP_PATH}/tardb.index"; then
       # shellcheck disable=SC2086
-      "${MMSEQS}" tar2db "${IN_TAR}" "${TMP_PATH}/tardb" ${VERBOSITY_PAR} \
-          || fail "createsetdb failed"
+      "${MMSEQS}" tar2db "${IN_TAR}" "${TMP_PATH}/tardb" ${THREADS_PAR} \
+          || fail "tar2db failed"
   fi
 
   if notExists "${TMP_PATH}/seqdb.index"; then
       # shellcheck disable=SC2086
       "${MMSEQS}" createdb "${TMP_PATH}/tardb" "${TMP_PATH}/seqdb" ${VERBOSITY_PAR} \
-          || fail "createsetdb failed"
+          || fail "createdb failed"
   fi
 
   if notExists "${OUTDB}.index"; then
       # shellcheck disable=SC2086
-      "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" ${VERBOSITY_PAR} \
+      "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
           || fail "createsetdb failed"
   fi
 
   if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then
       # shellcheck disable=SC2086
-      "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${VERBOSITY_PAR} \
+      "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}_rev" "${TMP_PATH}" --reverse-fragments 1 ${CREATESETDB_PAR} \
           || fail "create reverse setdb failed"
   fi
 fi

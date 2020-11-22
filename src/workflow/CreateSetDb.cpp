@@ -18,7 +18,7 @@ int createsetdb(int argc, const char **argv, const Command& command) {
     // check if temp dir exists and if not, try to create it:
     std::string tmpDir = par.filenames.back();
     par.filenames.pop_back();
-    std::string hash = SSTR(par.hashParameter(par.filenames, par.createsetdbworkflow));
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.createsetdbworkflow));
     if (par.reuseLatest) {
         hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
@@ -37,8 +37,6 @@ int createsetdb(int argc, const char **argv, const Command& command) {
     cmd.addVariable("EXTRACTORFS_PAR", par.createParameterString(par.extractorfs).c_str());
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
     cmd.addVariable("SWAPDB_PAR", par.createParameterString(par.swapdb).c_str());
-    par.stat = "linecount";
-    cmd.addVariable("RESULT2STATS_PAR", par.createParameterString(par.result2stats).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 

@@ -114,7 +114,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
 
     if notExists "${OUTDB}_set_size.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" result2stats "${OUTDB}_nucl" "${OUTDB}_nucl" "${OUTDB}_set_to_member" "${OUTDB}_set_size" ${RESULT2STATS_PAR} \
+        "${MMSEQS}" result2stats "${OUTDB}_nucl" "${OUTDB}_nucl" "${OUTDB}_set_to_member" "${OUTDB}_set_size" --stat linecount ${THREADS_PAR} \
             || fail "result2stats failed"
     fi
 
