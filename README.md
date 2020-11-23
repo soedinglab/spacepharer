@@ -85,6 +85,14 @@ Before search, query or target sequences contained in FASTA files need to be con
 You will also need to generate a control target set DB to allow SpacePHARER to calibrate the cutoff for reporting matches. SpacePHARER enables generating such control by reversing the protein fragments of your provided target DB using the parameter ```--reverse-fragments 1```:
 
       spacepharer createsetdb Target1.fasta [...TargetN.fasta] controlSetDB tmpFolder --reverse-fragments 1
+      
+      
+### Downloading query CRISPR spacer sets
+
+As an alternative to creating query setDB, you can use `downloadgenome` to download a comprehensive set of CRISPR spacers. The query setDB will be automatically created in the provided path.
+
+      # spacers_shmakov_et_al_2017 is a set of more than 30000 CRISPR spacer sets (Shmarkov et al., 2017)
+      spacepharer downloadgenome spacers_shmakov_et_al_2017 querySetDB tmpFolder --reverse-setdb 0
 
 ### Downloading target genomes
 
