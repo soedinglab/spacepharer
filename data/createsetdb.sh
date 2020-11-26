@@ -33,6 +33,13 @@ if notExists "${OUTDB}.dbtype"; then
         cp "$1_h" "${OUTDB}_h"
         cp "$1_h.index" "${OUTDB}_h.index"
         cp "$1_h.dbtype" "${OUTDB}_h.dbtype"
+
+        if [ -z "${REVERSE_FRAGMENTS}" ] && [ -f "${1}_mapping" ]; then
+            ln -fs "${1}_mapping" "${OUTDB}_mapping"
+            ln -fs "${1}_nodes.dmp" "${OUTDB}_nodes.dmp"
+            ln -fs "${1}_names.dmp" "${OUTDB}_names.dmp"
+            ln -fs "${1}_merged.dmp" "${OUTDB}_merged.dmp"
+        fi
     fi
 fi
 
@@ -54,6 +61,13 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     mv -f "${OUTDB}_h" "${OUTDB}_nucl_h"
     mv -f "${OUTDB}_h.index" "${OUTDB}_nucl_h.index"
     mv -f "${OUTDB}_h.dbtype" "${OUTDB}_nucl_h.dbtype"
+
+    if [ -z "${REVERSE_FRAGMENTS}" ] && [ -f "${OUTDB}_mapping" ]; then
+        ln -fs "${OUTDB}_mapping" "${OUTDB}_nucl_mapping"
+        ln -fs "${OUTDB}_nodes.dmp" "${OUTDB}_nucl_nodes.dmp"
+        ln -fs "${OUTDB}_names.dmp" "${OUTDB}_nucl_names.dmp"
+        ln -fs "${OUTDB}_merged.dmp" "${OUTDB}_nucl_merged.dmp"
+    fi
 
     if notExists "${OUTDB}_nucl_contig_to_set.index"; then
         awk '{ print $1"\t"$3; }' "${OUTDB}_nucl.lookup" | sort -k1,1n -k2,2n > "${OUTDB}_nucl_contig_to_set.tsv"

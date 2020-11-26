@@ -137,9 +137,13 @@ if notExists "${TMP_PATH}/aggregate_offset.index"; then
 fi
 
 if notExists "${TMP_PATH}/aln.index"; then
+    TAXCOL="empty"
+    if [ -e "${TARGET}_mapping" ]; then
+        TAXCOL="taxid"
+    fi
     # shellcheck disable=SC2086
     "${MMSEQS}" convertalis "${QUERY}_nucl" "${TARGET}_nucl" "${TMP_PATH}/aggregate_offset" "${TMP_PATH}/aln" \
-        --db-output --search-type 3 --format-output "tsetid,query,qset,target,evalue,qstart,qend,qlen,tstart,tend,qaln,taln" ${THREADS_PAR} \
+        --db-output --search-type 3 --format-output "tsetid,query,qset,target,evalue,qstart,qend,qlen,tstart,tend,qaln,taln,${TAXCOL}" ${THREADS_PAR} \
         || fail "convertalis failed"
 fi
 
@@ -160,7 +164,7 @@ if [ -n "$REPORT_PAM" ]; then
 fi
 
 # shellcheck disable=SC2086
-"${MMSEQS}" summarizeresults "${TMP_PATH}/match" "${ALN_RES}" "${OUTPUT}" ${SUMMARIZERESULTS_PAR} \
+"${MMSEQS}" summarizeresults "${TARGET}_nucl" "${TMP_PATH}/match" "${ALN_RES}" "${OUTPUT}" ${SUMMARIZERESULTS_PAR} \
     || fail "summarizeresults failed"
 
 if [ -n "${REMOVE_TMP}" ]; then

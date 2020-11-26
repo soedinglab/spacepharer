@@ -41,6 +41,7 @@ abspath() {
 
 hasCommand wget
 
+MMSEQS="$(abspath "${MMSEQS}")"
 OUTDB="$(abspath "$2")"
 TMP_PATH="$(abspath "$3")"
 if [ -n "${GENOME_FTP}" ]; then
@@ -51,14 +52,23 @@ cd "${TMP_PATH}"
 if [ -n "${GENOME_FTP}" ]; then
     if notExists downloaded.tsv; then
         : > downloaded.tsv.tmp
-        while read -r URL; do
+        : > downloaded.tax.tmp
+        while read -r URL TAXON; do
             NAME="$(basename "${URL}")"
             if wget -N -np -nv "${URL}"; then
                 push_back "${NAME}"
                 echo "${NAME}" >> downloaded.tsv.tmp
             fi
+            if [ -n "${TAXON}" ]; then
+              printf "%s\t%s" "${NAME}" "${TAXON}" >> downloaded.tax.tmp
+            else
+              INVALID_TAXON=1
+            fi
         done < "${GENOME_FTP}"
         mv -f downloaded.tsv.tmp downloaded.tsv
+        if [ -z "${INVALID_TAXON}" ]; then
+            mv -f downloaded.tax.tmp downloaded.tax
+        fi
     else
         while read -r NAME; do
             push_back "${NAME}"
@@ -69,6 +79,12 @@ if [ -n "${GENOME_FTP}" ]; then
         # shellcheck disable=SC2086
         "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
             || fail "createsetdb failed"
+    fi
+
+    if [ -f "downloaded.tax" ] && notExists "${OUTDB}_mapping"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "downloaded.tax" ${THREADS_PAR} \
+            || fail "createtaxdb failed"
     fi
 
     if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then
@@ -106,6 +122,12 @@ else
         # shellcheck disable=SC2086
         "${MMSEQS}" createdb "${TMP_PATH}/tardb" "${TMP_PATH}/seqdb" ${VERBOSITY_PAR} \
             || fail "createdb failed"
+    fi
+
+    if [ -n "${IN_TAX}" ] && notExists "${OUTDB}_mapping"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createtaxdb "${TMP_PATH}/seqdb" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
+            || fail "createtaxdb failed"
     fi
 
     if notExists "${OUTDB}.index"; then

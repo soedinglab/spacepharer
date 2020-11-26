@@ -4,6 +4,7 @@
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
+#include "NcbiTaxonomy.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -13,15 +14,23 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> matchReader(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    NcbiTaxonomy *t = NULL;
+    std::string nodesDb = par.db1 + "_nodes.dmp";
+    if (FileUtil::fileExists(nodesDb.c_str())) {
+        t = NcbiTaxonomy::openTaxonomy(par.db1);
+    }
+    std::vector<std::string> ranks = NcbiTaxonomy::parseRanks(par.lcaRanks);
+
+
+    DBReader<unsigned int> matchReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     matchReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    DBReader<unsigned int> alnReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
+    DBReader<unsigned int> alnReader(par.db3.c_str(), par.db3Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     alnReader.open(DBReader<unsigned int>::NOSORT);
 
     const bool shouldCompress = par.dbOut == true && par.compressed == true;
     const int dbType = par.dbOut == true ? Parameters::DBTYPE_GENERIC_DB : Parameters::DBTYPE_OMIT_FILE;
-    DBWriter dbw(par.db3.c_str(), par.db3Index.c_str(), par.threads, shouldCompress, dbType);
+    DBWriter dbw(par.db4.c_str(), par.db4Index.c_str(), par.threads, shouldCompress, dbType);
     dbw.open();
 
     Debug::Progress progress(matchReader.getSize());
@@ -93,6 +102,29 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         buffer.append("\t");
                         buffer.append(cScore);
                         buffer.append("\t");
+                        if (t != NULL) {
+                            TaxID taxId = Util::fast_atoi<TaxID>(entry[12]);
+                            TaxonNode const * node = t->taxonNode(taxId, false);
+                            if (node != NULL) {
+                                buffer.append(SSTR(node->taxId));
+                                buffer.append(1, '\t');
+                                buffer.append(node->rank);
+                                buffer.append(1, '\t');
+                                buffer.append(node->name);
+                                if (!ranks.empty()) {
+                                    buffer.append(1, '\t');
+                                    buffer.append(Util::implode(t->AtRanks(node, ranks), ';'));
+                                }
+                                if (par.showTaxLineage == 1) {
+                                    buffer.append(1, '\t');
+                                    buffer.append(t->taxLineage(node, true));
+                                }
+                                if (par.showTaxLineage == 2) {
+                                    buffer.append(1, '\t');
+                                    buffer.append(t->taxLineage(node, false));
+                                }
+                            }
+                        }
                     }
                     lineCount++;
 
@@ -113,9 +145,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     tmpBuffer.append(entry[8], entry[9] - entry[8]); //tstart
                     tmpBuffer.append("\t");
                     tmpBuffer.append(entry[9], entry[10] - entry[9]); //tend
-                    if (columns == 13) {
+                    if (columns == 14) {
                         tmpBuffer.append("\t");
-                        tmpBuffer.append(entry[12], entry[13] - entry[12]); //PAM
+                        tmpBuffer.append(entry[13], entry[14] - entry[13]); //PAM
                     }
                     if (par.formatType == LocalParameters::FORMAT_TYPE_ALN) {
                         tmpBuffer.append("\n");

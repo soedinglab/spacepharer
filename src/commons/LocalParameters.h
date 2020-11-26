@@ -70,6 +70,8 @@ private:
         filtermatchbyfdr.push_back(&PARAM_V);
 
         summarizeresults.push_back(&PARAM_FORMAT_TYPE);
+        summarizeresults.push_back(&PARAM_LCA_RANKS);
+        summarizeresults.push_back(&PARAM_TAXON_ADD_LINEAGE);
         summarizeresults.push_back(&PARAM_COMPRESSED);
         summarizeresults.push_back(&PARAM_THREADS);
         summarizeresults.push_back(&PARAM_V);
