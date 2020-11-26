@@ -4,6 +4,7 @@
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
+#include "Matcher.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -31,72 +32,66 @@ int combineprotnuclaln(int argc, const char **argv, const Command& command) {
         thread_idx = omp_get_thread_num();
 #endif
 
+        const char *protEntry[255];
+        const char *nuclEntry[255];
+
         std::string buffer;
         buffer.reserve(1024 * 1024);
 
 #pragma omp for schedule(dynamic, 10)
-
-        for (size_t i = 0; i < protAlnReader.getSize(); ++i) {
-            
+        for (size_t id = 0; id < protAlnReader.getSize(); ++id) {
             progress.updateProgress();
-            char *protData = protAlnReader.getData(i, thread_idx);
-            while (*protData != '\0'){
-                char *protCurrent = protData;
-                protData = Util::skipLine(protData);
-                size_t length = protData - protCurrent;
-                std::string line(protCurrent, length - 1);
-                if (line.empty() == true) {
-                    continue;
-                }
-                std::vector<std::string> columns = Util::split(line, "\t");
-                size_t targetId = Util::fast_atoi<size_t>(columns[0].c_str());
-                double protEval = strtod(columns[3].c_str(), NULL);
-                size_t key = protAlnReader.getDbKey(i);
-                char *nuclData = nuclAlnReader.getDataByDBKey(key, thread_idx);
 
+            unsigned int dbKey = protAlnReader.getDbKey(id);
+
+            size_t nuclId = nuclAlnReader.getId(dbKey);
+            if (nuclId == UINT_MAX) {
+                Debug(Debug::WARNING) << "Missing nucleotide alignment result for key " << dbKey << " \n";
+                continue;
+            }
+
+            char *nuclData = nuclAlnReader.getData(nuclId, thread_idx);
+            char *protData = protAlnReader.getData(id, thread_idx);
+            while (*protData != '\0'){
+                size_t columns = Util::getWordsOfLine(protData, protEntry, 255);
+                if (columns < Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
+                    Debug(Debug::ERROR) << "Invalid alignment result record\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                protData = Util::skipLine(protData);
+
+                size_t targetSetId = Util::fast_atoi<size_t>(protEntry[0]);
+                double protEval = strtod(protEntry[3], NULL);
+
+                double updatedEval = FLT_MAX;
                 while (*nuclData != '\0') {
-                    char *nuclCurrent = nuclData;
-                    nuclData = Util::skipLine(nuclData);
-                    size_t length = nuclData - nuclCurrent;
-                    std::string nuclLine(nuclCurrent, length - 1);
-                    if (nuclLine.empty() == true) {
+                    // read only key
+                    unsigned int dbKey = Util::fast_atoi<size_t>(nuclData);
+                    if (dbKey != targetSetId) {
+                        nuclData = Util::skipLine(nuclData);
                         continue;
                     }
-                    std::vector<std::string> nuclColumns = Util::split(nuclLine, "\t");
-                    double nuclEval = strtod(nuclColumns[3].c_str(), NULL);
-                    if (targetId == Util::fast_atoi<size_t>(nuclColumns[0].c_str())){   
-                        columns[3] = SSTR((protEval < nuclEval) ? protEval : nuclEval);
+
+                    columns = Util::getWordsOfLine(nuclData, nuclEntry, 255);
+                    if (columns < Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
+                        Debug(Debug::ERROR) << "Invalid alignment result record\n";
+                        EXIT(EXIT_FAILURE);
                     }
+                    nuclData = Util::skipLine(nuclData);
+
+                    double nuclEval = strtod(nuclEntry[3], NULL);
+                    updatedEval = (protEval < nuclEval) ? protEval : nuclEval;
                 }
-                buffer.append(columns[0]);
+                buffer.append(protEntry[0], protEntry[3] - protEntry[0]);
+                buffer.append(SSTR(updatedEval));
                 buffer.append("\t");
-                buffer.append(columns[1]);
-                buffer.append("\t");
-                buffer.append(columns[2]);
-                buffer.append("\t");
-                buffer.append(columns[3]);
-                buffer.append("\t");
-                buffer.append(columns[4]);
-                buffer.append("\t");
-                buffer.append(columns[5]);
-                buffer.append("\t");
-                buffer.append(columns[6]);
-                buffer.append("\t");
-                buffer.append(columns[7]);
-                buffer.append("\t");
-                buffer.append(columns[8]);
-                buffer.append("\t");
-                buffer.append(columns[9]);
-                buffer.append("\t");
-                buffer.append(columns[10]);
+                buffer.append(protEntry[4], (protData - 1) - protEntry[4]);
                 buffer.append("\n");
 
             }
-            dbw.writeData(buffer.c_str(), buffer.length(), protAlnReader.getDbKey(i), thread_idx);
+            dbw.writeData(buffer.c_str(), buffer.length(), dbKey, thread_idx);
             buffer.clear();
-
         }
-
     }
     dbw.close();
     protAlnReader.close();
