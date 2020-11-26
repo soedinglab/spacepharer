@@ -24,21 +24,20 @@ if notExists "${OUTDB}.dbtype"; then
         "${MMSEQS}" createdb "$@" "${OUTDB}" ${CREATEDB_PAR} \
             || fail "createdb failed"
     else
-        cp "$1" "${OUTDB}"
-        cp "$1.index" "${OUTDB}.index"
-        cp "$1.lookup" "${OUTDB}.lookup"
-        cp "$1.source" "${OUTDB}.source"
-        cp "$1.dbtype" "${OUTDB}.dbtype"
-
-        cp "$1_h" "${OUTDB}_h"
-        cp "$1_h.index" "${OUTDB}_h.index"
-        cp "$1_h.dbtype" "${OUTDB}_h.dbtype"
+        cp -f "$1" "${OUTDB}"
+        cp -f "$1.index" "${OUTDB}.index"
+        cp -f "$1.lookup" "${OUTDB}.lookup"
+        cp -f "$1.source" "${OUTDB}.source"
+        cp -f "$1.dbtype" "${OUTDB}.dbtype"
+        cp -f "$1_h" "${OUTDB}_h"
+        cp -f "$1_h.index" "${OUTDB}_h.index"
+        cp -f "$1_h.dbtype" "${OUTDB}_h.dbtype"
 
         if [ -z "${REVERSE_FRAGMENTS}" ] && [ -f "${1}_mapping" ]; then
-            ln -fs "${1}_mapping" "${OUTDB}_mapping"
-            ln -fs "${1}_nodes.dmp" "${OUTDB}_nodes.dmp"
-            ln -fs "${1}_names.dmp" "${OUTDB}_names.dmp"
-            ln -fs "${1}_merged.dmp" "${OUTDB}_merged.dmp"
+            cp -f "${1}_mapping" "${OUTDB}_mapping"
+            cp -f "${1}_nodes.dmp" "${OUTDB}_nodes.dmp"
+            cp -f "${1}_names.dmp" "${OUTDB}_names.dmp"
+            cp -f "${1}_merged.dmp" "${OUTDB}_merged.dmp"
         fi
     fi
 fi
