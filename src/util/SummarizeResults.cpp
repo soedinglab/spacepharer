@@ -96,9 +96,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
 
                     if (lineCount == 0) {
                         buffer.append("#");
-                        buffer.append(entry[2], entry[3] - entry[2]);
+                        buffer.append(entry[2], entry[3] - entry[2] - 1);
                         buffer.append("\t");
-                        buffer.append(entry[3], entry[4] - entry[3]);
+                        buffer.append(entry[3], entry[4] - entry[3] - 1);
                         buffer.append("\t");
                         buffer.append(cScore);
                         buffer.append("\t");
@@ -132,28 +132,28 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         continue;
                     }
                     tmpBuffer.append(">");
-                    tmpBuffer.append(entry[1], entry[2] - entry[1]); //spacername
+                    tmpBuffer.append(entry[1], entry[2] - entry[1] - 1); //spacername
                     tmpBuffer.append("\t");
-                    tmpBuffer.append(entry[3], entry[4] - entry[3]); //genomename
+                    tmpBuffer.append(entry[3], entry[4] - entry[3] - 1); //genomename
                     tmpBuffer.append("\t");
-                    tmpBuffer.append(entry[4], entry[5] - entry[4]); //best-hit pval
+                    tmpBuffer.append(entry[4], entry[5] - entry[4] - 1); //best-hit pval
                     tmpBuffer.append("\t");
-                    tmpBuffer.append(entry[5], entry[6] - entry[5]); //qstart
+                    tmpBuffer.append(entry[5], entry[6] - entry[5] - 1); //qstart
                     tmpBuffer.append("\t");
-                    tmpBuffer.append(entry[6], entry[7] - entry[6]); //qend
+                    tmpBuffer.append(entry[6], entry[7] - entry[6] - 1); //qend
                     tmpBuffer.append("\t");
-                    tmpBuffer.append(entry[8], entry[9] - entry[8]); //tstart
+                    tmpBuffer.append(entry[8], entry[9] - entry[8] - 1); //tstart
                     tmpBuffer.append("\t");
-                    tmpBuffer.append(entry[9], entry[10] - entry[9]); //tend
+                    tmpBuffer.append(entry[9], entry[10] - entry[9] - 1); //tend
                     if (columns == 14) {
                         tmpBuffer.append("\t");
-                        tmpBuffer.append(entry[13], entry[14] - entry[13]); //PAM
+                        tmpBuffer.append(entry[13], entry[14] - entry[13] - 1); //PAM
                     }
                     if (par.formatType == LocalParameters::FORMAT_TYPE_ALN) {
                         tmpBuffer.append("\n");
-                        tmpBuffer.append(entry[10], entry[11] - entry[10]); //qaln
+                        tmpBuffer.append(entry[10], entry[11] - entry[10] - 1); //qaln
                         tmpBuffer.append("\n");
-                        tmpBuffer.append(entry[11], entry[12] - entry[11]); //taln
+                        tmpBuffer.append(entry[11], entry[12] - entry[11] - 1); //taln
                     }
                     tmpBuffer.append("\n");
                 }
