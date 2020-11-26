@@ -115,9 +115,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     }
                 }
 
-                if (buffer.back() != '\n'){
-                    buffer.append("\n");
-                }
+                // if (buffer.back() != '\n'){
+                //     buffer.append("\n");
+                // }
                 tmpBuffer.clear();
                 targetSetName.clear();
                 querySetName.clear();

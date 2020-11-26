@@ -26,6 +26,7 @@ public:
     std::vector<MMseqsParameter*> combinescore;
     std::vector<MMseqsParameter*> combineprotnuclaln;
     std::vector<MMseqsParameter*> empiricalpval;
+    std::vector<MMseqsParameter*> reverseseqbycodon;
 
     PARAMETER(PARAM_REVERSE_FRAGMENTS)
     PARAMETER(PARAM_REVERSE_SETDB)
@@ -81,6 +82,10 @@ private:
         empiricalpval.push_back(&PARAM_THREADS);
         empiricalpval.push_back(&PARAM_V);
 
+        reverseseqbycodon.push_back(&PARAM_COMPRESSED);
+        reverseseqbycodon.push_back(&PARAM_THREADS);
+        reverseseqbycodon.push_back(&PARAM_V);
+
         combineprotnuclaln.push_back(&PARAM_COMPRESSED);
         combineprotnuclaln.push_back(&PARAM_THREADS);
         combineprotnuclaln.push_back(&PARAM_V);
@@ -95,6 +100,7 @@ private:
         predictmatchworkflow = combineList(predictmatchworkflow, summarizeresults);
         //predictmatchworkflow.push_back(&PARAM_FDR_CUTOFF);
         //predictmatchworkflow.push_back(&PARAM_FORMAT_TYPE);
+        predictmatchworkflow.push_back(&PARAM_DB_OUTPUT);
         predictmatchworkflow.push_back(&PARAM_REPORT_PAM);
         predictmatchworkflow.push_back(&PARAM_PERFORM_NUCLALN);
 
