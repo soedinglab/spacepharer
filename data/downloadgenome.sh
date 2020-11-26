@@ -109,6 +109,7 @@ else
       "spacers_shmakov_et_al_2017")
           wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_shmakov_et_al_2017.tar.gz";
           IN_TAR="spacers_shmakov_et_al_2017.tar.gz"
+          unset CREATE_REVERSE_SETDB
       ;;
     esac
 
