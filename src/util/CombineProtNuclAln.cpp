@@ -64,20 +64,21 @@ int combineprotnuclaln(int argc, const char **argv, const Command& command) {
                 double protEval = strtod(protEntry[3], NULL);
 
                 double updatedEval = FLT_MAX;
-                while (*nuclData != '\0') {
+                char *nuclCurrent = nuclData;
+                while (*nuclCurrent != '\0') {
                     // read only key
-                    unsigned int dbKey = Util::fast_atoi<size_t>(nuclData);
+                    unsigned int dbKey = Util::fast_atoi<size_t>(nuclCurrent);
                     if (dbKey != targetSetId) {
-                        nuclData = Util::skipLine(nuclData);
+                        nuclCurrent = Util::skipLine(nuclCurrent);
                         continue;
                     }
 
-                    columns = Util::getWordsOfLine(nuclData, nuclEntry, 255);
+                    columns = Util::getWordsOfLine(nuclCurrent, nuclEntry, 255);
                     if (columns < Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
                         Debug(Debug::ERROR) << "Invalid alignment result record\n";
                         EXIT(EXIT_FAILURE);
                     }
-                    nuclData = Util::skipLine(nuclData);
+                    nuclCurrent = Util::skipLine(nuclCurrent);
 
                     double nuclEval = strtod(nuclEntry[3], NULL);
                     updatedEval = (protEval < nuclEval) ? protEval : nuclEval;
