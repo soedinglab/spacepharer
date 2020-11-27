@@ -17,6 +17,8 @@ hasCommand sort
 
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
 
+export MMSEQS_FORCE_MERGE=1
+
 #check if already created db
 if notExists "${OUTDB}.dbtype"; then
     if notExists "${1}.dbtype"; then
