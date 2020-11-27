@@ -170,7 +170,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
     }
     dbw.close(par.dbOut == false);
     if (par.dbOut == false) {
-        FileUtil::remove(par.db3Index.c_str());
+        FileUtil::remove(par.db4Index.c_str());
     }
     matchReader.close();
     alnReader.close();
