@@ -131,10 +131,22 @@ else
             || fail "createsetdb failed"
     fi
 
-    if [ -n "${IN_TAX}" ] && notExists "${OUTDB}_mapping"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
-            || fail "createtaxdb failed"
+    if [ -n "${IN_TAX}" ]; then
+        if notExists "${OUTDB}_nucl_orf_mapping"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
+                || fail "createtaxdb failed"
+
+            ln -sf "${OUTDB}_nucl_orf_names.dmp" "${OUTDB}_nucl_names.dmp"
+            ln -sf "${OUTDB}_nucl_orf_nodes.dmp" "${OUTDB}_nucl_nodes.dmp"
+            ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_nucl_merged.dmp"
+        fi
+
+        if notExists "${OUTDB}_nucl_mapping"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}_nucl" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
+                || fail "createtaxdb failed"
+        fi
     fi
 
     if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then

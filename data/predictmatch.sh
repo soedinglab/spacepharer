@@ -138,7 +138,7 @@ fi
 
 if notExists "${TMP_PATH}/aln.index"; then
     TAXCOL="empty"
-    if [ -e "${TARGET}_mapping" ]; then
+    if [ -e "${TARGET}_nucl_mapping" ]; then
         TAXCOL="taxid"
     fi
     # shellcheck disable=SC2086
@@ -182,7 +182,7 @@ fi
 
 if notExists "${TMP_PATH}/lca.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 ${THREADS_PAR} \
+    "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 --tax-lineage 1 ${THREADS_PAR} \
         || fail "aggregatetax failed"
 fi
 
