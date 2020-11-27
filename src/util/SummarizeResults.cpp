@@ -74,11 +74,12 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 size_t targetSetId = Util::fast_atoi<size_t>(entry[0]);
 
                 size_t lineCount = 0;
-                while (*alnData != '\0') {
+                char* alnCurrent = alnData;
+                while (*alnCurrent != '\0') {
                     // read only key
-                    unsigned int dbKey = Util::fast_atoi<size_t>(alnData);
+                    unsigned int dbKey = Util::fast_atoi<size_t>(alnCurrent);
                     if (dbKey != targetSetId) {
-                        alnData = Util::skipLine(alnData);
+                        alnCurrent = Util::skipLine(alnCurrent);
                         continue;
                     }
 
@@ -87,12 +88,12 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         cScore.assign(entry[1], entry[2] - entry[1]);
                     }
 
-                    columns = Util::getWordsOfLine(alnData, entry, 255);
+                    columns = Util::getWordsOfLine(alnCurrent, entry, 255);
                     if (columns < 10) {
                         Debug(Debug::ERROR) << "Invalid alignment result record\n";
                         EXIT(EXIT_FAILURE);
                     }
-                    alnData = Util::skipLine(alnData);
+                    alnCurrent = Util::skipLine(alnCurrent);
 
                     if (lineCount == 0) {
                         buffer.append("#");
