@@ -89,7 +89,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
                 || fail "extractorfs failed"     
         else   
             # shellcheck disable=SC2086
-            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" --orf-start-mode 0 ${THREADS_PAR} \
+            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" --orf-start-mode 0 --create-lookup 1 ${THREADS_PAR} \
                 || fail "extractorfs failed"
         fi
     fi

@@ -83,7 +83,7 @@ if [ -n "${GENOME_FTP}" ]; then
 
     if [ -f "downloaded.tax" ] && notExists "${OUTDB}_mapping"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "downloaded.tax" ${THREADS_PAR} \
+        "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "downloaded.tax" ${THREADS_PAR} \
             || fail "createtaxdb failed"
     fi
 
@@ -125,16 +125,16 @@ else
             || fail "createdb failed"
     fi
 
-    if [ -n "${IN_TAX}" ] && notExists "${OUTDB}_mapping"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createtaxdb "${TMP_PATH}/seqdb" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
-            || fail "createtaxdb failed"
-    fi
-
     if notExists "${OUTDB}.index"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
             || fail "createsetdb failed"
+    fi
+
+    if [ -n "${IN_TAX}" ] && notExists "${OUTDB}_mapping"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
+            || fail "createtaxdb failed"
     fi
 
     if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then

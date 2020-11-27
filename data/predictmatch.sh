@@ -167,6 +167,29 @@ fi
 "${MMSEQS}" summarizeresults "${TARGET}_nucl" "${TMP_PATH}/match" "${ALN_RES}" "${OUTPUT}" ${SUMMARIZERESULTS_PAR} \
     || fail "summarizeresults failed"
 
+if notExists "${TMP_PATH}/aggregate_lca.index"; then
+    # shellcheck disable=SC2086
+    "${MMSEQS}" lca "${TARGET}_nucl_orf" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_lca" ${THREADS_PAR} \
+        || fail "lca failed"
+fi
+
+# TODO: move
+if notExists "${TMP_PATH}/orf_to_spacer.index"; then
+    # shellcheck disable=SC2086
+    "${MMSEQS}" swapdb "${QUERY}_nucl_orf_h" "${TMP_PATH}/orf_to_spacer" ${THREADS_PAR} \
+        || fail "swapdb failed"
+fi
+
+if notExists "${TMP_PATH}/lca.index"; then
+    # shellcheck disable=SC2086
+    "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 ${THREADS_PAR} \
+        || fail "aggregatetax failed"
+fi
+
+# shellcheck disable=SC2086
+"${MMSEQS}" createtsv "${QUERY}_nucl" "${TMP_PATH}/lca" "${OUTPUT}_lca" ${THREADS_PAR} \
+    || fail "createtsv failed"
+
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
     rmdir "${TMP_PATH}/search"
