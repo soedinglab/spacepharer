@@ -56,8 +56,8 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
         for (size_t id = 0; id < matchReader.getSize(); ++id) {
             progress.updateProgress();
 
-            size_t matchKey = matchReader.getDbKey(id);
-            unsigned int alnId = alnReader.getId(matchKey);
+            unsigned int matchKey = matchReader.getDbKey(id);
+            size_t alnId = alnReader.getId(matchKey);
             if (alnId == UINT_MAX) {
                 Debug(Debug::WARNING) << "Missing alignment result for key " << matchKey << " \n";
                 continue;
@@ -71,14 +71,14 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     Debug(Debug::ERROR) << "Invalid alignment result record\n";
                     EXIT(EXIT_FAILURE);
                 }
-                size_t targetSetId = Util::fast_atoi<size_t>(entry[0]);
+                unsigned int targetSetKey = Util::fast_atoi<unsigned int>(entry[0]);
 
                 size_t lineCount = 0;
                 char* alnCurrent = alnData;
                 while (*alnCurrent != '\0') {
                     // read only key
-                    unsigned int dbKey = Util::fast_atoi<size_t>(alnCurrent);
-                    if (dbKey != targetSetId) {
+                    unsigned int dbKey = Util::fast_atoi<unsigned int>(alnCurrent);
+                    if (dbKey != targetSetKey) {
                         alnCurrent = Util::skipLine(alnCurrent);
                         continue;
                     }
