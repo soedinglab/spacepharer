@@ -52,6 +52,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
         std::string tmpBuffer;
         tmpBuffer.reserve(1024 * 1024);
 
+        std::vector<TaxID> taxa;
+        taxa.reserve(1024);
+
 #pragma omp for schedule(dynamic, 10)
         for (size_t id = 0; id < matchReader.getSize(); ++id) {
             progress.updateProgress();
@@ -104,27 +107,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         buffer.append(cScore);
                         buffer.append("\t");
                         if (t != NULL) {
-                            TaxID taxId = Util::fast_atoi<TaxID>(entry[12]);
-                            TaxonNode const * node = t->taxonNode(taxId, false);
-                            if (node != NULL) {
-                                buffer.append(SSTR(node->taxId));
-                                buffer.append(1, '\t');
-                                buffer.append(node->rank);
-                                buffer.append(1, '\t');
-                                buffer.append(node->name);
-                                if (!ranks.empty()) {
-                                    buffer.append(1, '\t');
-                                    buffer.append(Util::implode(t->AtRanks(node, ranks), ';'));
-                                }
-                                if (par.showTaxLineage == 1) {
-                                    buffer.append(1, '\t');
-                                    buffer.append(t->taxLineage(node, true));
-                                }
-                                if (par.showTaxLineage == 2) {
-                                    buffer.append(1, '\t');
-                                    buffer.append(t->taxLineage(node, false));
-                                }
-                            }
+                            taxa.emplace_back(Util::fast_atoi<TaxID>(entry[12]));
                         }
                     }
                     lineCount++;
@@ -160,10 +143,34 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 }
                 if (lineCount > 0) {
                     buffer.append(SSTR(lineCount));
+                    if (t != NULL) {
+                        buffer.append("\t");
+                        TaxonNode const * node = t->LCA(taxa);
+                        if (node != NULL) {
+                            buffer.append(SSTR(node->taxId));
+                            buffer.append(1, '\t');
+                            buffer.append(node->rank);
+                            buffer.append(1, '\t');
+                            buffer.append(node->name);
+                            if (!ranks.empty()) {
+                                buffer.append(1, '\t');
+                                buffer.append(Util::implode(t->AtRanks(node, ranks), ';'));
+                            }
+                            if (par.showTaxLineage == 1) {
+                                buffer.append(1, '\t');
+                                buffer.append(t->taxLineage(node, true));
+                            }
+                            if (par.showTaxLineage == 2) {
+                                buffer.append(1, '\t');
+                                buffer.append(t->taxLineage(node, false));
+                            }
+                        }
+                    }
                     buffer.append("\n");
                     buffer.append(tmpBuffer);
                 }
                 tmpBuffer.clear();
+                taxa.clear();
             }
             dbw.writeData(buffer.c_str(), buffer.length(), matchKey, thread_idx, par.dbOut);
             buffer.clear();
