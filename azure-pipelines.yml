@@ -35,8 +35,8 @@ jobs:
       - checkout: self
         submodules: true
       - script: |
-          brew install cmake libomp
-        displayName: Install Dependencies
+          sudo xcode-select -s "/Applications/Xcode_12.2.app"
+        displayName: Use Xcode 12.2
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./util/build_osx.sh . build
