@@ -144,9 +144,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 if (lineCount > 0) {
                     buffer.append(SSTR(lineCount));
                     if (t != NULL) {
-                        buffer.append("\t");
                         TaxonNode const * node = t->LCA(taxa);
                         if (node != NULL) {
+                            buffer.append(1, '\t');
                             buffer.append(SSTR(node->taxId));
                             buffer.append(1, '\t');
                             buffer.append(node->rank);
