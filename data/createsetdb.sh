@@ -87,7 +87,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     if notExists "${OUTDB}_nucl_orf.index"; then
         if [ -n "${EXTRACTORFS_SPACER}" ]; then
             # shellcheck disable=SC2086
-            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" --min-length 9 --orf-start-mode 1 ${THREADS_PAR} \
+            "${MMSEQS}" extractorfs "${OUTDB}_nucl" "${OUTDB}_nucl_orf" --min-length 9 --orf-start-mode 1 --create-lookup 1 ${THREADS_PAR} \
                 || fail "extractorfs failed"     
         else   
             # shellcheck disable=SC2086
@@ -143,6 +143,32 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
             || fail "result2stats failed"
     fi
 
+    if [ -n "${TAXMAPPING}" ]; then
+        if notExists "${OUTDB}_nucl_orf_mapping"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${TAXMAPPING}" ${THREADS_PAR} \
+                || fail "createtaxdb failed"
+        fi
+
+        if notExists "${OUTDB}_set_mapping"; then
+            awk 'NR == FNR { f[$1] = $2; next } $2 in f { print $1"\t"f[$2] }' \
+                "${TAXMAPPING}" "${OUTDB}.source" > "${OUTDB}_set_mapping"
+            ln -sf "${OUTDB}_nucl_orf_names.dmp" "${OUTDB}_set_names.dmp"
+            ln -sf "${OUTDB}_nucl_orf_nodes.dmp" "${OUTDB}_set_nodes.dmp"
+            ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_set_merged.dmp"
+            awk 'BEGIN { printf("%c%c%c%c",18,0,0,0); exit; }' > "${OUTDB}_set.dbtype"
+        fi
+
+        if notExists "${OUTDB}_nucl_mapping"; then
+            ln -sf "${OUTDB}_nucl_orf_names.dmp" "${OUTDB}_nucl_names.dmp"
+            ln -sf "${OUTDB}_nucl_orf_nodes.dmp" "${OUTDB}_nucl_nodes.dmp"
+            ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_nucl_merged.dmp"
+
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}_nucl" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${TAXMAPPING}" ${THREADS_PAR} \
+                || fail "createtaxdb failed"
+        fi
+    fi
 else
     fail "protein mode not implemented"
 fi

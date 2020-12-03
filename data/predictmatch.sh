@@ -167,29 +167,51 @@ fi
 "${MMSEQS}" summarizeresults "${TARGET}_nucl" "${TMP_PATH}/match" "${ALN_RES}" "${OUTPUT}" ${SUMMARIZERESULTS_PAR} \
     || fail "summarizeresults failed"
 
-if notExists "${TMP_PATH}/aggregate_lca.index"; then
+if [ -e "${TARGET}_nucl_orf_mapping" ]; then
+    if notExists "${TMP_PATH}/aggregate_lca.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" lca "${TARGET}_nucl_orf" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_lca" ${THREADS_PAR} \
+            || fail "lca failed"
+    fi
+
+    # TODO: move
+    if notExists "${TMP_PATH}/orf_to_spacer.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" swapdb "${QUERY}_nucl_orf_h" "${TMP_PATH}/orf_to_spacer" ${THREADS_PAR} \
+            || fail "swapdb failed"
+    fi
+
+    if notExists "${TMP_PATH}/lca.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 --tax-lineage 1 ${THREADS_PAR} \
+            || fail "aggregatetax failed"
+    fi
+
     # shellcheck disable=SC2086
-    "${MMSEQS}" lca "${TARGET}_nucl_orf" "${TMP_PATH}/aggregate_truncated" "${TMP_PATH}/aggregate_lca" ${THREADS_PAR} \
-        || fail "lca failed"
+    "${MMSEQS}" createtsv "${QUERY}_nucl" "${TMP_PATH}/lca" "${OUTPUT}_lca" ${THREADS_PAR} \
+        || fail "createtsv failed"
 fi
 
-# TODO: move
-if notExists "${TMP_PATH}/orf_to_spacer.index"; then
+if [ -e "${QUERY}_set_mapping" ]; then
+    if notExists "${TMP_PATH}/match_swap.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" swapdb "${TMP_PATH}/match" "${TMP_PATH}/match_swap" ${THREADS_PAR} \
+            || fail "swapdb failed"
+        awk 'BEGIN { printf("%c%c%c%c",6,0,0,0); exit; }' > "${TMP_PATH}/match_swap.dbtype"
+    fi
+
+    if notExists "${TMP_PATH}/lca_per_targetset.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" lca "${QUERY}_set" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset" ${THREADS_PAR} \
+            || fail "lca failed"
+    fi
+
     # shellcheck disable=SC2086
-    "${MMSEQS}" swapdb "${QUERY}_nucl_orf_h" "${TMP_PATH}/orf_to_spacer" ${THREADS_PAR} \
-        || fail "swapdb failed"
+    "${MMSEQS}" prefixid "${TMP_PATH}/lca_per_targetset" "${OUTPUT}_lca_per_target.tsv.tmp" --tsv ${THREADS_PAR} \
+        || fail "prefixid failed"
+    awk 'FNR == NR { f[$1] = $2; next; } $1 in f { $1 = f[$1]; print $0 }' "${TARGET}.source" "${OUTPUT}_lca_per_target.tsv.tmp" > "${OUTPUT}_lca_per_target.tsv"
+    rm -f "${OUTPUT}_lca_per_target.tsv.tmp"
 fi
-
-if notExists "${TMP_PATH}/lca.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 --tax-lineage 1 ${THREADS_PAR} \
-        || fail "aggregatetax failed"
-fi
-
-# shellcheck disable=SC2086
-"${MMSEQS}" createtsv "${QUERY}_nucl" "${TMP_PATH}/lca" "${OUTPUT}_lca" ${THREADS_PAR} \
-    || fail "createtsv failed"
-
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
     rmdir "${TMP_PATH}/search"

@@ -39,6 +39,7 @@ int createsetdb(int argc, const char **argv, const Command& command) {
     cmd.addVariable("SWAPDB_PAR", par.createParameterString(par.swapdb).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
+    cmd.addVariable("TAXMAPPING", par.taxMappingFile.empty() == false ? par.taxMappingFile.c_str() : NULL);
 
     std::string program(tmpDir + "/createsetdb.sh");
     FileUtil::writeFile(program.c_str(), createsetdb_sh, createsetdb_sh_len);

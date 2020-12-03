@@ -62,6 +62,7 @@ private:
         downloadgenome.push_back(&PARAM_HELP);
         downloadgenome.push_back(&PARAM_HELP_LONG);
         downloadgenome.push_back(&PARAM_REVERSE_SETDB);
+        downloadgenome.push_back(&PARAM_THREADS);
         downloadgenome.push_back(&PARAM_V);
 
         filtermatchbyfdr.push_back(&PARAM_FDR_CUTOFF);
@@ -92,10 +93,11 @@ private:
         combineprotnuclaln.push_back(&PARAM_THREADS);
         combineprotnuclaln.push_back(&PARAM_V);
         
-        createsetdbworkflow = combineList(createdb, translatenucs);
+        createsetdbworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
         createsetdbworkflow.push_back(&PARAM_REVERSE_FRAGMENTS);
         createsetdbworkflow.push_back(&PARAM_EXTRACTORF_SPACER);
-    
+        createsetdbworkflow = combineList(createsetdbworkflow, translatenucs);
+
         predictmatchworkflow = combineList(searchworkflow, besthitbyset);
         predictmatchworkflow = combineList(predictmatchworkflow, combinepvalbyset);
         predictmatchworkflow = combineList(predictmatchworkflow, filtermatchbyfdr);

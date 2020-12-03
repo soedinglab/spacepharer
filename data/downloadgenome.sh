@@ -76,15 +76,15 @@ if [ -n "${GENOME_FTP}" ]; then
     fi
     eval "set -- $ARR"
     if notExists "${OUTDB}.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
-            || fail "createsetdb failed"
-    fi
-
-    if [ -f "downloaded.tax" ] && notExists "${OUTDB}_mapping"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "downloaded.tax" ${THREADS_PAR} \
-            || fail "createtaxdb failed"
+        if [ -f "downloaded.tax" ]; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 --tax-mapping-file "downloaded.tax" ${CREATESETDB_PAR} \
+                || fail "createsetdb failed"
+        else
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createsetdb "${@}" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
+                || fail "createsetdb failed"
+        fi
     fi
 
     if [ -n "${CREATE_REVERSE_SETDB}" ] && notExists "${OUTDB}_rev.index"; then
@@ -108,7 +108,9 @@ else
       ;;
       "spacers_shmakov_et_al_2017")
           wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_shmakov_et_al_2017.tar.gz";
+          wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_shmakov_et_al_2017.tsv";
           IN_TAR="spacers_shmakov_et_al_2017.tar.gz"
+          IN_TAX="spacers_shmakov_et_al_2017.tsv"
           unset CREATE_REVERSE_SETDB
       ;;
     esac
@@ -126,26 +128,14 @@ else
     fi
 
     if notExists "${OUTDB}.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
-            || fail "createsetdb failed"
-    fi
-
-    if [ -n "${IN_TAX}" ]; then
-        if notExists "${OUTDB}_nucl_orf_mapping"; then
+        if [ -n "${IN_TAX}" ]; then
             # shellcheck disable=SC2086
-            "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
-                || fail "createtaxdb failed"
-
-            ln -sf "${OUTDB}_nucl_orf_names.dmp" "${OUTDB}_nucl_names.dmp"
-            ln -sf "${OUTDB}_nucl_orf_nodes.dmp" "${OUTDB}_nucl_nodes.dmp"
-            ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_nucl_merged.dmp"
-        fi
-
-        if notExists "${OUTDB}_nucl_mapping"; then
+            "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 --tax-mapping-file "${IN_TAX}" ${CREATESETDB_PAR} \
+                || fail "createsetdb failed"
+        else
             # shellcheck disable=SC2086
-            "${MMSEQS}" createtaxdb "${OUTDB}_nucl" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${IN_TAX}" ${THREADS_PAR} \
-                || fail "createtaxdb failed"
+            "${MMSEQS}" createsetdb "${TMP_PATH}/seqdb" "${OUTDB}" "${TMP_PATH}" --reverse-fragments 0 ${CREATESETDB_PAR} \
+                || fail "createsetdb failed"
         fi
     fi
 
