@@ -52,9 +52,6 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
         std::string tmpBuffer;
         tmpBuffer.reserve(1024 * 1024);
 
-        std::vector<TaxID> taxa;
-        taxa.reserve(1024);
-
 #pragma omp for schedule(dynamic, 10)
         for (size_t id = 0; id < matchReader.getSize(); ++id) {
             progress.updateProgress();
@@ -76,6 +73,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 }
                 unsigned int targetSetKey = Util::fast_atoi<unsigned int>(entry[0]);
 
+                TaxID taxId = 0;
                 size_t lineCount = 0;
                 char* alnCurrent = alnData;
                 while (*alnCurrent != '\0') {
@@ -107,7 +105,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         buffer.append(cScore);
                         buffer.append("\t");
                         if (t != NULL) {
-                            taxa.emplace_back(Util::fast_atoi<TaxID>(entry[12]));
+                            taxId = Util::fast_atoi<TaxID>(entry[12]);
                         }
                     }
                     lineCount++;
@@ -144,7 +142,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 if (lineCount > 0) {
                     buffer.append(SSTR(lineCount));
                     if (t != NULL) {
-                        TaxonNode const * node = t->LCA(taxa);
+                        TaxonNode const * node = t->taxonNode(taxId, false);
                         if (node != NULL) {
                             buffer.append(1, '\t');
                             buffer.append(SSTR(node->taxId));
@@ -170,7 +168,6 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     buffer.append(tmpBuffer);
                 }
                 tmpBuffer.clear();
-                taxa.clear();
             }
             dbw.writeData(buffer.c_str(), buffer.length(), matchKey, thread_idx, par.dbOut);
             buffer.clear();
