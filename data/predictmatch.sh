@@ -209,7 +209,7 @@ if [ -e "${QUERY}_set_mapping" ]; then
     # shellcheck disable=SC2086
     "${MMSEQS}" prefixid "${TMP_PATH}/lca_per_targetset" "${OUTPUT}_lca_per_target.tsv.tmp" --tsv ${THREADS_PAR} \
         || fail "prefixid failed"
-    awk 'FNR == NR { f[$1] = $2; next; } $1 in f { $1 = f[$1]; print $0 }' "${TARGET}.source" "${OUTPUT}_lca_per_target.tsv.tmp" > "${OUTPUT}_lca_per_target.tsv"
+    awk 'BEGIN { OFS="\t" } FNR == NR { f[$1] = $2; next; } $1 in f { $1 = f[$1]; print $0 }' "${TARGET}.source" "${OUTPUT}_lca_per_target.tsv.tmp" > "${OUTPUT}_lca_per_target.tsv"
     rm -f "${OUTPUT}_lca_per_target.tsv.tmp"
 fi
 if [ -n "${REMOVE_TMP}" ]; then
