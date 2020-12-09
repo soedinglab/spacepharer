@@ -202,7 +202,7 @@ if [ -e "${QUERY}_set_mapping" ]; then
 
     if notExists "${TMP_PATH}/lca_per_targetset.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" majoritylca "${QUERY}_set" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset"  --vote-mode 0 ${THREADS_PAR} \
+        "${MMSEQS}" majoritylca "${QUERY}_set" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset"  --vote-mode 2 ${THREADS_PAR} \
             || fail "lca failed"
     fi
 
