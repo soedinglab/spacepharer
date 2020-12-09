@@ -197,6 +197,7 @@ public:
     // aggregate taxonomy
     static const int AGG_TAX_UNIFORM = 0;
     static const int AGG_TAX_MINUS_LOG_EVAL = 1;
+    static const int AGG_TAX_SCORE = 2;
 
     // taxonomy search strategy
     static const int TAXONOMY_SINGLE_SEARCH = 1;
@@ -1033,6 +1034,7 @@ public:
     std::vector<MMseqsParameter*> filtertaxdb;
     std::vector<MMseqsParameter*> filtertaxseqdb;
     std::vector<MMseqsParameter*> aggregatetax;
+    std::vector<MMseqsParameter*> aggregatetaxweights;
     std::vector<MMseqsParameter*> taxonomy;
     std::vector<MMseqsParameter*> taxpercontig;
     std::vector<MMseqsParameter*> easytaxonomy;

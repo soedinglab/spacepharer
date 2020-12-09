@@ -247,7 +247,7 @@ Parameters::Parameters():
         PARAM_TAXON_ADD_LINEAGE(PARAM_TAXON_ADD_LINEAGE_ID, "--tax-lineage", "Column with taxonomic lineage", "0: don't show, 1: add all lineage names, 2: add all lineage taxids", typeid(int), (void *) &showTaxLineage, "^[0-2]{1}$"),
         // aggregatetax
         PARAM_MAJORITY(PARAM_MAJORITY_ID, "--majority", "Majority threshold", "minimal fraction of agreement among taxonomically assigned sequences of a set", typeid(float), (void *) &majorityThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
-        PARAM_VOTE_MODE(PARAM_VOTE_MODE_ID, "--vote-mode", "Vote mode", "Mode of assigning weights to compute majority. 0: uniform, 1: minus log E-value", typeid(int), (void *) &voteMode, "^[0-1]{1}$"),
+        PARAM_VOTE_MODE(PARAM_VOTE_MODE_ID, "--vote-mode", "Vote mode", "Mode of assigning weights to compute majority. 0: uniform, 1: minus log E-value, 2: score", typeid(int), (void *) &voteMode, "^[0-2]{1}$"),
         // taxonomyreport
         PARAM_REPORT_MODE(PARAM_REPORT_MODE_ID, "--report-mode", "Report mode", "Taxonomy report mode 0: Kraken 1: Krona", typeid(int), (void *) &reportMode, "^[0-1]{1}$"),
         // createtaxdb
@@ -974,14 +974,22 @@ Parameters::Parameters():
     filtertaxseqdb.push_back(&PARAM_THREADS);
     filtertaxseqdb.push_back(&PARAM_V);
 
+    // aggregatetaxweights
+    aggregatetaxweights.push_back(&PARAM_MAJORITY);
+    aggregatetaxweights.push_back(&PARAM_VOTE_MODE);
+    aggregatetaxweights.push_back(&PARAM_LCA_RANKS);
+    aggregatetaxweights.push_back(&PARAM_TAXON_ADD_LINEAGE);
+    aggregatetaxweights.push_back(&PARAM_COMPRESSED);
+    aggregatetaxweights.push_back(&PARAM_THREADS);
+    aggregatetaxweights.push_back(&PARAM_V);
+
     // aggregatetax
-    aggregatetax.push_back(&PARAM_MAJORITY);
-    aggregatetax.push_back(&PARAM_VOTE_MODE);
     aggregatetax.push_back(&PARAM_LCA_RANKS);
     aggregatetax.push_back(&PARAM_TAXON_ADD_LINEAGE);
     aggregatetax.push_back(&PARAM_COMPRESSED);
     aggregatetax.push_back(&PARAM_THREADS);
     aggregatetax.push_back(&PARAM_V);
+
     // TODO should we add this in the future?
     //aggregatetax.push_back(&PARAM_BLACKLIST);
 
@@ -2276,7 +2284,7 @@ void Parameters::setDefaults() {
 
     // aggregatetax
     majorityThr = 0.5;
-    voteMode = 1;
+    voteMode = AGG_TAX_MINUS_LOG_EVAL;
 
     // taxonomyreport
     reportMode = 0;

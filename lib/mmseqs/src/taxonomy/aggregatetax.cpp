@@ -83,23 +83,34 @@ int aggregate(const bool useAln, int argc, const char **argv, const Command& com
                 char *seqToTaxData = taxSeqReader.getData(seqId, thread_idx);
                 TaxID taxon = Util::fast_atoi<int>(seqToTaxData);
 
-                float evalue = FLT_MAX;
-                if (useAln == true) {
+                if (useAln == true && taxon != 0) {
                     size_t alnId = alnSeqReader->getId(seqKey);
                     if (alnId == UINT_MAX) {
                         Debug(Debug::ERROR) << "Missing key " << alnId << " in alignment result\n";
                         EXIT(EXIT_FAILURE);
                     }
                     char *seqToAlnData = alnSeqReader->getData(alnId, thread_idx);
-                    size_t numCols = Util::getWordsOfLine(seqToAlnData, entry, 255);
-                    if (numCols < Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
-                        Debug(Debug::ERROR) << "No alignment result for taxon " << taxon << " found\n";
-                        EXIT(EXIT_FAILURE);
+                    float weight = FLT_MAX;
+                    size_t columns = Util::getWordsOfLine(seqToAlnData, entry, 255);
+                    if (par.voteMode == Parameters::AGG_TAX_MINUS_LOG_EVAL) {
+                        if (columns <= 3) {
+                            Debug(Debug::ERROR) << "No alignment evalue for taxon " << taxon << " found\n";
+                            EXIT(EXIT_FAILURE);
+                        }
+                        weight = strtod(entry[3], NULL);
+                    } else if (par.voteMode == Parameters::AGG_TAX_SCORE) {
+                        if (columns <= 1) {
+                            Debug(Debug::ERROR) << "No alignment score for taxon " << taxon << " found\n";
+                            EXIT(EXIT_FAILURE);
+                        }
+                        weight = strtod(entry[1], NULL);
                     }
-                    evalue = strtod(entry[3], NULL);
+                    setTaxa.emplace_back(taxon, weight, par.voteMode);
+                } else {
+                    const int uniformMode = Parameters::AGG_TAX_UNIFORM;
+                    setTaxa.emplace_back(taxon, 1.0, uniformMode);
                 }
 
-                setTaxa.emplace_back(taxon, evalue);
                 results = Util::skipLine(results);
             }
 
