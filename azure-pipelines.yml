@@ -7,28 +7,46 @@ variables:
     regression: 1
 
 jobs:
-  - job: build_ubuntu_1604
-    displayName: Ubuntu 1604
+  - job: build_ubuntu_1804
+    displayName: Ubuntu 1804
     pool:
-      vmImage: 'Ubuntu-16.04'
-
+      vmImage: 'Ubuntu-18.04'
+    timeoutInMinutes: 120
     strategy:
       matrix:
         avx2:
           SIMD: 'AVX2'
           STATIC: 1
           MPI: 0
-        sse:
+          BUILD_TYPE: RelWithDebInfo
+        sse41:
           SIMD: 'SSE4_1'
           STATIC: 1
           MPI: 0
+          BUILD_TYPE: RelWithDebInfo
+        sse2:
+          SIMD: 'SSE2'
+          STATIC: 1
+          MPI: 0
+          BUILD_TYPE: RelWithDebInfo
         avx2_mpi:
           SIMD: 'AVX2'
           STATIC: 0
           MPI: 1
-
+          BUILD_TYPE: RelWithDebInfo
+        asan:
+          SIMD: 'AVX2'
+          STATIC: 0
+          MPI: 0
+          BUILD_TYPE: ASanOpt
     steps:
       - checkout: self
+      - script: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y g++-10
+        condition: eq(variables['BUILD_TYPE'], 'ASanOpt')
+        displayName: Install newer GCC
       - script: |
           sudo apt-get update
           sudo apt-get -y install mpi-default-dev mpi-default-bin
@@ -36,13 +54,16 @@ jobs:
         condition: eq(variables['MPI'], 1)
       - script: |
           mkdir build && cd build
+          if [ "${BUILD_TYPE}" = "ASanOpt" ]; then
+              export CC=gcc-10 ; export CXX=g++-10
+          fi
           if [ "${STATIC}" -eq "1" ]; then
-              cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SHARED_LIBS=OFF \
+              cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_SHARED_LIBS=OFF \
                 -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
                 -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           else
-              cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+              cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           fi
 
@@ -50,6 +71,11 @@ jobs:
         displayName: Build SpacePHARER
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
+          export TTY=0
+          if [ "${BUILD_TYPE}" = "ASan" ]; then
+              echo "leak:libgomp1" > ${BUILD_SOURCESDIRECTORY}/ASan.supp
+              export ASAN_OPTIONS=suppressions=${BUILD_SOURCESDIRECTORY}/ASan.supp
+          fi
           ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
           ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
           ./build/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp
@@ -62,87 +88,80 @@ jobs:
           targetPath: $(Build.SourcesDirectory)/build/src/spacepharer
           artifactName: spacepharer-linux-$(SIMD)
 
-  - job: build_macos_1014
-    displayName: macOS 1014
+  - job: build_ubuntu_cross_2004
+    displayName: Ubuntu 2004 Cross-Compile
     pool:
-      vmImage: 'macOS-10.14'
+      vmImage: 'Ubuntu-20.04'
+    strategy:
+      matrix:
+        power8:
+          SIMD: POWER8
+          ARCH: ppc64el
+          CPREF: powerpc64le
+        power9:
+          SIMD: POWER9
+          ARCH: ppc64el
+          CPREF: powerpc64le
+        arm64:
+          SIMD: ARM8
+          ARCH: arm64
+          CPREF: aarch64
+    steps:
+      - script: |
+          sudo dpkg --add-architecture $ARCH
+          cat << HEREDOC | sudo tee /etc/apt/sources.list
+          deb [arch=amd64,i386] http://archive.ubuntu.com/ubuntu/ focal main universe multiverse
+          deb [arch=amd64,i386] http://archive.ubuntu.com/ubuntu/ focal-updates main universe multiverse
+          deb [arch=amd64,i386] http://archive.ubuntu.com/ubuntu/ focal-backports main universe multiverse
+          deb [arch=amd64,i386] http://security.ubuntu.com/ubuntu/ focal-security main universe multiverse
+          deb [arch=$ARCH] http://ports.ubuntu.com/ubuntu-ports/ focal main  universe multiverse
+          deb [arch=$ARCH] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main universe multiverse
+          deb [arch=$ARCH] http://ports.ubuntu.com/ubuntu-ports/ focal-backports main universe multiverse
+          deb [arch=$ARCH] http://ports.ubuntu.com/ubuntu-ports/ focal-security main universe multiverse
+          HEREDOC
+          sudo apt-get update
+          sudo apt-get -y install -o APT::Immediate-Configure=false crossbuild-essential-$ARCH zlib1g-dev:$ARCH libbz2-dev:$ARCH
+        displayName: Install Toolchain
+      - script: |
+          mkdir build && cd build
+          CC=${CPREF}-linux-gnu-gcc CXX=${CPREF}-linux-gnu-g++ \
+           cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DHAVE_TESTS=1 \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc \
+            -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+            -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 ..
+          make -j $(nproc --all)
+        displayName: Build SpacePHARER
+      - task: PublishPipelineArtifact@0
+        inputs:
+          targetPath: $(Build.SourcesDirectory)/build/src/spacepharer
+          artifactName: spacepharer-linux-$(SIMD)
+
+  - job: build_macos_1015
+    displayName: macOS 1015
+    pool:
+      vmImage: 'macos-10.15'
     steps:
       - checkout: self
       - script: |
-          brew install cmake libomp zlib bzip2 coreutils
-        displayName: Install Dependencies
+          sudo xcode-select -s "/Applications/Xcode_12.2.app"
+        displayName: Use Xcode 12.2
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build spacepharer
         displayName: Build SpacePHARER
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./build/build_sse41/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
-          ./build/build_sse41/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
-          ./build/build_sse41/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp
+          ./build/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
+          ./build/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
+          ./build/spacepharer easy-predict examples/*.fas targets result.tsv tmp
           awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 7) exit 1; }' result.tsv
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/build_sse41/src/spacepharer
-          artifactName: spacepharer-darwin-sse41
-      - task: PublishPipelineArtifact@0
-        inputs:
-          targetPath: $(Build.SourcesDirectory)/build/build_avx2/src/spacepharer
-          artifactName: spacepharer-darwin-avx2
-
-  # - job: build_windows_2019
-  #   displayName: Windows 2019
-  #   pool:
-  #     vmImage: 'windows-2019'
-  #   variables:
-  #     CYGWIN_ROOT: $(System.Workfolder)\cygwin
-  #     CYGWIN_MIRROR: http://cygwin.mirror.constant.com
-  #   timeoutInMinutes: 120
-  #   steps:
-  #     - powershell: git config --global core.autocrlf false
-  #       displayName: core.autocrlf false
-  #       submodules: true
-  #     - script: |
-  #         choco install cygwin --params="/InstallDir:%CYGWIN_ROOT%"
-  #       displayName: Install Cygwin
-  #     - script: |
-  #         %CYGWIN_ROOT%\cygwinsetup.exe -qnNdO -R "%CYGWIN_ROOT%" -s "%CYGWIN_MIRROR%" -g -P ^
-  #         bash,^
-  #         xxd,^
-  #         cmake,^
-  #         make,^
-  #         gcc-core,^
-  #         gcc-g++,^
-  #         zlib-devel,^
-  #         libbz2-devel,^
-  #         busybox-standalone,^
-  #         git,^
-  #         binutils,^
-  #         wget,^
-  #         perl
-  #       displayName: Install Dependencies
-  #     - script: |
-  #         %CYGWIN_ROOT%\bin\bash.exe -cl "${BUILD_SOURCESDIRECTORY}/lib/mmseqs/util/build_windows.sh $(cygpath ${BUILD_SOURCESDIRECTORY}) $(cygpath ${BUILD_SOURCESDIRECTORY}/build) spacepharer"
-  #       displayName: Build SpacePHARER
-  #     - task: "ArchiveFiles@2"
-  #       inputs:
-  #         rootFolderOrFile: $(Build.SourcesDirectory)\build\spacepharer
-  #         archiveFile: $(Build.SourcesDirectory)\spacepharer-win64.zip
-  #         includeRootFolder: true
-  #         archiveType: zip
-  #     - task: PublishPipelineArtifact@0
-  #       inputs:
-  #         targetPath: $(Build.SourcesDirectory)\spacepharer-win64.zip
-  #         artifactName: spacepharer-win64
-  #     - script: |
-  #         %BUILD_SOURCESDIRECTORY%\build\spacepharer\spacepharer.bat version
-  #       displayName: Setup Busybox
-  #     - script: |
-  #         %CYGWIN_ROOT%\bin\bash.exe -cl "cd ${BUILD_SOURCESDIRECTORY}/tests && ./run.sh $(cygpath ${BUILD_SOURCESDIRECTORY}/build/spacepharer/bin/spacepharer.exe)"
-  #       displayName: Run Regression Suite
-  #       condition: eq(variables['regression'], 1)
+          targetPath: $(Build.SourcesDirectory)/build/spacepharer
+          artifactName: spacepharer-darwin-universal
 
   - job: upload_artifacts
     displayName: Upload Artifacts
@@ -150,9 +169,9 @@ jobs:
     pool:
       vmImage: 'Ubuntu-16.04'
     dependsOn:
-      - build_macos_1014
-      - build_ubuntu_1604
-      # - build_windows_2019
+      - build_macos_1015
+      - build_ubuntu_1804
+      - build_ubuntu_cross_2004
     steps:
       - script: |
           cd "${BUILD_SOURCESDIRECTORY}"
@@ -161,26 +180,26 @@ jobs:
           mkdir spacepharer/bin
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: spacepharer-darwin-sse41
+          artifactName: spacepharer-darwin-universal
           targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
           chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       - task: ArchiveFiles@2
         inputs:
           rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
-          archiveFile: $(Build.SourcesDirectory)/spacepharer-osx-sse41.tar.gz
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-osx-universal.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: spacepharer-darwin-avx2
+          artifactName: spacepharer-linux-SSE2
           targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
           chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
       - task: ArchiveFiles@2
         inputs:
           rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
-          archiveFile: $(Build.SourcesDirectory)/spacepharer-osx-avx2.tar.gz
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-sse2.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
@@ -207,21 +226,42 @@ jobs:
           archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-avx2.tar.gz
           includeRootFolder: true
           archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: spacepharer-linux-ARM8
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
       - script:
-          rm "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
-      # - task: DownloadPipelineArtifact@1
-      #   inputs:
-      #     artifactName: spacepharer-win64
-      #     targetPath: $(Build.SourcesDirectory)
-      # - script: |
-      #     unzip "${BUILD_SOURCESDIRECTORY}/spacepharer-win64.zip"
-      #     chmod +x spacepharer/spacepharer.bat spacepharer/bin/*
-      # - task: ArchiveFiles@2
-      #   inputs:
-      #     rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
-      #     archiveFile: $(Build.SourcesDirectory)/spacepharer-win64.zip
-      #     includeRootFolder: true
-      #     archiveType: zip
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-arm64.tar.gz
+          includeRootFolder: true
+          archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: spacepharer-linux-POWER8
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
+      - script:
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-ppc64le-POWER8.tar.gz
+          includeRootFolder: true
+          archiveType: tar
+      - task: DownloadPipelineArtifact@1
+        inputs:
+          artifactName: spacepharer-linux-POWER9
+          targetPath: $(Build.SourcesDirectory)/spacepharer/bin
+      - script:
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacepharer/bin/spacepharer"
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacepharer
+          archiveFile: $(Build.SourcesDirectory)/spacepharer-linux-ppc64le-POWER9.tar.gz
+          includeRootFolder: true
+          archiveType: tar
       - task: DownloadSecureFile@1
         inputs:
           secureFile: azure_upload_spacepharer
@@ -232,5 +272,5 @@ jobs:
           ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
           cd "${BUILD_SOURCESDIRECTORY}"
           ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
-          scp spacepharer-osx-sse41.tar.gz spacepharer-osx-avx2.tar.gz spacepharer-linux-sse41.tar.gz spacepharer-linux-avx2.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
+          scp spacepharer-osx-universal.tar.gz spacepharer-linux-sse2.tar.gz spacepharer-linux-sse41.tar.gz spacepharer-linux-avx2.tar.gz spacepharer-linux-arm64.tar.gz spacepharer-linux-ppc64le-POWER8.tar.gz spacepharer-linux-ppc64le-POWER9.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
           ssh codeship@uniclust.mmseqs.com "update-latest-spacepharer.sh \"${BUILD_SOURCEVERSION}\""
