@@ -157,7 +157,7 @@ ALN_RES="${TMP_PATH}/aln_merge"
 if [ -n "$REPORT_PAM" ]; then
     if notExists "${TMP_PATH}/aln_merge_pam.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" findpam "${TARGET}_nucl" "${TMP_PATH}/aln_merge" "${TMP_PATH}/aln_merge_pam" ${THREADS_PAR} \
+        "${MMSEQS}" findpam "${TARGET}_nucl" "${TMP_PATH}/aln_merge" "${TMP_PATH}/aln_merge_pam" ${FINDPAM_PAR} \
             || fail "findpam failed"
     fi
     ALN_RES="${TMP_PATH}/aln_merge_pam"

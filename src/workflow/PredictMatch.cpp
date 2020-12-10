@@ -75,6 +75,7 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("BESTHITBYSET_PAR", par.createParameterString(par.besthitbyset).c_str());
     cmd.addVariable("COMBINEPVALPERSET_PAR", par.createParameterString(par.combinepvalbyset).c_str());
     cmd.addVariable("FILTERMATCHBYFDR_PAR", par.createParameterString(par.filtermatchbyfdr).c_str());
+    cmd.addVariable("FINDPAM_PAR", par.createParameterString(par.findpam).c_str());
     cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 

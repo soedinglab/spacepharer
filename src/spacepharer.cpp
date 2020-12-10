@@ -64,7 +64,7 @@ std::vector<Command> commands = {
                 CITATION_SPACEPHARER, {{"cScoreDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb},
                                        {"controlcScoreDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb},
                                        {"resultDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::genericDb}}},
-       {"findpam",                  findpam,                &localPar.threadsandcompression,    COMMAND_SPECIAL | COMMAND_EXPERT,
+       {"findpam",                  findpam,                &localPar.findpam,    COMMAND_SPECIAL | COMMAND_EXPERT,
                 "Report PAM upstream or downstream of protospacer",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",

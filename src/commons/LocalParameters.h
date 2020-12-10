@@ -27,6 +27,7 @@ public:
     std::vector<MMseqsParameter*> combineprotnuclaln;
     std::vector<MMseqsParameter*> empiricalpval;
     std::vector<MMseqsParameter*> reverseseqbycodon;
+    std::vector<MMseqsParameter*> findpam;
 
     PARAMETER(PARAM_REVERSE_FRAGMENTS)
     PARAMETER(PARAM_REVERSE_SETDB)
@@ -34,6 +35,7 @@ public:
     PARAMETER(PARAM_FDR_CUTOFF)
     PARAMETER(PARAM_FORMAT_TYPE)
     PARAMETER(PARAM_REPORT_PAM)
+    PARAMETER(PARAM_FLANKING_SEQ_LEN)
     PARAMETER(PARAM_PERFORM_NUCLALN)
 
     static const int FORMAT_TYPE_SHORT = 0;
@@ -47,6 +49,7 @@ public:
     int formatType;
     int reportPam;
     int performNuclAln;
+    int flankingSeqLen;
     
 private:
     LocalParameters() : 
@@ -57,6 +60,7 @@ private:
         PARAM_FDR_CUTOFF(PARAM_FDR_CUTOFF_ID,"--fdr", "FDR cutoff", "FDR cutoff for filtering matches [0.0, 1.0]", typeid(float), (void *) &fdrCutoff, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_FORMAT_TYPE(PARAM_FORMAT_TYPE_ID,"--fmt", "Output format", "0: short (only matches); 1: long (matches and hits); 2: long with nucleotide alignment", typeid(int), (void *) &formatType, "^[0-2]{1}$"),
         PARAM_REPORT_PAM(PARAM_REPORT_PAM_ID,"--report-pam", "Report PAM", "Report protospacer adjacent motifs up and downstream of hits [0,1]", typeid(int), (void *) &reportPam, "^[0-1]{1}$"),
+        PARAM_FLANKING_SEQ_LEN(PARAM_FLANKING_SEQ_LEN_ID,"--flanking-seq-len", "flaking sequence length", "Length of protospacer flanking sequence to extract for possible PAMs scanning", typeid(int), (void *) &flankingSeqLen, "^[0-9]{1}[0-9]*$"),
         PARAM_PERFORM_NUCLALN(PARAM_PERFORM_NUCLALN_ID,"--perform-nucl-aln", "Perform nucl-nucl alignment", "Perform a nucl-nucl alignment in addition to the hits reported in 6-frame translated search, and assign the smallest E-value between the two alignments [0,1]", typeid(int), (void *) &performNuclAln, "^[0-1]{1}$")
     {
         downloadgenome.push_back(&PARAM_HELP);
@@ -84,6 +88,11 @@ private:
         empiricalpval.push_back(&PARAM_COMPRESSED);
         empiricalpval.push_back(&PARAM_THREADS);
         empiricalpval.push_back(&PARAM_V);
+        
+        findpam.push_back(&PARAM_FLANKING_SEQ_LEN);
+        findpam.push_back(&PARAM_COMPRESSED);
+        findpam.push_back(&PARAM_THREADS);
+        findpam.push_back(&PARAM_V);
 
         reverseseqbycodon.push_back(&PARAM_COMPRESSED);
         reverseseqbycodon.push_back(&PARAM_THREADS);
@@ -102,6 +111,7 @@ private:
         predictmatchworkflow = combineList(predictmatchworkflow, combinepvalbyset);
         predictmatchworkflow = combineList(predictmatchworkflow, filtermatchbyfdr);
         predictmatchworkflow = combineList(predictmatchworkflow, summarizeresults);
+        predictmatchworkflow = combineList(predictmatchworkflow, findpam);
         //predictmatchworkflow.push_back(&PARAM_FDR_CUTOFF);
         //predictmatchworkflow.push_back(&PARAM_FORMAT_TYPE);
         predictmatchworkflow.push_back(&PARAM_DB_OUTPUT);
@@ -116,6 +126,7 @@ private:
         formatType = 1;
         reportPam = 1;
         performNuclAln = 1;
+        flankingSeqLen = 10;
         
         citations.emplace(CITATION_SPACEPHARER, "Zhang R, Mirdita M, Levy Karin E, Norroy C, Galiez C, and Soding J: SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. (2020)");
     }
