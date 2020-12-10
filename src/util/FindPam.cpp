@@ -29,19 +29,19 @@
 // N 	Any 	A/C/G/T
 
 //adapted from Leenay & Beisel, 2017. Table 1, represented in guide-centric orientation (PAM is from the strand that matches crRNA)
-//classification    PAM location    Consensus sequence
-//1-I-A     5'  YCN
-//1-I-B     5'  CCW
-//1-I-C     5'  YYC
-//1-I-E     5'  AWG
-//1-I-F     5'  CC
+//classification    PAM location    Consensus sequence  Rep. Genome
+//1-I-A     5'  YCN     Sulfolobus solfataricus P2, Pyrococcus. furiosus
+//1-I-B     5'  CCW     Clostridium difficile
+//1-I-C     5'  YYC     Bacillus halodurans
+//1-I-E     5'  AWG     Escherichia coli K12, salmonella enterica
+//1-I-F     5'  CC      Pseudomonas aeruginosa
 //1-III-B   3'  MMA (RNA PAM)
-//2-II-A    3'  NGG
-//2-II-A    3'  NNAGAA
-//2-II-A    3'  NNGRRT
-//2-II-C    3'  NNNNGWWT
-//2-V-A     5'  TTN
-//2-V-B     5'  TTN
+//2-II-A    3'  NGG     Streptococcus pyogenes
+//2-II-A    3'  NNAGAA  Streptococcus thermophilus(CRISPR1)
+//2-II-A    3'  NNGRRT  Staphylococcus aureus
+//2-II-C    3'  NNNNGWWT    Neisseria meningitidis
+//2-V-A     5'  TTN     Francisella novicida
+//2-V-B     5'  TTN     Alicyclobacillus acidoterrestris
 //2-VI      3'  D (protospacer flanking sequence)
 
 std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand, std::string fivePrimeStrand){
@@ -53,7 +53,7 @@ std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand,
     std::pair<std::string, std::string> result;
 
     static PatternCompiler YCN("[TC]C[ACGT]");
-    static PatternCompiler CCW ("CC[AT]");
+    static PatternCompiler CCW ("CC[GAT]");
     static PatternCompiler YYC ("[TC][TC]C");
     static PatternCompiler AWG ("A[AT]G");
     static PatternCompiler CC ("CC");
@@ -64,9 +64,9 @@ std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand,
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
     } else if(YYC.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(AWG.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
-        result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
     } else if(CC.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
+        result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
+    } else if(AWG.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
     } else if(TTN.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == 10) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
@@ -142,6 +142,7 @@ int findpam(int argc, const char **argv, const Command& command) {
                 if (line.empty() == true) {
                     continue;
                 }
+                //TODO: parameterize length of flanking seq
                 std::vector<std::string> columns = Util::split(line, "\t");
                 size_t tsetid = Util::fast_atoi<size_t>(columns[0].c_str());
                 size_t contigid = Util::fast_atoi<size_t>(setReader.getDataByDBKey(tsetid, thread_idx));
@@ -175,30 +176,30 @@ int findpam(int argc, const char **argv, const Command& command) {
                         char seqChar = Orf::complement(data[i]);
                         fivePrimeStrand.append(1, seqChar);
                     }
-                    for (size_t i = threePrimeEndPos; i > threePrimeEndPos -10; i--){
+                    for (size_t i = threePrimeEndPos; i > threePrimeEndPos - 10; i--){
                         char seqChar = Orf::complement(data[i]);
                         threePrimeStrand.append(1, seqChar);
                     }
                 } else if (isqReverse == true && istReverse == false){
-                    threePrimeEndPos = tend + qend + 1;
-                    fivePrimeEndPos = tstart - (qlen - qstart) + 1;
-                    for (size_t i = fivePrimeEndPos -10; i < fivePrimeEndPos; ++i){
+                    fivePrimeEndPos = tend + qend;
+                    threePrimeEndPos = tstart - (qlen - qstart);
+                    for (size_t i = fivePrimeEndPos + 10; i > fivePrimeEndPos; i--){
+                        char seqChar = Orf::complement(data[i]);
+                        fivePrimeStrand.append(1, seqChar);
+                    }
+                    for (size_t i = threePrimeEndPos; i > threePrimeEndPos - 10; i--){
+                        char seqChar = Orf::complement(data[i]);
+                        threePrimeStrand.append(1, seqChar);
+                    }
+                } else if (isqReverse == true && istReverse == true){
+                    fivePrimeEndPos = tend - qend;
+                    threePrimeEndPos = tstart + (qlen - qstart);
+                    for (size_t i = fivePrimeEndPos - 10; i < fivePrimeEndPos; ++i){
                         char seqChar = data[i];
                         fivePrimeStrand.append(1, seqChar);
                     }
                     for (size_t i = threePrimeEndPos; i < threePrimeEndPos + 10; ++i){
                         char seqChar = data[i];
-                        threePrimeStrand.append(1, seqChar);
-                    }
-                } else if (isqReverse == true && istReverse == true){
-                    threePrimeEndPos = tend - qend - 1;
-                    fivePrimeEndPos = tstart + (qlen - qstart) - 1;
-                    for (size_t i = fivePrimeEndPos + 10; i > fivePrimeEndPos; i--){
-                        char seqChar = Orf::complement(data[i]);
-                        fivePrimeStrand.append(1, seqChar);
-                    }
-                    for (size_t i = threePrimeEndPos; i > threePrimeEndPos -10; i--){
-                        char seqChar = Orf::complement(data[i]);
                         threePrimeStrand.append(1, seqChar);
                     }
                 }
