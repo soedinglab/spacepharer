@@ -81,7 +81,7 @@ int combineprotnuclaln(int argc, const char **argv, const Command& command) {
                     nuclCurrent = Util::skipLine(nuclCurrent);
 
                     double nuclEval = strtod(nuclEntry[3], NULL);
-                    updatedEval = (protEval < nuclEval) ? protEval : nuclEval;
+                    updatedEval = ((log(protEval) * 0.5 + log(nuclEval) * 0.5) < log(nuclEval)) ? exp(log(protEval) * 0.5 + log(nuclEval) * 0.5) : nuclEval;
                 }
                 buffer.append(protEntry[0], protEntry[3] - protEntry[0]);
                 buffer.append(SSTR(updatedEval));
