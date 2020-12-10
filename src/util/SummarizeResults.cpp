@@ -129,7 +129,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     tmpBuffer.append(entry[9], entry[10] - entry[9] - 1); //tend
                     if (columns == 14) {
                         tmpBuffer.append("\t");
-                        tmpBuffer.append(entry[13], entry[14] - entry[13] - 1); //PAM
+                        tmpBuffer.append(entry[13], entry[14] - entry[13]); //PAM
                     }
                     if (par.formatType == LocalParameters::FORMAT_TYPE_ALN) {
                         tmpBuffer.append("\n");
