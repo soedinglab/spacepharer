@@ -76,9 +76,9 @@ jobs:
               echo "leak:libgomp1" > ${BUILD_SOURCESDIRECTORY}/ASan.supp
               export ASAN_OPTIONS=suppressions=${BUILD_SOURCESDIRECTORY}/ASan.supp
           fi
-          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder --tax-mapping-file <(sed 's|^.*/||g' examples/genome_list.tsv)
           ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
-          ./build/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp
+          ./build/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp --tax-mapping-file <(printf "CP003088.fas\t1097668\nJNGQ01000029.fas\t1639\n")
           awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 7) exit 1; }' result.tsv
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
@@ -152,9 +152,9 @@ jobs:
         displayName: Build SpacePHARER
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./build/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder
+          ./build/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder --tax-mapping-file <(sed 's|^.*/||g' examples/genome_list.tsv)
           ./build/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
-          ./build/spacepharer easy-predict examples/*.fas targets result.tsv tmp
+          ./build/spacepharer easy-predict examples/*.fas targets result.tsv tmp --tax-mapping-file <(printf "CP003088.fas\t1097668\nJNGQ01000029.fas\t1639\n")
           awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 7) exit 1; }' result.tsv
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
