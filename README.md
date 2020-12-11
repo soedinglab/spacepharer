@@ -8,20 +8,24 @@ SpacePHARER is a modular toolkit for sensitive phage-host interaction identifica
 
 ## Installation
 
-SpacePHARER can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux or `sysctl -a | grep machdep.cpu.features | grep SSE4.1` on MacOS).
+SpacePHARER can be used by compiling from source (see below) or downloading a statically compiled version. It requires a 64-bit system. We recommend using a system with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux).
 
      # install from bioconda
      conda install -c conda-forge -c bioconda spacepharer
      # pull docker container
      docker pull soedinglab/spacepharer
-     # static SSE4.1 build
-     wget https://mmseqs.com/spacepharer/spacepharer-linux-sse41.tar.gz; tar xvzf spacepharer-linux-sse41.tar.gz; export PATH=$(pwd)/spacepharer/bin/:$PATH
-     # static AVX2 build
+     # static Linux AVX2 build
      wget https://mmseqs.com/spacepharer/spacepharer-linux-avx2.tar.gz; tar xvzf spacepharer-linux-avx2.tar.gz; export PATH=$(pwd)/spacepharer/bin/:$PATH
+     # static Linux SSE4.1 build
+     wget https://mmseqs.com/spacepharer/spacepharer-linux-sse41.tar.gz; tar xvzf spacepharer-linux-sse41.tar.gz; export PATH=$(pwd)/spacepharer/bin/:$PATH
+     # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
+     wget https://mmseqs.com/spacepharer/spacepharer-osx-universal.tar.gz; tar xvzf spacepharer-osx-universal.tar.gz; export PATH=$(pwd)/spacepharer/bin/:$PATH
+
+Precompiled binaries for other architectures (ARM64, PPC64LE) and very old AMD/Intel CPUs (SSE2 only) are available at [https://mmseqs.com/spacepharer](https://mmseqs.com/spacepharer).
 
 ### Compile from source
 
-Compiling SpacePHARER from source has the advantage of system-specific optimizations, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.8 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
+Compiling SpacePHARER from source has the advantage of system-specific optimizations, which should improve its performance. To compile SpacePHARER `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the SpacePHARER binary will be located in the `build/bin` directory.
 
       git clone https://github.com/soedinglab/spacepharer.git
       cd spacepharer
@@ -34,7 +38,7 @@ Compiling SpacePHARER from source has the advantage of system-specific optimizat
 
 :exclamation: If you want to compile SpacePHARER on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and SpacePHARER will not be able to run multithreaded. Adjust the `cmake` call above to:
 
-      CC="$(brew --prefix)/bin/gcc-9" CXX="$(brew --prefix)/bin/g++-9" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
+      CC="$(brew --prefix)/bin/gcc-10" CXX="$(brew --prefix)/bin/g++-10" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
 
 ## Input
 
@@ -55,6 +59,7 @@ SpacePHARER will conduct a similarity search between six-frame translated CRISPR
      --reverse-fragments      reverse AA fragments (ORFs) to generate control setDB
      --fdr                    false discovery rate cut-off to determine S_comb threshold of predictions
      --fmt                    output format for predictmatch. (0: short (only matches); 1: long (matches and hits); 2: long with nucleotide alignment)
+
 
 ### Quick start
 
@@ -165,4 +170,4 @@ During the workflow execution, SpacePHARER will keep all intermediate outputs in
 
 ## Hardware requirements
 
-SpacePHARER will scale its memory consumption based on the available main memory of the machine. SpacePHARER needs a CPU with at least the SSE4.1 instruction set to run.
+SpacePHARER will scale its memory consumption based on the available main memory of the machine. SpacePHARER needs a 64-bit CPU with at least the SSE2 instruction set to run.
