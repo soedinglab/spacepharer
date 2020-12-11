@@ -76,9 +76,9 @@ jobs:
               echo "leak:libgomp1" > ${BUILD_SOURCESDIRECTORY}/ASan.supp
               export ASAN_OPTIONS=suppressions=${BUILD_SOURCESDIRECTORY}/ASan.supp
           fi
-          ./cmake-build-release-gcc/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder --tax-mapping-file examples/genome_taxa.tsv
-          ./cmake-build-release-gcc/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
-          ./cmake-build-release-gcc/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp --tax-mapping-file examples/spacer_taxa.tsv
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets tmpFolder --tax-mapping-file examples/genome_taxa.tsv
+          ./build/src/spacepharer createsetdb examples/GCA*.fna.gz targets_rev tmpFolder --reverse-fragments 1
+          ./build/src/spacepharer easy-predict examples/*.fas targets result.tsv tmp --tax-mapping-file examples/spacer_taxa.tsv
           awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 6) exit 1; }' result.tsv
           awk 'BEGIN { other = 0; } $2 == 40521 { listeria++; next } $2 == 244310 { burkholdia++; next; } $2 != 0 { other++; } END { if ((listeria" "burkholdia" "other) != "5 1 0") exit 1; }' result.tsv_lca.tsv
           awk '$1 == "GCA_000836905.1_ViralProj14035_genomic.fna.gz" && $2 == 0 { c++ } $1 == "GCA_000845445.1_ViralProj14409_genomic.fna.gz" && $2 == 1097668 { c++ } $1 == "GCA_000849645.1_ViralProj14589_genomic.fna.gz" && $2 == 1639 { c++ } END { if (c != 3) exit 1; }' result.tsv_lca_per_target.tsv
