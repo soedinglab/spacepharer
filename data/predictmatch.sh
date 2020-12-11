@@ -183,7 +183,7 @@ if [ -e "${TARGET}_nucl_orf_mapping" ]; then
 
     if notExists "${TMP_PATH}/lca.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 ${TAXFORMAT_PAR} ${THREADS_PAR} \
+        "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" ${TAXFORMAT_PAR} ${THREADS_PAR} \
             || fail "aggregatetax failed"
     fi
 
