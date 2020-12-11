@@ -76,7 +76,7 @@ Alternatively, you can use `downloaddb` to download a list of phage genomes. Her
     # Alternatively you can pass a list of URLs to downloadgenome
     spacepharer downloaddb examples/genome_list.tsv targetSetDB tmpFolder
 
-The `easy-predict` workflow directly returns a tab-separated (.tsv) file containing phage-host predictions from (multiple) FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
+The `easy-predict` workflow directly returns a tab-separated (`.tsv`) file containing phage-host predictions from (multiple) FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
 
     spacepharer easy-predict examples/*.fas targetSetDB predictions.tsv tmpFolder
 
@@ -92,14 +92,14 @@ You will also need to generate a control target set DB to allow SpacePHARER to c
     spacepharer createsetdb Target1.fasta [...TargetN.fasta] controlSetDB tmpFolder --reverse-fragments 1
       
       
-### Downloading query CRISPR spacer sets
+#### Downloading query CRISPR spacer sets
 
 As an alternative to creating query setDB, you can use `downloaddb` to download a comprehensive set of CRISPR spacers. The query setDB will be automatically created in the provided path.
 
     # spacers_shmakov_et_al_2017 is a set of more than 30000 CRISPR spacer sets (Shmarkov et al., 2017)
-    spacepharer downloaddb spacers_shmakov_et_al_2017 querySetDB tmpFolder --reverse-setdb 0
+    spacepharer downloaddb spacers_shmakov_et_al_2017 querySetDB tmpFolder
 
-### Downloading target genomes
+#### Downloading target genomes
 
 As an alternative to creating target and control setDB, the `downloaddb` module will download the provided list of URLs to phage genomes or a predefined list of phage genomes and create a target setDB in the provided path.
 
@@ -111,6 +111,41 @@ As an alternative to creating target and control setDB, the `downloaddb` module 
 A list of predefined spacer or phage catalogues can be shown by executing `downloaddb` without additional parameters:
 
     spacepharer downloaddb
+
+A file containing URLs can also be supplied to `downloaddb`:
+
+    spacepharer downloaddb urls.txt targetSetDB tmpFolder
+    # urls.txt content
+    https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/836/905/GCA_000836905.1_ViralProj14035/GCA_000836905.1_ViralProj14035_genomic.fna.gz
+    https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/845/445/GCA_000845445.1_ViralProj14409/GCA_000845445.1_ViralProj14409_genomic.fna.gz
+
+#### Adding taxonomic labels
+
+If input spacers or genomes are supplied together with taxonomic identifiers, lowest common ancestors are computed for each spacer or each phage and the [SpacePHARER output](#the-spacepharer-output) will contain taxonomic information for each match.
+
+Databases download from the predefined entries in `downloaddb` come with taxonomic information already included. For custom databases, extra steps have to be taken:
+
+#### Taxonomic labels in `createsetdb`
+
+When calling `createsetdb` you can supply a tab-separated list of file names to NCBI taxonomy identifiers with the `--tax-mapping-file` parameter:
+
+    # create phage database with taxonomic labels
+    spacepharer createsetdb Target1.fasta [...TargetN.fasta] targetSetDB tmpFolder --tax-mapping-file targets.tsv
+    # targets.tsv content (\t is a tab character)
+    Target1.fasta\t10665
+    ...
+    TargetN.fasta\t31754
+
+#### Taxonomic labels in `downloaddb URLFILE`
+
+If an file containing URLs is supplied to `downloaddb` taxonomic labels can be provided in the second column of the URL file:
+
+A file containing URLs can also be supplied to `downloaddb`:
+
+    spacepharer downloaddb urls.txt targetSetDB tmpFolder
+    # urls.txt content (\t is a tab character)
+    https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/836/905/GCA_000836905.1_ViralProj14035/GCA_000836905.1_ViralProj14035_genomic.fna.gz\t10679
+    https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/845/445/GCA_000845445.1_ViralProj14409/GCA_000845445.1_ViralProj14409_genomic.fna.gz\t244310
 
 ### Parsing spacer files
 
@@ -147,7 +182,7 @@ The `predictmatch` workflow gives more control of the execution of the predictio
 
 ### The SpacePHARER output
 
-Upon completion, SpacePHARER outputs a tab-separated text file (.tsv). Each prokaryotic-phage match spans two or more lines:
+Upon completion, SpacePHARER outputs a tab-separated text file (`.tsv`). Each prokaryotic-phage match spans two or more lines:
 
     #prok_acc  phage_acc   S_comb      num_hits
     >spacer_acc      phage_acc   p_bh    spacer_start      spacer_end  phage_start phage_end   putative_5'_PAM|putative_3'_PAM
@@ -161,6 +196,10 @@ Each following line describes an individual hit: spacer accession, phage accessi
 Optionally, the aligned spacer and phage sequences can be printed in two additional lines following each hit line, using `--fmt 2`
 
 `--fmt 0` will output a short-format, if you wish to only see the match line.
+
+If the spacer database was created with taxonomic labels, a result file with the suffix `_lca.tsv` is also created. The first column of this file contains the spacer accession and the remaining columns are described in the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-output-and-tsv).
+
+If the phage database was created with taxonomic labels, a result file with the suffix `_lca_per_target.tsv` is also created. The first column of this file contains the phage genome file name and the remaining columns are described in the [same MMseqs2 wiki entry](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-output-and-tsv). Additionally, each match in the base `.tsv` will also contain these columns.
 
 ### Removing temporary files
 

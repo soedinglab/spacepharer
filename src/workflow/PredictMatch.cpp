@@ -59,6 +59,10 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
 
+    std::vector<MMseqsParameter*> taxformat;
+    taxformat.push_back(&(par.PARAM_LCA_RANKS));
+    taxformat.push_back(&(par.PARAM_TAXON_ADD_LINEAGE));
+
     CommandCaller cmd;
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("REVERSE_FRAGMENTS", par.reverseFragments == 1 ? "TRUE" : NULL);
@@ -77,6 +81,7 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("FILTERMATCHBYFDR_PAR", par.createParameterString(par.filtermatchbyfdr).c_str());
     cmd.addVariable("FINDPAM_PAR", par.createParameterString(par.findpam).c_str());
     cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
+    cmd.addVariable("TAXFORMAT_PAR", par.createParameterString(taxformat).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 
     FileUtil::writeFile(tmpDir + "/predictmatch.sh", predictmatch_sh, predictmatch_sh_len);

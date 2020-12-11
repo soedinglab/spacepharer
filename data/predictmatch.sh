@@ -183,12 +183,12 @@ if [ -e "${TARGET}_nucl_orf_mapping" ]; then
 
     if notExists "${TMP_PATH}/lca.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 --tax-lineage 1 ${THREADS_PAR} \
+        "${MMSEQS}" aggregatetax "${TARGET}_nucl_orf" "${TMP_PATH}/orf_to_spacer" "${TMP_PATH}/aggregate_lca" "${TMP_PATH}/lca" --vote-mode 0 ${TAXFORMAT_PAR} ${THREADS_PAR} \
             || fail "aggregatetax failed"
     fi
 
     # shellcheck disable=SC2086
-    "${MMSEQS}" createtsv "${QUERY}_nucl" "${TMP_PATH}/lca" "${OUTPUT}_lca" ${THREADS_PAR} \
+    "${MMSEQS}" createtsv "${QUERY}_nucl" "${TMP_PATH}/lca" "${OUTPUT}_lca.tsv" ${THREADS_PAR} \
         || fail "createtsv failed"
 fi
 
@@ -202,7 +202,7 @@ if [ -e "${QUERY}_set_mapping" ]; then
 
     if notExists "${TMP_PATH}/lca_per_targetset.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" majoritylca "${QUERY}_set" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset"  --vote-mode 2 ${THREADS_PAR} \
+        "${MMSEQS}" majoritylca "${QUERY}_set" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset"  --vote-mode 2 ${TAXFORMAT_PAR} ${THREADS_PAR} \
             || fail "lca failed"
     fi
 
