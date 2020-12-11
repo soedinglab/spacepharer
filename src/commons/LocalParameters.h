@@ -22,7 +22,7 @@ public:
     std::vector<MMseqsParameter*> summarizeresults;    
     std::vector<MMseqsParameter*> predictmatchworkflow;
     std::vector<MMseqsParameter*> createsetdbworkflow;
-    std::vector<MMseqsParameter*> downloadgenome;
+    std::vector<MMseqsParameter*> downloaddb;
     std::vector<MMseqsParameter*> combinescore;
     std::vector<MMseqsParameter*> combineprotnuclaln;
     std::vector<MMseqsParameter*> empiricalpval;
@@ -63,11 +63,11 @@ private:
         PARAM_FLANKING_SEQ_LEN(PARAM_FLANKING_SEQ_LEN_ID,"--flanking-seq-len", "flaking sequence length", "Length of protospacer flanking sequence to extract for possible PAMs scanning", typeid(int), (void *) &flankingSeqLen, "^[0-9]{1}[0-9]*$"),
         PARAM_PERFORM_NUCLALN(PARAM_PERFORM_NUCLALN_ID,"--perform-nucl-aln", "Perform nucl-nucl alignment", "Perform a nucl-nucl alignment in addition to the hits reported in 6-frame translated search, and assign the smallest E-value between the two alignments [0,1]", typeid(int), (void *) &performNuclAln, "^[0-1]{1}$")
     {
-        downloadgenome.push_back(&PARAM_HELP);
-        downloadgenome.push_back(&PARAM_HELP_LONG);
-        downloadgenome.push_back(&PARAM_REVERSE_SETDB);
-        downloadgenome.push_back(&PARAM_THREADS);
-        downloadgenome.push_back(&PARAM_V);
+        downloaddb.push_back(&PARAM_HELP);
+        downloaddb.push_back(&PARAM_HELP_LONG);
+        downloaddb.push_back(&PARAM_REVERSE_SETDB);
+        downloaddb.push_back(&PARAM_THREADS);
+        downloaddb.push_back(&PARAM_V);
 
         filtermatchbyfdr.push_back(&PARAM_FDR_CUTOFF);
         filtermatchbyfdr.push_back(&PARAM_COMPRESSED);

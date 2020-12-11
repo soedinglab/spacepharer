@@ -11,7 +11,7 @@ extern int filtermatchbyfdr(int argc, const char **argv, const Command& command)
 extern int findpam(int argc, const char **argv, const Command& command);
 extern int truncatebesthits(int argc, const char **argv, const Command& command);
 extern int summarizeresults(int argc, const char **argv, const Command& command);
-extern int downloadgenome(int argc, const char **argv, const Command& command);
+extern int downloaddb(int argc, const char **argv, const Command& command);
 extern int combinescore(int argc, const char **argv, const Command& command);
 extern int combineprotnuclaln(int argc, const char **argv, const Command& command);
 extern int empiricalpval(int argc, const char **argv, const Command& command);

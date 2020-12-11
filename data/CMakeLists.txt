@@ -4,7 +4,7 @@ set(COMPILED_RESOURCES
         easypredict.sh
         predictmatch.sh
         createsetdb.sh
-        downloadgenome.sh
+        downloaddb.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

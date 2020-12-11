@@ -38,14 +38,14 @@ Compiling SpacePHARER from source has the advantage of system-specific optimizat
 
 ## Input
 
-SpacePHARER will conduct a similarity search between six-frame translated CRISPR spacer sequences and sets of phage **ORFs** (open reading frames), combine multiple evidences (**hits**) found between the two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are FASTA files of nucleotide sequences (`.fasta` or `.fasta.gz`). Spacers should be provided in multiple FASTA files, each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/), [MinCED](https://github.com/ctSkennerton/minced) (derived from CRT format) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html). Phage genomes are supplied as separate FASTA files(one genome per file), or can be downloaded by `downloadgenome`(see below).
+SpacePHARER will conduct a similarity search between six-frame translated CRISPR spacer sequences and sets of phage **ORFs** (open reading frames), combine multiple evidences (**hits**) found between the two sets and predict prokaryote-phage pairs (**matches**) with strictly controlled **FDR** (false discovery rate). The starting point are FASTA files of nucleotide sequences (`.fasta` or `.fasta.gz`). Spacers should be provided in multiple FASTA files, each containing spacers from one genome. For spacers, SpacePHARER also accepts output files from the following common CRISPR array analysis tools: [PILER-CR](https://www.drive5.com/pilercr/), [CRT](http://www.room220.com/crt/), [MinCED](https://github.com/ctSkennerton/minced) (derived from CRT format) and [CRISPRDetect](http://crispr.otago.ac.nz/CRISPRDetect/predict_crispr_array.html). Phage genomes are supplied as separate FASTA files (one genome per file), or can be downloaded with `downloaddb`(see below).
 
 ## Running SpacePHARER
 
 ### Main Modules
 
       easy-predict      Predict phage-host matches from multiFASTA and common spacer files (PILER-CR, CRISPRDetect and CRT)
-      downloadgenome    Download GenBank (phage) genomes and create sequence database
+      downloaddb        Download spacers or GenBank phage genomes and create sequence database
       createsetdb       Create sequence database from FASTA input
       predictmatch      Predict host-phage matches
       parsespacer       Parse a file containing CRISPR array in supported formats (CRT,PILER-CR and CRISPRDetect)
@@ -63,13 +63,13 @@ To start, you need to create a database of the phage genomes `targetSetDB` and c
       spacepharer createsetdb examples/GCA*.fna.gz targetSetDB tmpFolder
       spacepharer createsetdb examples/GCA*.fna.gz targetSetDB_rev tmpFolder --reverse-fragments 1
 
-Alternatively, you can use `downloadgenome` to download a list of phage genomes. Here, the reversed control sequences are automatically created.
+Alternatively, you can use `downloaddb` to download a list of phage genomes. Here, the reversed control sequences are automatically created.
 
       # GenBank_phage_2018_09 is a set of nearly 8000 phage genomes
-      spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmpFolder
+      spacepharer downloaddb GenBank_phage_2018_09 targetSetDB tmpFolder
       
       # Alternatively you can pass a list of URLs to downloadgenome
-      spacepharer downloadgenome examples/genome_list.tsv targetSetDB tmpFolder
+      spacepharer downloaddb examples/genome_list.tsv targetSetDB tmpFolder
 
 The `easy-predict` workflow directly returns a tab-separated (.tsv) file containing phage-host predictions from (multiple) FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
 
@@ -89,23 +89,23 @@ You will also need to generate a control target set DB to allow SpacePHARER to c
       
 ### Downloading query CRISPR spacer sets
 
-As an alternative to creating query setDB, you can use `downloadgenome` to download a comprehensive set of CRISPR spacers. The query setDB will be automatically created in the provided path.
+As an alternative to creating query setDB, you can use `downloaddb` to download a comprehensive set of CRISPR spacers. The query setDB will be automatically created in the provided path.
 
       # spacers_shmakov_et_al_2017 is a set of more than 30000 CRISPR spacer sets (Shmarkov et al., 2017)
-      spacepharer downloadgenome spacers_shmakov_et_al_2017 querySetDB tmpFolder --reverse-setdb 0
+      spacepharer downloaddb spacers_shmakov_et_al_2017 querySetDB tmpFolder --reverse-setdb 0
 
 ### Downloading target genomes
 
-As an alternative to creating target and control setDB, the `downloadgenome` module will download the provided list of URLs to phage genomes or a predefined list of phage genomes and create a target setDB in the provided path.
+As an alternative to creating target and control setDB, the `downloaddb` module will download the provided list of URLs to phage genomes or a predefined list of phage genomes and create a target setDB in the provided path.
 
-      spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmpFolder
+      spacepharer downloaddb GenBank_phage_2018_09 targetSetDB tmpFolder
       
       # Generating control sequences can be disabled if a different set will be used
-      spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmpFolder --reverse-setdb 0
+      spacepharer downloaddb GenBank_phage_2018_09 targetSetDB tmpFolder --reverse-setdb 0
 
-A list of predefined phage catalogues can be shown by executing `downloadgenome` without additional parameters:
+A list of predefined spacer or phage catalogues can be shown by executing `downloaddb` without additional parameters:
 
-      spacepharer downloadgenome
+      spacepharer downloaddb
 
 ### Parsing spacer files
 
@@ -138,8 +138,8 @@ CRISPRDetect is available as web server tool [here](http://crispr.otago.ac.nz/CR
 
 The `predictmatch` workflow gives more control of the execution of the prediction. Here a seperate control sequence set DB `controlSetDB` can be used. For example, we can assume that any spacer hit towards a eukoryota-targeting virus is a false positive:
 
-    spacepharer downloadgenome GenBank_phage_2018_09 targetSetDB tmp --reverse-setdb 0
-    spacepharer downloadgenome GenBank_eukvir_2018_09 controlSetDB tmp --reverse-setdb 0
+    spacepharer downloaddb GenBank_phage_2018_09 targetSetDB tmp --reverse-setdb 0
+    spacepharer downloaddb GenBank_eukvir_2018_09 controlSetDB tmp --reverse-setdb 0
     spacepharer predictmatch querySetDB targetSetDB controlSetDB outputFileName.tsv tmpFolder
 
 ### The SpacePHARER output

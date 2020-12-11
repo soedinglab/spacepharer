@@ -6,36 +6,47 @@
 
 #include <cassert>
 
-#include "downloadgenome.sh.h"
+#include "downloaddb.sh.h"
 
-struct GenomesDownload {
+struct SpacePharerDownload {
     const char *name;
     const char *description;
     const char *citation;
-    enum {
+    enum DbType {
         SPACER,
         GENOME
     } type;
+
+    static const char* formatType(DbType type) {
+        switch (type) {
+            case SPACER:
+                return "Spacer";
+            case GENOME:
+                return "Genome";
+            default:
+                return "-";
+        }
+    }
 };
 
-std::vector<GenomesDownload> genomesDownloads = {
+std::vector<SpacePharerDownload> genomesDownloads = {
     {
         "GenBank_phage_2018_09",
         "GenBank phage genomes from September 2018",
         "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
-        GenomesDownload::GENOME,
+            SpacePharerDownload::GENOME,
     },
     {
         "GenBank_eukvir_2018_09",
         "GenBank eukaryotic viral genomes from September 2018",
         "NCBI Resource Coordinators: Database resources of the National Center for Biotechnology Information. Nucleic Acids Res 46(D1), D8-D13 (2018)",
-        GenomesDownload::GENOME,
+            SpacePharerDownload::GENOME,
     },
     {
         "spacers_shmakov_et_al_2017",
         "Spacers extracted from Shmakov et al",
         "The CRISPR Spacer Space Is Dominated by Sequences from Species-Specific Mobilomes. mBio 8(5), e01397-17 (2017)",
-        GenomesDownload::SPACER,
+            SpacePharerDownload::SPACER,
     }
 };
 
@@ -43,8 +54,10 @@ extern void appendPadded(std::string& dst, const std::string& value, size_t n, i
 
 std::string listGenomeDatabases(const Command &command, bool detailed) {
     size_t nameWidth = 4;
+    size_t typeWidth = 4;
     for (size_t i = 0; i < genomesDownloads.size(); ++i) {
         nameWidth = std::max(nameWidth, strlen(genomesDownloads[i].name));
+        nameWidth = std::max(nameWidth, strlen(SpacePharerDownload::formatType(genomesDownloads[i].type)));
     }
 
     std::string description;
@@ -57,12 +70,19 @@ std::string listGenomeDatabases(const Command &command, bool detailed) {
 
     description += "\n  ";
     appendPadded(description, "Name", nameWidth, 0, ' ');
+    description.append(1, '\t');
+    appendPadded(description, "Type", typeWidth, 0, ' ');
     description.append(1, '\n');
 
     for (size_t i = 0; i < genomesDownloads.size(); ++i) {
         description.append("- ");
         appendPadded(description, genomesDownloads[i].name, nameWidth, 0, ' ');
+        description.append(1, '\t');
+        appendPadded(description, SpacePharerDownload::formatType(genomesDownloads[i].type), typeWidth, 0, ' ');
         description.append(1, '\n');
+        if (detailed == false) {
+            continue;
+        }
         if (strlen(genomesDownloads[i].description) > 0) {
             description.append(2, ' ');
             description.append(genomesDownloads[i].description);
@@ -79,19 +99,29 @@ std::string listGenomeDatabases(const Command &command, bool detailed) {
     return description;
 }
 
-int downloadgenome(int argc, const char **argv, const Command &command) {
+
+extern const char* binary_name;
+
+int downloaddb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, false, Parameters::PARSE_ALLOW_EMPTY, 0);
 
     std::string description = listGenomeDatabases(command, par.help);
     if (par.filenames.size() == 0 || par.help) {
+        if (par.help == false) {
+            description.append("Show a detailed list of databases by calling '");
+            description.append(binary_name);
+            description.append(1, ' ');
+            description.append(command.cmd);
+            description.append(" -h'\n\n");
+        }
         par.printUsageMessage(command, par.help ? MMseqsParameter::COMMAND_EXPERT : 0, description.c_str());
         EXIT(EXIT_SUCCESS);
     }
 
-    par.printParameters(command.cmd, argc, argv, par.downloadgenome);
+    par.printParameters(command.cmd, argc, argv, *command.params);
     std::string tmpDir = par.db3;
-    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.downloadgenome));
+    std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, par.downloaddb));
     if (par.reuseLatest) {
         hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
@@ -119,7 +149,7 @@ int downloadgenome(int argc, const char **argv, const Command &command) {
     } else {
         cmd.addVariable("GENOME_FTP", NULL);
         cmd.addVariable("DBNAME", genomesDownloads[downloadIdx].name);
-        if (genomesDownloads[downloadIdx].type == GenomesDownload::SPACER) {
+        if (genomesDownloads[downloadIdx].type == SpacePharerDownload::SPACER) {
             par.extractorfsSpacer = 1;
             if (par.PARAM_REVERSE_SETDB.wasSet == false) {
                 par.reverseSetDb = 0;
@@ -138,8 +168,8 @@ int downloadgenome(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    std::string program(tmpDir + "/downloadgenome.sh");
-    FileUtil::writeFile(program, downloadgenome_sh, downloadgenome_sh_len);
+    std::string program(tmpDir + "/downloadb.sh");
+    FileUtil::writeFile(program, downloaddb_sh, downloaddb_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
