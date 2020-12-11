@@ -4,8 +4,8 @@
 
 const char* binary_name = "spacepharer";
 const char* tool_name = "SpacePHARER";
-// TODO Write one full sentence
-const char* tool_introduction = "CRISPR spacer phage-host finder";
+const char* tool_introduction =
+"SpacePHARER (CRISPR Spacer Phage-Host Pair Finder) is a sensitive and fast tool for de novo prediction of phage-host relationships via identifying phage genomes that match CRISPR spacers in genomic or metagenomic data.\n\nPlease cite: R. Zhang et al. SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. biorxiv, doi:10.1101/2020.05.15.090266 (2020).";
 const char* main_author = "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>";
 const char* show_extended_help = "1";
 const char* show_bash_info = NULL;
