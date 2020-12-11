@@ -35,14 +35,8 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_OVERLAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    for (size_t i = 0; i < par.extractorfs.size(); i++){
-        par.extractorfs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
-    }
-    for (size_t i = 0; i < par.translatenucs.size(); i++){
-        par.translatenucs[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
-    }
-    for (size_t i = 0; i < par.result2profile.size(); i++){
-        par.result2profile[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
+    for (size_t i = 0; i < par.searchworkflow.size(); i++){
+        par.searchworkflow[i]->addCategory(MMseqsParameter::COMMAND_EXPERT);
     }
     par.PARAM_COMPRESSED.removeCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_THREADS.removeCategory(MMseqsParameter::COMMAND_EXPERT);
