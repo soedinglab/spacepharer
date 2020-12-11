@@ -13,7 +13,7 @@ bool hide_base_commands = true;
 
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<Command> commands = {
-        {"easy-predict",             easypredict,           &localPar.predictmatchworkflow,              COMMAND_EASY,
+        {"easy-predict",             easypredict,           &localPar.easypredictmatchworkflow, COMMAND_EASY,
                 "Predict phage-host matches from common spacer files (PILER-CR, CRISPRDetect and CRT)",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",

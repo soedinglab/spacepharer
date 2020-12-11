@@ -21,6 +21,7 @@ public:
     std::vector<MMseqsParameter*> filtermatchbyfdr; 
     std::vector<MMseqsParameter*> summarizeresults;    
     std::vector<MMseqsParameter*> predictmatchworkflow;
+    std::vector<MMseqsParameter*> easypredictmatchworkflow;
     std::vector<MMseqsParameter*> createsetdbworkflow;
     std::vector<MMseqsParameter*> downloaddb;
     std::vector<MMseqsParameter*> combinescore;
@@ -117,6 +118,9 @@ private:
         predictmatchworkflow.push_back(&PARAM_DB_OUTPUT);
         predictmatchworkflow.push_back(&PARAM_REPORT_PAM);
         predictmatchworkflow.push_back(&PARAM_PERFORM_NUCLALN);
+
+        easypredictmatchworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
+        easypredictmatchworkflow = combineList(easypredictmatchworkflow, predictmatchworkflow);
 
         // default value 0 means no reverse of AA fragments
         reverseFragments = 0;
