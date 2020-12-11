@@ -53,16 +53,17 @@ if [ -n "${GENOME_FTP}" ]; then
     if notExists downloaded.tsv; then
         : > downloaded.tsv.tmp
         : > downloaded.tax.tmp
-        while read -r URL TAXON; do
+        TAB="$(printf '\t')"
+        while IFS="${TAB}" read -r URL TAXON; do
             NAME="$(basename "${URL}")"
             if wget -N -np -nv "${URL}"; then
                 push_back "${NAME}"
                 echo "${NAME}" >> downloaded.tsv.tmp
             fi
             if [ -n "${TAXON}" ]; then
-              printf "%s\t%s" "${NAME}" "${TAXON}" >> downloaded.tax.tmp
+                printf "%s\t%s\n" "${NAME}" "${TAXON}" >> downloaded.tax.tmp
             else
-              INVALID_TAXON=1
+                INVALID_TAXON=1
             fi
         done < "${GENOME_FTP}"
         mv -f downloaded.tsv.tmp downloaded.tsv
