@@ -8,6 +8,20 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+abspath() {
+    if [ -d "$1" ]; then
+        (cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+        if [ -z "${1##*/*}" ]; then
+            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+        else
+            echo "$(pwd)/$1"
+        fi
+    elif [ -d "$(dirname "$1")" ]; then
+        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
+
 hasCommand () {
     command -v "$1" >/dev/null 2>&1 || { echo "Please make sure that $1 is in \$PATH."; exit 1; }
 }
@@ -18,6 +32,8 @@ hasCommand sort
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
 
 export MMSEQS_FORCE_MERGE=1
+
+OUTDB="$(abspath "${OUTDB}")"
 
 #check if already created db
 if notExists "${OUTDB}.dbtype"; then
