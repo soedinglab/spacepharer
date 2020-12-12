@@ -4,14 +4,11 @@
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
-
-#include "omptl/omptl_algorithm"
+#include "FastSort.h"
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
-
-
 
 int empiricalpval(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
@@ -70,7 +67,7 @@ int empiricalpval(int argc, const char **argv, const Command& command) {
 #pragma omp critical
             negToSort.insert(negToSort.end(), threadNegToSort.begin(), threadNegToSort.end());
         }
-        omptl::sort(negToSort.begin(), negToSort.end());    
+    SORT_PARALLEL(negToSort.begin(), negToSort.end());
 
     negEvalDb.close();
 

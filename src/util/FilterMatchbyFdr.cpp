@@ -4,8 +4,7 @@
 #include "DBWriter.h"
 #include "Debug.h"
 #include "Util.h"
-
-#include "omptl/omptl_algorithm"
+#include "FastSort.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -50,7 +49,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
 #pragma omp critical
         posToSort.insert(posToSort.end(), threadPosToSort.begin(), threadPosToSort.end());
     }
-    omptl::sort(posToSort.rbegin(), posToSort.rend());
+    SORT_PARALLEL(posToSort.rbegin(), posToSort.rend());
 
     DBReader<unsigned int> negScoreDb(par.db2.c_str(),par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     negScoreDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
@@ -88,7 +87,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
 #pragma omp critical
             negToSort.insert(negToSort.end(), threadNegToSort.begin(), threadNegToSort.end());
         }
-        omptl::sort(negToSort.rbegin(), negToSort.rend());
+        SORT_PARALLEL(negToSort.rbegin(), negToSort.rend());
 
         //cumsum for TP+FP(pos_counter) and FP(neg_counter) and x = FP/nNeg, y = (TP + FP)/nPos
         std::vector<double> uniqueScoreList;
