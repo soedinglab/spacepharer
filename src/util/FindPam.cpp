@@ -44,7 +44,7 @@
 //2-V-B     5'  TTN     Alicyclobacillus acidoterrestris
 //2-VI      3'  D (protospacer flanking sequence)
 
-std::pair<std::string, std::string> searchpamlist (std::string threePrimeStrand, std::string fivePrimeStrand, int flankingSeqLen){
+std::pair<std::string, std::string> searchpamlist(const std::string &threePrimeStrand, const std::string &fivePrimeStrand, int flankingSeqLen){
     char fivePrime[11];
     strcpy(fivePrime, fivePrimeStrand.c_str()); 
     char threePrime[11];
