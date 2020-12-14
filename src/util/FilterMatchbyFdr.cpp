@@ -50,6 +50,9 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         posToSort.insert(posToSort.end(), threadPosToSort.begin(), threadPosToSort.end());
     }
     SORT_PARALLEL(posToSort.rbegin(), posToSort.rend());
+    if (posToSort.empty()) {
+        posToSort.emplace_back(0);
+    }
 
     DBReader<unsigned int> negScoreDb(par.db2.c_str(),par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     negScoreDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
@@ -102,7 +105,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         for (size_t i = 0; i < posToSort.size(); i++) {
             if (posToSort[pos_counter] < currentScore) {
                 currentScore = posToSort[pos_counter];
-                while (currentScore < (negToSort[neg_counter]) && neg_counter < negToSort.size()) {
+                while (neg_counter < negToSort.size() && currentScore < (negToSort[neg_counter])) {
                     neg_counter++;
                 }
                 uniqueScoreList.push_back(currentScore);
