@@ -10,9 +10,9 @@ BASEDIR="$3"
 
 mkdir -p "${BASEDIR}"
 
-"${SPACEPHARER}" createsetdb ${DATA}/GCA*.fna.gz "${BASEDIR}/targets" "${BASEDIR}/tmp" --tax-mapping-file "${DATA}/genome_taxa.tsv"
+"${SPACEPHARER}" createsetdb ${DATA}/GCA*.fna.gz "${BASEDIR}/targets" "${BASEDIR}/tmp" --tax-mapping-file "${DATA}/genome_taxa.tsv" --ncbi-tax-dump "${DATA}/ncbi_taxdump"
 "${SPACEPHARER}" createsetdb ${DATA}/GCA*.fna.gz "${BASEDIR}/targets_rev" "${BASEDIR}/tmp" --reverse-fragments 1
-"${SPACEPHARER}" easy-predict ${DATA}/*.fas "${BASEDIR}/targets" "${BASEDIR}/result.tsv" "${BASEDIR}/tmp" --tax-mapping-file "${DATA}/spacer_taxa.tsv"
+"${SPACEPHARER}" easy-predict ${DATA}/*.fas "${BASEDIR}/targets" "${BASEDIR}/result.tsv" "${BASEDIR}/tmp" --tax-mapping-file "${DATA}/spacer_taxa.tsv" --ncbi-tax-dump "${DATA}/ncbi_taxdump"
 
 awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 6) exit 1; }' "${BASEDIR}/result.tsv" \
   || fail "Check 1 failed"

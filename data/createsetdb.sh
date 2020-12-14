@@ -162,7 +162,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     if [ -n "${TAXMAPPING}" ]; then
         if notExists "${OUTDB}_nucl_orf_mapping"; then
             # shellcheck disable=SC2086
-            "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${TAXMAPPING}" ${THREADS_PAR} \
+            "${MMSEQS}" createtaxdb "${OUTDB}_nucl_orf" "${TMP_PATH}" --tax-mapping-mode 1 ${CREATETAXDB_PAR} ${THREADS_PAR} \
                 || fail "createtaxdb failed"
         fi
 
@@ -181,7 +181,7 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
             ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_nucl_merged.dmp"
 
             # shellcheck disable=SC2086
-            "${MMSEQS}" createtaxdb "${OUTDB}_nucl" "${TMP_PATH}" --tax-mapping-mode 1 --tax-mapping-file "${TAXMAPPING}" ${THREADS_PAR} \
+            "${MMSEQS}" createtaxdb "${OUTDB}_nucl" "${TMP_PATH}" --tax-mapping-mode 1 ${CREATETAXDB_PAR} ${THREADS_PAR} \
                 || fail "createtaxdb failed"
         fi
     fi

@@ -104,8 +104,9 @@ private:
         combineprotnuclaln.push_back(&PARAM_COMPRESSED);
         combineprotnuclaln.push_back(&PARAM_THREADS);
         combineprotnuclaln.push_back(&PARAM_V);
-        
+
         createsetdbworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
+        createsetdbworkflow.push_back(&PARAM_NCBI_TAX_DUMP);
         createsetdbworkflow.push_back(&PARAM_REVERSE_FRAGMENTS);
         createsetdbworkflow.push_back(&PARAM_EXTRACTORF_SPACER);
         createsetdbworkflow = combineList(createsetdbworkflow, translatenucs);
@@ -122,6 +123,7 @@ private:
         predictmatchworkflow.push_back(&PARAM_PERFORM_NUCLALN);
 
         easypredictmatchworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
+        easypredictmatchworkflow.push_back(&PARAM_NCBI_TAX_DUMP);
         easypredictmatchworkflow = combineList(easypredictmatchworkflow, predictmatchworkflow);
 
         // default value 0 means no reverse of AA fragments
