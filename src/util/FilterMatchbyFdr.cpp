@@ -54,7 +54,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> negScoreDb(par.db2.c_str(),par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX|DBReader<unsigned int>::USE_DATA);
     negScoreDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    double threshold;
+    double threshold = 0;
     if (negScoreDb.getSize() > 0) {
         progress.reset(negScoreDb.getSize());
         std::vector<double> negToSort;
@@ -146,7 +146,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         }
 
         if (i < 2) {
-            threshold = posToSort[posToSort.size()];
+            threshold = posToSort.back();
             Debug(Debug::WARNING) << "Combined score list too short. Using threshold " << threshold << "\n";
         } else {
             size_t j = idxList[i-2];
@@ -167,7 +167,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         }
     } else {
         Debug(Debug::WARNING) << "Combined score list of control set is empty\n";
-        threshold = posToSort[posToSort.size()];
+        threshold = posToSort.back();
     }
     negScoreDb.close();
     posToSort.clear();
