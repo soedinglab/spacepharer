@@ -147,9 +147,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                             buffer.append(1, '\t');
                             buffer.append(SSTR(node->taxId));
                             buffer.append(1, '\t');
-                            buffer.append(node->rank);
+                            buffer.append(t->getString(node->rankIdx));
                             buffer.append(1, '\t');
-                            buffer.append(node->name);
+                            buffer.append(t->getString(node->nameIdx));
                             if (!ranks.empty()) {
                                 buffer.append(1, '\t');
                                 buffer.append(Util::implode(t->AtRanks(node, ranks), ';'));
@@ -164,7 +164,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                             }
                         }
                     }
-                    buffer.append("\n");
+                    buffer.append(1, '\n');
                     buffer.append(tmpBuffer);
                 }
                 tmpBuffer.clear();

@@ -50,23 +50,14 @@ if notExists "${OUTDB}.dbtype"; then
         cp -f "$1_h" "${OUTDB}_h"
         cp -f "$1_h.index" "${OUTDB}_h.index"
         cp -f "$1_h.dbtype" "${OUTDB}_h.dbtype"
-
-#        if [ -z "${REVERSE_FRAGMENTS}" ] && [ -f "${1}_mapping" ]; then
-#            cp -f "${1}_mapping" "${OUTDB}_mapping"
-#            cp -f "${1}_nodes.dmp" "${OUTDB}_nodes.dmp"
-#            cp -f "${1}_names.dmp" "${OUTDB}_names.dmp"
-#            cp -f "${1}_merged.dmp" "${OUTDB}_merged.dmp"
-#        fi
     fi
 fi
-
 
 # if notExists "${OUTDB}"; then
 #     # shellcheck disable=SC2086
 #     "${MMSEQS}" createdb "$@" "${OUTDB}" ${CREATEDB_PAR} \
 #         || fail "createdb failed"
 # fi
-
 
 if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     mv -f "${OUTDB}" "${OUTDB}_nucl"
@@ -78,13 +69,6 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
     mv -f "${OUTDB}_h" "${OUTDB}_nucl_h"
     mv -f "${OUTDB}_h.index" "${OUTDB}_nucl_h.index"
     mv -f "${OUTDB}_h.dbtype" "${OUTDB}_nucl_h.dbtype"
-
-#    if [ -z "${REVERSE_FRAGMENTS}" ] && [ -f "${OUTDB}_mapping" ]; then
-#        ln -fs "${OUTDB}_mapping" "${OUTDB}_nucl_mapping"
-#        ln -fs "${OUTDB}_nodes.dmp" "${OUTDB}_nucl_nodes.dmp"
-#        ln -fs "${OUTDB}_names.dmp" "${OUTDB}_nucl_names.dmp"
-#        ln -fs "${OUTDB}_merged.dmp" "${OUTDB}_nucl_merged.dmp"
-#    fi
 
     if notExists "${OUTDB}_nucl_contig_to_set.index"; then
         awk '{ print $1"\t"$3; }' "${OUTDB}_nucl.lookup" | sort -k1,1n -k2,2n > "${OUTDB}_nucl_contig_to_set.tsv"
@@ -169,16 +153,12 @@ if [ "$("${MMSEQS}" dbtype "${OUTDB}")" = "Nucleotide" ]; then
         if notExists "${OUTDB}_set_mapping"; then
             awk 'NR == FNR { f[$1] = $2; next } $2 in f { print $1"\t"f[$2] }' \
                 "${TAXMAPPING}" "${OUTDB}.source" > "${OUTDB}_set_mapping"
-            ln -sf "${OUTDB}_nucl_orf_names.dmp" "${OUTDB}_set_names.dmp"
-            ln -sf "${OUTDB}_nucl_orf_nodes.dmp" "${OUTDB}_set_nodes.dmp"
-            ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_set_merged.dmp"
+            ln -sf "${OUTDB}_nucl_orf_taxonomy" "${OUTDB}_set_taxonomy"
             awk 'BEGIN { printf("%c%c%c%c",18,0,0,0); exit; }' > "${OUTDB}_set.dbtype"
         fi
 
         if notExists "${OUTDB}_nucl_mapping"; then
-            ln -sf "${OUTDB}_nucl_orf_names.dmp" "${OUTDB}_nucl_names.dmp"
-            ln -sf "${OUTDB}_nucl_orf_nodes.dmp" "${OUTDB}_nucl_nodes.dmp"
-            ln -sf "${OUTDB}_nucl_orf_merged.dmp" "${OUTDB}_nucl_merged.dmp"
+            ln -sf "${OUTDB}_nucl_orf_taxonomy" "${OUTDB}_nucl_taxonomy"
 
             # shellcheck disable=SC2086
             "${MMSEQS}" createtaxdb "${OUTDB}_nucl" "${TMP_PATH}" --tax-mapping-mode 1 ${CREATETAXDB_PAR} ${THREADS_PAR} \
