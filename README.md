@@ -121,7 +121,8 @@ A file containing URLs can also be supplied to `downloaddb`:
 
 #### Adding taxonomic labels
 
-If input spacers or genomes are supplied together with taxonomic identifiers, lowest common ancestors are computed for each spacer or each phage and the [SpacePHARER output](#the-spacepharer-output) will contain taxonomic information for each match.
+If input spacers are supplied together with taxonomic identifiers, lowest common ancestors (LCA) of the phages are computed for each spacer. If input genomes are supplied together with taxonomic identifiers, the LCA of the host are computed for each phage.
+Also, the [SpacePHARER output](#the-spacepharer-output) will contain taxonomic information for each match.
 
 Databases download from the predefined entries in `downloaddb` come with taxonomic information already included. For custom databases, extra steps have to be taken:
 
@@ -197,9 +198,9 @@ Optionally, the aligned spacer and phage sequences can be printed in two additio
 
 `--fmt 0` will output a short-format, if you wish to only see the match line.
 
-If the spacer database was created with taxonomic labels, a result file with the suffix `_lca.tsv` is also created. The first column of this file contains the spacer accession and the remaining columns are described in the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-output-and-tsv).
+If the phage database was created with taxonomic labels, a result file with the suffix `_lca.tsv` is also created. The first column of this file contains the spacer accession and the remaining columns are described in the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-output-and-tsv).
 
-If the phage database was created with taxonomic labels, a result file with the suffix `_lca_per_target.tsv` is also created. The first column of this file contains the phage genome file name and the remaining columns are described in the [same MMseqs2 wiki entry](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-output-and-tsv). Additionally, each match in the base `.tsv` will also contain these columns.
+If the spacer database was created with taxonomic labels, a result file with the suffix `_lca_per_target.tsv` is also created. The first column of this file contains the phage genome file name and the remaining columns are described in the [same MMseqs2 wiki entry](https://github.com/soedinglab/MMseqs2/wiki#taxonomy-output-and-tsv). Additionally, each match in the base `.tsv` will also contain these columns.
 
 ### Removing temporary files
 
