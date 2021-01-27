@@ -206,8 +206,18 @@ if [ -e "${QUERY}_set_mapping" ]; then
             || fail "lca failed"
     fi
 
+    LCA_PER_TARGET_OUT="${TMP_PATH}/lca_per_targetset"
+    if false; then
+        if notExists "${TMP_PATH}/lca_per_targetset_restricted.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" restrictranks "${QUERY}_set" "${TMP_PATH}/lca_per_targetset" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset_restricted" ${THREADS_PAR} \
+                || fail "restrictranks failed"
+        fi
+        LCA_PER_TARGET_OUT="${TMP_PATH}/lca_per_targetset_restricted"
+    fi
+
     # shellcheck disable=SC2086
-    "${MMSEQS}" prefixid "${TMP_PATH}/lca_per_targetset" "${OUTPUT}_lca_per_target.tsv.tmp" --tsv ${THREADS_PAR} \
+    "${MMSEQS}" prefixid "${LCA_PER_TARGET_OUT}" "${OUTPUT}_lca_per_target.tsv.tmp" --tsv ${THREADS_PAR} \
         || fail "prefixid failed"
     awk 'BEGIN { FS="\t"; OFS="\t" } FNR == NR { f[$1] = $2; next; } $1 in f { $1 = f[$1]; print $0 }' "${TARGET}.source" "${OUTPUT}_lca_per_target.tsv.tmp" > "${OUTPUT}_lca_per_target.tsv"
     rm -f "${OUTPUT}_lca_per_target.tsv.tmp"

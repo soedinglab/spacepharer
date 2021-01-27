@@ -121,6 +121,15 @@ std::vector<Command> commands = {
                                                            {"targetSetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"pvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb },
-                                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}}
+                                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"restrictranks",       restrictranks,      &localPar.threadsandcompression,COMMAND_SPECIAL | COMMAND_EXPERT,
+                "Restrict taxonomic result to ranks based on sequence identity",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:taxSeqDB> <i:taxResult> <i:matchResult> <o:taxResult>",
+                CITATION_SPACEPHARER, {{"taxSeqDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::taxSequenceDb},
+                                              {"taxResult", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::taxResult},
+                                              {"matchResult", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb},
+                                              {"taxResult", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::taxResult}}},
 };
 

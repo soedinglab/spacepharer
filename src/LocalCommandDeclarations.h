@@ -16,4 +16,5 @@ extern int combinescore(int argc, const char **argv, const Command& command);
 extern int combineprotnuclaln(int argc, const char **argv, const Command& command);
 extern int empiricalpval(int argc, const char **argv, const Command& command);
 extern int reverseseqbycodon(int argc, const char **argv, const Command& command);
+extern int restrictranks(int argc, const char **argv, const Command& command);
 #endif

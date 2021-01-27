@@ -8,5 +8,5 @@ set(util_source_files
         util/CombineProtNuclAln.cpp
         util/EmpiricalPval.cpp
         util/ReverseSeqByCodon.cpp
+        util/RestrictRanks.cpp
         PARENT_SCOPE)
-        
