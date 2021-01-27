@@ -103,7 +103,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         buffer.append(entry[3], entry[4] - entry[3] - 1);
                         buffer.append("\t");
                         buffer.append(cScore);
-                        buffer.append("\t");
+                        //buffer.append("\t");
                         if (t != NULL) {
                             taxId = Util::fast_atoi<TaxID>(entry[12]);
                         }

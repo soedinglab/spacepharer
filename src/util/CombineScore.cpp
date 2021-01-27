@@ -54,31 +54,45 @@ public:
         double logPvalThreshold = log(1.0/ (orfCount + 1));
         double minLogPval = 0;
         double sumLogPval = 0; 
+        double minSeqId = 0;
+        double sumSeqId = 0;
         size_t k = 0;
 
         for (size_t i = 0; i < dataToAggregate.size(); ++i) {
             double logPvalue = std::strtod(dataToAggregate[i][1].c_str(), NULL);
+            double seqId = std::strtod(dataToAggregate[i][2].c_str(), NULL);
             if (logPvalue < minLogPval) {
                 if (logPvalue == 0) {
                     //to avoid -0.0
                     minLogPval = logPvalue;
+                    minSeqId = seqId;
                 }
-                else {minLogPval = -logPvalue;}
+                else {
+                    minLogPval = -logPvalue;
+                    minSeqId = seqId;
+                }
             }
             if (logPvalue < logPvalThreshold) {
                 //sum up the part exceeding logThreshold, add a minus to make score positive
                 sumLogPval -= logPvalue - logPvalThreshold;
+                sumSeqId += seqId;
                 k++;
             }
         }
+        
         if(k == 0){
             //if no hit passed thr, take the -log of best hit pval as score
             buffer.append(SSTR(minLogPval));
+            buffer.append("\t");
+            buffer.append(SSTR(minSeqId));
             return buffer;
         }
         else {
             //if one or more hits passed thr
+            double avgSeqId = sumSeqId / k;
             buffer.append(SSTR(sumLogPval - logPvalThreshold));
+            buffer.append("\t");
+            buffer.append(SSTR(avgSeqId));
             return buffer;
         }
     }

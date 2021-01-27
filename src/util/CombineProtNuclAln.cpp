@@ -64,6 +64,7 @@ int combineprotnuclaln(int argc, const char **argv, const Command& command) {
                 double protEval = strtod(protEntry[3], NULL);
 
                 double updatedEval = FLT_MAX;
+                double nuclSeqId = 0;
                 char *nuclCurrent = nuclData;
                 while (*nuclCurrent != '\0') {
                     // read only key
@@ -80,10 +81,14 @@ int combineprotnuclaln(int argc, const char **argv, const Command& command) {
                     }
                     nuclCurrent = Util::skipLine(nuclCurrent);
 
+                    nuclSeqId =  strtod(nuclEntry[2], NULL);
                     double nuclEval = strtod(nuclEntry[3], NULL);
                     updatedEval = ((log(protEval) * 0.5 + log(nuclEval) * 0.5) < log(nuclEval)) ? exp(log(protEval) * 0.5 + log(nuclEval) * 0.5) : nuclEval;
                 }
-                buffer.append(protEntry[0], protEntry[3] - protEntry[0]);
+                buffer.append(protEntry[0], protEntry[2] - protEntry[0]);
+                //substitute protein sequence identity with nucl sequence identity to later calculated average seqid per set
+                buffer.append(SSTR(nuclSeqId));
+                buffer.append("\t");
                 buffer.append(SSTR(updatedEval));
                 buffer.append("\t");
                 buffer.append(protEntry[4], (protData - 1) - protEntry[4]);
