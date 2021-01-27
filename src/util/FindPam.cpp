@@ -102,6 +102,17 @@ std::pair<std::string, std::string> searchpamlist(const std::string &threePrimeS
     return result;
 }
 
+std::string reverseComplement(std::string seq){
+    unsigned int lenSeq = seq.length();
+    std::string revStr = "";
+    for (size_t i = 0; i < lenSeq; ++i) {
+        size_t revInd = lenSeq - i - 1;
+        char seqChar = Orf::complement(seq[revInd]);
+        revStr.append(1, seqChar);
+    }
+    return revStr;
+}
+
 int findpam(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
@@ -203,25 +214,45 @@ int findpam(int argc, const char **argv, const Command& command) {
                     }
                 }
                 std::string na = "-";
-                std::pair<std::string, std::string> pamResult = searchpamlist(threePrimeStrand, fivePrimeStrand, par.flankingSeqLen);
+                std::pair<std::string, std::string> pamResultFwdStrand = searchpamlist(threePrimeStrand, fivePrimeStrand, par.flankingSeqLen);
+                std::string threePrimeReverseStrand = reverseComplement(fivePrimeStrand);
+                std::string fivePrimeReverseStrand = reverseComplement(threePrimeStrand);
+                std::pair<std::string, std::string> pamResultRevStrand = searchpamlist(threePrimeReverseStrand, fivePrimeReverseStrand, par.flankingSeqLen);
                 buffer.append(line);
                 buffer.append("\t");
-                if(pamResult.first.c_str() == na){
+                if(pamResultFwdStrand.first.c_str() == na){
                     buffer.append("-");
                 } else {
-                    buffer.append(SSTR(pamResult.first));
+                    buffer.append(SSTR(pamResultFwdStrand.first));
                 }
 
                 buffer.append("|");
 
-                if(pamResult.second.c_str() == na){
+                if(pamResultFwdStrand.second.c_str() == na){
                     buffer.append("-");
                 } else {
-                    buffer.append(SSTR(pamResult.second));
+                    buffer.append(SSTR(pamResultFwdStrand.second));
+                }                        
+                                
+                buffer.append("\t");
+                if(pamResultRevStrand.first.c_str() == na){
+                    buffer.append("-");
+                } else {
+                    buffer.append(SSTR(pamResultRevStrand.first));
+                }
+
+                buffer.append("|");
+
+                if(pamResultRevStrand.second.c_str() == na){
+                    buffer.append("-");
+                } else {
+                    buffer.append(SSTR(pamResultRevStrand.second));
                 }                    
                 if (buffer.back() != '\n'){
                     buffer.append("\n");
                 }
+
+
             }    
             writer.writeData(buffer.c_str(), buffer.length(), alnReader.getDbKey(id), thread_idx);
             buffer.clear();
