@@ -29,6 +29,7 @@ public:
     std::vector<MMseqsParameter*> empiricalpval;
     std::vector<MMseqsParameter*> reverseseqbycodon;
     std::vector<MMseqsParameter*> findpam;
+    std::vector<MMseqsParameter*> restrictranks;
 
     PARAMETER(PARAM_REVERSE_FRAGMENTS)
     PARAMETER(PARAM_REVERSE_SETDB)
@@ -104,6 +105,12 @@ private:
         combineprotnuclaln.push_back(&PARAM_COMPRESSED);
         combineprotnuclaln.push_back(&PARAM_THREADS);
         combineprotnuclaln.push_back(&PARAM_V);
+
+        restrictranks.push_back(&PARAM_TAXON_ADD_LINEAGE);
+        restrictranks.push_back(&PARAM_LCA_RANKS);
+        restrictranks.push_back(&PARAM_COMPRESSED);
+        restrictranks.push_back(&PARAM_THREADS);
+        restrictranks.push_back(&PARAM_V);
 
         createsetdbworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
         createsetdbworkflow.push_back(&PARAM_NCBI_TAX_DUMP);

@@ -34,6 +34,17 @@ int restrictranks(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     NcbiTaxonomy *t = NcbiTaxonomy::openTaxonomy(par.db1.c_str());
+    std::vector<std::string> ranks = NcbiTaxonomy::parseRanks(par.lcaRanks);
+    // will be used when no hits
+    std::string noTaxResult = "0\tno rank\tunclassified";
+    if (!ranks.empty()) {
+        noTaxResult += '\t';
+    }
+    if (par.showTaxLineage > 0) {
+        noTaxResult += '\t';
+    }
+    noTaxResult += '\n';
+
 
     DBReader<unsigned int> taxReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
     taxReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
@@ -52,7 +63,8 @@ int restrictranks(int argc, const char **argv, const Command& command) {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
         const char *entry[255];
-        char buffer[2048];
+        std::string buffer;
+        buffer.reserve(2048);
 #pragma omp for schedule(dynamic, 10)
         for (size_t i = 0; i < taxReader.getSize(); ++i) {
             progress.updateProgress();
@@ -81,15 +93,13 @@ int restrictranks(int argc, const char **argv, const Command& command) {
 
                 const char *bestRank = maxRank(seqId);
                 if (bestRank == NULL) {
-                    int len = snprintf(buffer, sizeof(buffer), "0\tno rank\tunclassified\t%.3f\n", seqId);
-                    writer.writeAdd(buffer, len, thread_idx);
+                    writer.writeAdd(noTaxResult.c_str(), noTaxResult.length(), thread_idx);
                     continue;
                 }
 
                 const TaxonNode* node = t->taxonNode(taxon, false);
                 if (node == NULL) {
-                    int len = snprintf(buffer, sizeof(buffer), "0\tno rank\tunclassified\t%.3f\n", seqId);
-                    writer.writeAdd(buffer, len, thread_idx);
+                    writer.writeAdd(noTaxResult.c_str(), noTaxResult.length(), thread_idx);
                     continue;
                 }
 
@@ -97,8 +107,26 @@ int restrictranks(int argc, const char **argv, const Command& command) {
                 int rankLevel = t->findRankIndex(rank);
                 int bestLevel = t->findRankIndex(bestRank);
                 if (rankLevel >= bestLevel) {
-                    int len = snprintf(buffer, sizeof(buffer), "%i\t%s\t%s\t%.3f\n", taxon, rank, t->getString(node->nameIdx), seqId);
-                    writer.writeAdd(buffer, len, thread_idx);
+                    buffer.append(SSTR(taxon));
+                    buffer.append(1, '\t');
+                    buffer.append(rank);
+                    buffer.append(1, '\t');
+                    buffer.append(t->getString(node->nameIdx));
+                    if (!ranks.empty()) {
+                        buffer.append(1, '\t');
+                        buffer.append(Util::implode(t->AtRanks(node, ranks), ';'));
+                    }
+                    if (par.showTaxLineage == 1) {
+                        buffer.append(1, '\t');
+                        buffer.append(t->taxLineage(node, true));
+                    }
+                    if (par.showTaxLineage == 2) {
+                        buffer.append(1, '\t');
+                        buffer.append(t->taxLineage(node, false));
+                    }
+                    buffer.append(1, '\n');
+                    writer.writeAdd(buffer.c_str(), buffer.length(), thread_idx);
+                    buffer.clear();
                     continue;
                 }
 
@@ -109,8 +137,26 @@ int restrictranks(int argc, const char **argv, const Command& command) {
                         break;
                     }
                 }
-                int len = snprintf(buffer, sizeof(buffer), "%i\t%s\t%s\t%.3f\n", node->taxId, t->getString(node->rankIdx), t->getString(node->nameIdx), seqId);
-                writer.writeAdd(buffer, len, thread_idx);
+                buffer.append(SSTR(node->taxId));
+                buffer.append(1, '\t');
+                buffer.append(t->getString(node->rankIdx));
+                buffer.append(1, '\t');
+                buffer.append(t->getString(node->nameIdx));
+                if (!ranks.empty()) {
+                    buffer.append(1, '\t');
+                    buffer.append(Util::implode(t->AtRanks(node, ranks), ';'));
+                }
+                if (par.showTaxLineage == 1) {
+                    buffer.append(1, '\t');
+                    buffer.append(t->taxLineage(node, true));
+                }
+                if (par.showTaxLineage == 2) {
+                    buffer.append(1, '\t');
+                    buffer.append(t->taxLineage(node, false));
+                }
+                buffer.append(1, '\n');
+                writer.writeAdd(buffer.c_str(), buffer.length(), thread_idx);
+                buffer.clear();
             }
             writer.writeEnd(key, thread_idx);
         }
