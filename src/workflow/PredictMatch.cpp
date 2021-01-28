@@ -76,6 +76,7 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("FINDPAM_PAR", par.createParameterString(par.findpam).c_str());
     cmd.addVariable("SUMMARIZERESULTS_PAR", par.createParameterString(par.summarizeresults).c_str());
     cmd.addVariable("TAXFORMAT_PAR", par.createParameterString(taxformat).c_str());
+    cmd.addVariable("RESTRICT_RANKS", par.restrictRanksMode == 1 ? "TRUE" : NULL);
     cmd.addVariable("RESTRICTRANKS_PAR", par.createParameterString(par.restrictranks).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
 

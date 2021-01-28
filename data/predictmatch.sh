@@ -207,7 +207,7 @@ if [ -e "${QUERY}_set_mapping" ]; then
     fi
 
     LCA_PER_TARGET_OUT="${TMP_PATH}/lca_per_targetset"
-    if false; then
+    if [ -n "${RESTRICT_RANKS}" ]; then
         if notExists "${TMP_PATH}/lca_per_targetset_restricted.index"; then
             # shellcheck disable=SC2086
             "${MMSEQS}" restrictranks "${QUERY}_set" "${TMP_PATH}/lca_per_targetset" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset_restricted" ${RESTRICTRANKS_PAR} \

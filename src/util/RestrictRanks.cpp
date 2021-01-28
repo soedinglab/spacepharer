@@ -1,3 +1,4 @@
+#include "LocalParameters.h"
 #include "Debug.h"
 #include "NcbiTaxonomy.h"
 #include "DBReader.h"
@@ -7,22 +8,22 @@
 #include <omp.h>
 #endif
 
-const char *maxRank(double seqId) {
-    if (seqId > 0.87) {
+const char *maxRank(double seqId, const double thresholds[8]) {
+    if (seqId > thresholds[0]) {
         return "species";
-    } else if (seqId > 0.83) {
+    } else if (seqId > thresholds[1]) {
         return "genus";
-    } else if (seqId > 0.78) {
+    } else if (seqId > thresholds[2]) {
         return "family";
-    } else if (seqId > 0.70) {
+    } else if (seqId > thresholds[3]) {
         return "order";
-    } else if (seqId > 0.60) {
+    } else if (seqId > thresholds[4]) {
         return "class";
-    } else if (seqId > 0.50) {
+    } else if (seqId > thresholds[5]) {
         return "phylum";
-    } else if (seqId > 0.40) {
+    } else if (seqId > thresholds[6]) {
         return "kingdom";
-    } else if (seqId > 0.30) {
+    } else if (seqId > thresholds[7]) {
         return "superkingdom";
     } else {
         return NULL;
@@ -30,7 +31,7 @@ const char *maxRank(double seqId) {
 }
 
 int restrictranks(int argc, const char **argv, const Command& command) {
-    Parameters &par = Parameters::getInstance();
+    LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     NcbiTaxonomy *t = NcbiTaxonomy::openTaxonomy(par.db1.c_str());
@@ -45,6 +46,15 @@ int restrictranks(int argc, const char **argv, const Command& command) {
     }
     noTaxResult += '\n';
 
+    std::vector<std::string> splitThresholds = Util::split(par.rankMinSeqIds, ",");
+    if (splitThresholds.size() != 8) {
+        Debug(Debug::ERROR) << "Expected 8 sequence identity thresholds, got " <<  splitThresholds.size() << " instead\n";
+        EXIT(EXIT_FAILURE);
+    }
+    double thresholds[8];
+    for (size_t i = 0; i < 8; ++i) {
+        thresholds[i] = strtod(splitThresholds[i].c_str(), NULL);
+    }
 
     DBReader<unsigned int> taxReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
     taxReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
@@ -91,7 +101,7 @@ int restrictranks(int argc, const char **argv, const Command& command) {
 
                 TaxID taxon = Util::fast_atoi<unsigned int>(entry[0]);
 
-                const char *bestRank = maxRank(seqId);
+                const char *bestRank = maxRank(seqId, thresholds);
                 if (bestRank == NULL) {
                     writer.writeAdd(noTaxResult.c_str(), noTaxResult.length(), thread_idx);
                     continue;
