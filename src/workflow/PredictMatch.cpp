@@ -20,13 +20,14 @@ void setpredictmatchDefaults(Parameters *p) {
     //TODO: change path for VTML40
     p->scoringMatrixFile = MultiParam<char*>("VTML40.out", "nucleotide.out");
     p->gapExtend = MultiParam<int>(2, 2);
-    p->gapOpen = MultiParam<int>(16, 5);
+    p->gapOpen = MultiParam<int>(16, 10);
 
     //besthitpar
     p->simpleBestHit = true;
     //combinepval par
     p->aggregationMode = 3;
-
+    //taxonomy format
+    p->lcaRanks = "superkingdom,phylum,class,order,family,genus,species";
 }
 
 int predictmatch(int argc, const char **argv, const Command& command) {
