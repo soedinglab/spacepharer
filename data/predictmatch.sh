@@ -193,13 +193,19 @@ if [ -e "${TARGET}_nucl_orf_mapping" ]; then
 fi
 
 if [ -e "${QUERY}_set_mapping" ]; then
+    if notExists "${TMP_PATH}/match_tax.index"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" filtermatchbyfdr "${TMP_PATH}/cScore" "${TMP_PATH}/cScore_rev" "${TMP_PATH}/match_tax" ${FILTERMATCHBYFDRTAX_PAR} \
+            || fail "filtermatchbyfdr failed"
+    fi
+
     if notExists "${TMP_PATH}/match_swap.index"; then
         # shellcheck disable=SC2086
-        "${MMSEQS}" swapdb "${TMP_PATH}/match" "${TMP_PATH}/match_swap" ${THREADS_PAR} \
+        "${MMSEQS}" swapdb "${TMP_PATH}/match_tax" "${TMP_PATH}/match_swap" ${THREADS_PAR} \
             || fail "swapdb failed"
         awk 'BEGIN { printf("%c%c%c%c",6,0,0,0); exit; }' > "${TMP_PATH}/match_swap.dbtype"
     fi
-
+    
     if notExists "${TMP_PATH}/lca_per_targetset.index"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" majoritylca "${QUERY}_set" "${TMP_PATH}/match_swap" "${TMP_PATH}/lca_per_targetset"  --vote-mode 2 ${TAXFORMAT_PAR} ${THREADS_PAR} \

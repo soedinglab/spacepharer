@@ -35,6 +35,7 @@ public:
     PARAMETER(PARAM_REVERSE_SETDB)
     PARAMETER(PARAM_EXTRACTORF_SPACER)
     PARAMETER(PARAM_FDR_CUTOFF)
+    PARAMETER(PARAM_TAX_FDR_CUTOFF)
     PARAMETER(PARAM_FORMAT_TYPE)
     PARAMETER(PARAM_REPORT_PAM)
     PARAMETER(PARAM_FLANKING_SEQ_LEN)
@@ -50,6 +51,7 @@ public:
     int extractorfsSpacer;
     int reverseSetDb;
     float fdrCutoff;
+    float taxFdrCutoff;
     int formatType;
     int reportPam;
     int performNuclAln;
@@ -64,6 +66,7 @@ private:
         PARAM_REVERSE_SETDB(PARAM_REVERSE_SETDB_ID,"--reverse-setdb", "Create reversed setdb", "Create additional setDB with reversed fragments to compute under null [0,1]", typeid(int), (void *) &reverseSetDb, "^[0-1]{1}$"),
         PARAM_EXTRACTORF_SPACER(PARAM_EXTRACTORF_SPACER_ID,"--extractorf-spacer", "Extract orfs from spacers", "change parameter settings for extractorfs when createsetdb for spacer db [0,1]", typeid(int), (void *) &extractorfsSpacer, "^[0-1]{1}$"),
         PARAM_FDR_CUTOFF(PARAM_FDR_CUTOFF_ID,"--fdr", "FDR cutoff", "FDR cutoff for filtering matches [0.0, 1.0]", typeid(float), (void *) &fdrCutoff, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_TAX_FDR_CUTOFF(PARAM_FDR_CUTOFF_ID,"--tax-fdr", "Taxonomy FDR cutoff", "FDR cutoff for taxonomy report [0.0, 1.0]", typeid(float), (void *) &taxFdrCutoff, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_FORMAT_TYPE(PARAM_FORMAT_TYPE_ID,"--fmt", "Output format", "0: short (only matches)\n1: long (matches and hits)\n2: long with nucleotide alignment", typeid(int), (void *) &formatType, "^[0-2]{1}$"),
         PARAM_REPORT_PAM(PARAM_REPORT_PAM_ID,"--report-pam", "Report PAM", "Report protospacer adjacent motifs up and downstream of hits [0,1]", typeid(int), (void *) &reportPam, "^[0-1]{1}$"),
         PARAM_FLANKING_SEQ_LEN(PARAM_FLANKING_SEQ_LEN_ID,"--flanking-seq-len", "flaking sequence length", "Length of protospacer flanking sequence to extract for possible PAMs scanning", typeid(int), (void *) &flankingSeqLen, "^[0-9]{1}[0-9]*$"),
@@ -137,6 +140,7 @@ private:
         predictmatchworkflow.push_back(&PARAM_DB_OUTPUT);
         predictmatchworkflow.push_back(&PARAM_REPORT_PAM);
         predictmatchworkflow.push_back(&PARAM_PERFORM_NUCLALN);
+        predictmatchworkflow.push_back(&PARAM_TAX_FDR_CUTOFF);
 
         easypredictmatchworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
         easypredictmatchworkflow.push_back(&PARAM_NCBI_TAX_DUMP);
@@ -147,6 +151,7 @@ private:
         extractorfsSpacer = 0;
         reverseSetDb = 1;
         fdrCutoff = 0.05;
+        taxFdrCutoff = 0.02;
         formatType = 1;
         reportPam = 1;
         performNuclAln = 1;
