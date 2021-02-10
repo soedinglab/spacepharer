@@ -88,8 +88,14 @@ int restrictranks(int argc, const char **argv, const Command& command) {
             while (*data != '\0') {
                 Util::getWordsOfLine(data, entry, 255);
                 data = Util::skipLine(data);
-                seqId += strtod(entry[2], NULL);
-                count++;
+                // 0% seqid hits are an artifact by filtermatchbyfdr when the control database is too small
+                // ignore them here, if we ignore them in filtermatchbyfdr we cant annotate many sequences as unassigned
+                // as they disappear completely due to how swapdb works
+                double currSeqId = strtod(entry[2], NULL);
+                if (currSeqId > 0.0f) {
+                    seqId += currSeqId;
+                    count++;
+                }
             }
             seqId = seqId / count;
 

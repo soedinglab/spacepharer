@@ -18,5 +18,5 @@ awk '/^>/ && $3 < 1E-03 { cnt++; } END { if (cnt != 6) exit 1; }' "${BASEDIR}/re
   || fail "Check 1 failed"
 awk 'BEGIN { other = 0; } $2 == 40521 { listeria++; next } $2 == 244310 { burkholdia++; next; } $2 != 0 { other++; } END { if ((listeria" "burkholdia" "other) != "5 1 0") exit 1; }' "${BASEDIR}/result.tsv_lca.tsv" \
   || fail "Check 2 failed"
-awk '$1 == "GCA_000836905.1_ViralProj14035_genomic.fna.gz" && $2 == 0 { c++ } $1 == "GCA_000845445.1_ViralProj14409_genomic.fna.gz" && $2 == 1097668 { c++ } $1 == "GCA_000849645.1_ViralProj14589_genomic.fna.gz" && $2 == 1639 { c++ } END { if (c != 3) exit 1; }' "${BASEDIR}/result.tsv_lca_per_target.tsv" \
+awk '$1 == "GCA_000836905.1_ViralProj14035_genomic.fna.gz" && $2 == 0 { c++ } $1 == "GCA_000845445.1_ViralProj14409_genomic.fna.gz" && $2 == 28216 { c++ } $1 == "GCA_000849645.1_ViralProj14589_genomic.fna.gz" && $2 == 1639 { c++ } END { if (c != 3) exit 1; }' "${BASEDIR}/result.tsv_lca_per_target.tsv" \
   || fail "Check 3 failed"
