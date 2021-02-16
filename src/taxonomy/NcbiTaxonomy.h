@@ -110,7 +110,8 @@ public:
 
     bool IsAncestor(TaxID ancestor, TaxID child);
     TaxonNode const* taxonNode(TaxID taxonId, bool fail = true) const;
-    //std::unordered_map<TaxID, unsigned int> getCladeCounts(std::unordered_map<TaxID, unsigned int>& taxonCounts, TaxID taxon = 1) const;
+    bool nodeExists(TaxID taxId) const;
+
     std::unordered_map<TaxID, TaxonCounts> getCladeCounts(std::unordered_map<TaxID, unsigned int>& taxonCounts) const;
 
     WeightedTaxResult weightedMajorityLCA(const std::vector<WeightedTaxHit> &setTaxa, const float majorityCutoff);
@@ -129,12 +130,11 @@ private:
     void elh(std::vector<std::vector<TaxID>> const & children, int node, int level, std::vector<int> &tmpE, std::vector<int> &tmpL);
     void InitRangeMinimumQuery();
     int nodeId(TaxID taxId) const;
-    bool nodeExists(TaxID taxId) const;
 
     int RangeMinimumQuery(int i, int j) const;
     int lcaHelper(int i, int j) const;
 
-    NcbiTaxonomy(TaxonNode* taxonNodes, size_t maxNodes, int maxTaxID, int *D, int *E, int *L, int *H, int **M, StringBlock *block)
+    NcbiTaxonomy(TaxonNode* taxonNodes, size_t maxNodes, int maxTaxID, int *D, int *E, int *L, int *H, int **M, StringBlock<unsigned int> *block)
         : taxonNodes(taxonNodes), maxNodes(maxNodes), maxTaxID(maxTaxID), D(D), E(E), L(L), H(H), M(M), block(block), externalData(true), mmapData(NULL), mmapSize(0) {};
     int maxTaxID;
     int *D; // maps from taxID to node ID in taxonNodes
@@ -142,7 +142,7 @@ private:
     int *L; // Level of nodes in tour sequence (size 2N-1)
     int *H;
     int **M;
-    StringBlock* block;
+    StringBlock<unsigned int>* block;
 
     bool externalData;
     char* mmapData;
