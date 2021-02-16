@@ -143,9 +143,13 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         double pi0 = (slopeList.end()[-2] + slopeList.end()[-1])/2;
         double deltaX = 0;
         double currentFDR = 0;
-        while (currentFDR <= par.fdrCutoff) {
-            currentFDR = x[idxList[i]] * pi0/ y[idxList[i]];
-            i++;
+        //check with the last element in idxList if the FDR can be larger than cutoff
+        //i = 0 if false
+        if (x[idxList.back()] * pi0/ y[idxList.back()] >= par.fdrCutoff){
+            while (currentFDR <= par.fdrCutoff) {
+                currentFDR = x[idxList[i]] * pi0/ y[idxList[i]];
+                i++;
+            }
         }
 
         if (i < 2) {
