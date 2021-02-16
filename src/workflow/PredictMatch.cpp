@@ -73,7 +73,6 @@ int predictmatch(int argc, const char **argv, const Command& command) {
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow).c_str());
     cmd.addVariable("PROTALN2NUCL_PAR", par.createParameterString(par.proteinaln2nucl).c_str());
     cmd.addVariable("BESTHITBYSET_PAR", par.createParameterString(par.besthitbyset).c_str());
-    cmd.addVariable("COMBINEPVALPERSET_PAR", par.createParameterString(par.combinepvalbyset).c_str());
     cmd.addVariable("FILTERMATCHBYFDR_PAR", par.createParameterString(par.filtermatchbyfdr).c_str());
     par.fdrCutoff = par.taxFdrCutoff;
     cmd.addVariable("FILTERMATCHBYFDRTAX_PAR", par.createParameterString(par.filtermatchbyfdr).c_str());

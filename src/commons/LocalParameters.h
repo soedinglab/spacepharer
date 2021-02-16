@@ -128,9 +128,7 @@ private:
         createsetdbworkflow.push_back(&PARAM_EXTRACTORF_SPACER);
         createsetdbworkflow = combineList(createsetdbworkflow, translatenucs);
 
-        predictmatchworkflow = combineList(searchworkflow, besthitbyset);
-        predictmatchworkflow = combineList(predictmatchworkflow, combinepvalbyset);
-        predictmatchworkflow = combineList(predictmatchworkflow, filtermatchbyfdr);
+        predictmatchworkflow = combineList(searchworkflow, filtermatchbyfdr);
         predictmatchworkflow = combineList(predictmatchworkflow, summarizeresults);
         predictmatchworkflow = combineList(predictmatchworkflow, findpam);
         predictmatchworkflow.push_back(&PARAM_RESTRICT_RANKS_MODE);
