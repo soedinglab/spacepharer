@@ -203,7 +203,7 @@ if [ -e "${QUERY}_set_mapping" ]; then
         # shellcheck disable=SC2086
         "${MMSEQS}" swapdb "${TMP_PATH}/match_tax" "${TMP_PATH}/match_swap" ${THREADS_PAR} \
             || fail "swapdb failed"
-        awk 'BEGIN { printf("%c%c%c%c",6,0,0,0); exit; }' > "${TMP_PATH}/match_swap.dbtype"
+        awk 'BEGIN { printf("%c%c%c%c",5,0,0,0); exit; }' > "${TMP_PATH}/match_swap.dbtype"
     fi
     
     if notExists "${TMP_PATH}/lca_per_targetset.index"; then
