@@ -114,6 +114,13 @@ else
           IN_TAX="spacers_shmakov_et_al_2017.tsv"
           unset CREATE_REVERSE_SETDB
       ;;
+      "spacers_dion_et_al_2021")
+          wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_dion_et_al_2021.tar.gz";
+          wget -N -np -nv "http://wwwuser.gwdg.de/~compbiol/spacepharer/2018_09/spacers_dion_et_al_2021.tsv";
+          IN_TAR="spacers_dion_et_al_2021.tar.gz"
+          IN_TAX="spacers_dion_et_al_2021.tsv"
+          unset CREATE_REVERSE_SETDB
+      ;;
     esac
 
     if notExists "${TMP_PATH}/tardb.index"; then

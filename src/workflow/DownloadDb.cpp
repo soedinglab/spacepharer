@@ -47,6 +47,12 @@ std::vector<SpacePharerDownload> genomesDownloads = {
         "Spacers extracted from Shmakov et al",
         "The CRISPR Spacer Space Is Dominated by Sequences from Species-Specific Mobilomes. mBio 8(5), e01397-17 (2017)",
             SpacePharerDownload::SPACER,
+    },
+        {
+        "spacers_dion_et_al_2021",
+        "Spacers extracted from Dion et al",
+        "Streamlining CRISPR spacer-based bacterial host predictions to decipher the viral dark matter. Nucleic Acids Research, gkab133 (2021)",
+            SpacePharerDownload::SPACER,
     }
 };
 
