@@ -343,11 +343,10 @@ int search(int argc, const char **argv, const Command& command) {
             par.rescoreMode = originalRescoreMode;
         } else {
             cmd.addVariable("ALIGNMENT_PAR", par.createParameterString(par.align).c_str());
-            par.alignmentMode = Parameters::ALIGNMENT_MODE_CLUSTER;
+            par.alignmentOutputMode = Parameters::ALIGNMENT_OUTPUT_CLUSTER;
             cmd.addVariable("ALIGNMENT_IT_PAR", par.createParameterString(par.align).c_str());
         }
 
-        cmd.addVariable("SORTRESULT_PAR", par.createParameterString(par.sortresult).c_str());
         par.covMode = originalCovMode;
 
         program = tmpDir + "/searchslicedtargetprofile.sh";
