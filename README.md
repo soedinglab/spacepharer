@@ -98,6 +98,9 @@ As an alternative to creating query setDB, you can use `downloaddb` to download 
 
     # spacers_shmakov_et_al_2017 is a set of more than 30000 CRISPR spacer sets (Shmarkov et al., 2017)
     spacepharer downloaddb spacers_shmakov_et_al_2017 querySetDB tmpFolder
+    
+    # spacers_dion_et_al_2021 is a set of more than 490000 CRISPR spacer sets (Dion et al., 2021)
+    spacepharer downloaddb spacers_dion_et_al_2021 querySetDB tmpFolder
 
 #### Downloading target genomes
 
