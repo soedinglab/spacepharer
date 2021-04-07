@@ -63,7 +63,7 @@ jobs:
                 -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           else
-              cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+              cmake -DHAVE_SANITIZER=1 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
                 -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 -DHAVE_MPI=${MPI} ..
           fi
 
