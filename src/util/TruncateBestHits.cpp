@@ -94,6 +94,7 @@ int truncatebesthits(int argc, const char **argv, const Command& command) {
     dbw.close();
     resultReader.close();
     setReader.close();
+    sizeReader.close();
 
     return EXIT_SUCCESS;
 }
