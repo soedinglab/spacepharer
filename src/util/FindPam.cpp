@@ -45,10 +45,6 @@
 //2-VI      3'  D (protospacer flanking sequence)
 
 std::pair<std::string, std::string> searchpamlist(const std::string &threePrimeStrand, const std::string &fivePrimeStrand, int flankingSeqLen){
-    char fivePrime[11];
-    strcpy(fivePrime, fivePrimeStrand.c_str()); 
-    char threePrime[11];
-    strcpy(threePrime, threePrimeStrand.c_str()); 
     regmatch_t pmatch[1];
     std::pair<std::string, std::string> result;
 
@@ -58,17 +54,17 @@ std::pair<std::string, std::string> searchpamlist(const std::string &threePrimeS
     static PatternCompiler AWG ("A[AT]G");
     static PatternCompiler CC ("CC");
     static PatternCompiler TTN ("TT[ACGT]");
-    if(YCN.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
+    if(YCN.isMatch(fivePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(CCW.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
+    } else if(CCW.isMatch(fivePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(YYC.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
+    } else if(YYC.isMatch(fivePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(CC.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
+    } else if(CC.isMatch(fivePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(AWG.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
+    } else if(AWG.isMatch(fivePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(TTN.isMatch(fivePrime, 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
+    } else if(TTN.isMatch(fivePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_eo == flankingSeqLen) {
         result.first.append(fivePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
     } else {
         result.first.append("-");
@@ -88,13 +84,13 @@ std::pair<std::string, std::string> searchpamlist(const std::string &threePrimeS
     //         matchStringThreePrime = threePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so);
     //     }
     // } 
-    if(NGG.isMatch(threePrime, 1, pmatch) && pmatch[0].rm_so == 0) {
+    if(NGG.isMatch(threePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_so == 0) {
         result.second.append(threePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    }  else if(NNAGAA.isMatch(threePrime, 1, pmatch) && pmatch[0].rm_so == 0) {
+    }  else if(NNAGAA.isMatch(threePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_so == 0) {
         result.second.append(threePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(NNGRRT.isMatch(threePrime, 1, pmatch) && pmatch[0].rm_so == 0) {
+    } else if(NNGRRT.isMatch(threePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_so == 0) {
         result.second.append(threePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
-    } else if(NNNNGWWT.isMatch(threePrime, 1, pmatch) && pmatch[0].rm_so == 0) {
+    } else if(NNNNGWWT.isMatch(threePrimeStrand.c_str(), 1, pmatch) && pmatch[0].rm_so == 0) {
         result.second.append(threePrimeStrand.substr(pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so));
     } else{
         result.second.append("-");
@@ -102,9 +98,11 @@ std::pair<std::string, std::string> searchpamlist(const std::string &threePrimeS
     return result;
 }
 
-std::string reverseComplement(std::string seq){
+
+std::string reverseComplement(const std::string& seq){
     unsigned int lenSeq = seq.length();
-    std::string revStr = "";
+    std::string revStr;
+    revStr.reserve(lenSeq);
     for (size_t i = 0; i < lenSeq; ++i) {
         size_t revInd = lenSeq - i - 1;
         char seqChar = Orf::complement(seq[revInd]);
@@ -261,6 +259,7 @@ int findpam(int argc, const char **argv, const Command& command) {
     writer.close();
     alnReader.close();
     targetReader.close();
+    setReader.close();
 
     return EXIT_SUCCESS;
 }
