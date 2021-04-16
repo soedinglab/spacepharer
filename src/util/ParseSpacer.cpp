@@ -195,7 +195,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
                             std::string line = getCurrentLine(data);
                             std::vector<std::string> values = Util::split(line, "\t");
                             //avoid last row empty spacer column
-                            if (values.size() == 3) {
+                            if (values.size() == 4) {
                                 sequence = Util::removeWhiteSpace(values[2].c_str());
                                 if (sequence.size() >= minSpacerLen && isNucl(sequence)) {
                                     spacerNum++;
