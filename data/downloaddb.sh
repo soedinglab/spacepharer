@@ -41,13 +41,16 @@ abspath() {
 
 hasCommand wget
 
-MMSEQS="$(abspath "${MMSEQS}")"
 OUTDB="$(abspath "$2")"
 TMP_PATH="$(abspath "$3")"
 if [ -n "${GENOME_FTP}" ]; then
     GENOME_FTP="$(abspath "${GENOME_FTP}")"
 fi
 
+# we need to change the current working directory
+# to reduce the command line length passed to createsetdb later
+# so we need to make sure that we are not using a relative path to spacepharer
+MMSEQS="$(abspath "$(command -v "${MMSEQS}" 2>&1)")"
 cd "${TMP_PATH}"
 if [ -n "${GENOME_FTP}" ]; then
     if notExists downloaded.tsv; then
