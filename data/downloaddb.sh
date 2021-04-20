@@ -153,3 +153,7 @@ else
             || fail "create reverse setdb failed"
     fi
 fi
+
+if [ -n "$REMOVE_TMP" ]; then
+    rm -f -- "${TMP_PATH}/downloaddb.sh"
+fi
