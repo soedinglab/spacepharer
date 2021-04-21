@@ -1,0 +1,71 @@
+pilercr v1.06
+By Robert C. Edgar
+
+/home/rosy/Downloads/sequence.fasta: 1 putative CRISPR arrays found.
+
+
+
+DETAIL REPORT
+
+
+
+Array 1
+>EF434469.1 Streptococcus thermophilus strain DGCC7710 CRISPR1 locus genomic sequence
+
+       Pos  Repeat     %id  Spacer  Left flank    Repeat                                  Spacer
+==========  ======  ======  ======  ==========    ====================================    ======
+        38      36   100.0      30  TTCATTTGAG    ....................................    TGTTTGACAGCAAATCAAGATTCGAATTGT
+       104      36   100.0      30  TTCGAATTGT    ....................................    AATGACGAGGAGCTATTGGCACAACTTACA
+       170      36   100.0      30  ACAACTTACA    ....................................    CGATTTGACAATCTGCTGACCACTGTTATC
+       236      36   100.0      30  CACTGTTATC    ....................................    ACACTTGGCAGGCTTATTACTCAACAGCGA
+       302      36   100.0      30  TCAACAGCGA    ....................................    CTGTTCCTTGTTCTTTTGTTGTATCTTTTC
+       368      36   100.0      30  GTATCTTTTC    ....................................    TTCATTCTTCCGTTTTTGTTTGCGAATCCT
+       434      36   100.0      30  TGCGAATCCT    ....................................    GCTGGCGAGGAAACGAACAAGGCCTCAACA
+       500      36   100.0      30  GGCCTCAACA    ....................................    CATAGAGTGGAAAACTAGAAACAGATTCAA
+       566      36   100.0      30  ACAGATTCAA    ....................................    ATAATGCCGTTGAATTACACGGCAAGGTCA
+       632      36   100.0      30  GGCAAGGTCA    ....................................    GAGCGAGCTCGAAATAATCTTAATTACAAG
+       698      36   100.0      30  TAATTACAAG    ....................................    GTTCGCTAGCGTCATGTGGTAACGTATTTA
+       764      36   100.0      30  AACGTATTTA    ....................................    GGCGTCCCAATCCTGATTAATACTTACTCG
+       830      36   100.0      30  TACTTACTCG    ....................................    AACACAGCAAGACAAGAGGATGATGCTATG
+       896      36   100.0      29  TGATGCTATG    ....................................    CGACACAAGAACGTATGCAAGAGTTCAAG
+       961      36   100.0      30  AGAGTTCAAG    ....................................    ACAATTCTTCATCCGGTAACTGCTCAAGTG
+      1027      36   100.0      30  TGCTCAAGTG    ....................................    AATTAAGGGCATAGAAAGGGAGACAACATG
+      1093      36   100.0      30  AGACAACATG    ....................................    CGATATTTAAAATCATTTTCATAACTTCAT
+      1159      36   100.0      30  ATAACTTCAT    ....................................    GCAGTATCAGCAAGCAAGCTGTTAGTTACT
+      1225      36   100.0      30  GTTAGTTACT    ....................................    ATAAACTATGAAATTTTATAATTTTTAAGA
+      1291      36   100.0      30  ATTTTTAAGA    ....................................    AATAATTTATGGTATAGCTTAATATCATTG
+      1357      36   100.0      30  AATATCATTG    ....................................    TGCATCGAGCACGTTCGAGTTTACCGTTTC
+      1423      36   100.0      30  TTACCGTTTC    ....................................    TCTATATCGAGGTCAACTAACAATTATGCT
+      1489      36   100.0      30  CAATTATGCT    ....................................    AATCGTTCAAATTCTGTTTTAGGTACATTT
+      1555      36   100.0      30  AGGTACATTT    ....................................    AATCAATACGACAAGAGTTAAAATGGTCTT
+      1621      36   100.0      30  AAATGGTCTT    ....................................    GCTTAGCTGTCCAATCCACGAACGTGGATG
+      1687      36   100.0      30  AACGTGGATG    ....................................    CAACCAACGGTAACAGCTACTTTTTACAGT
+      1753      36   100.0      30  TTTTTACAGT    ....................................    ATAACTGAAGGATAGGAGCTTGTAAAGTCT
+      1819      36   100.0      30  TGTAAAGTCT    ....................................    TAATGCTACATCTCAAAGGATGATCCCAGA
+      1885      36   100.0      30  TGATCCCAGA    ....................................    AAGTAGTTGATGACCTCTACAATGGTTTAT
+      1951      36   100.0      30  AATGGTTTAT    ....................................    ACCTAGAAGCATTTGAGCGTATATTGATTG
+      2017      36   100.0      30  ATATTGATTG    ....................................    AATTTTGCCCCTTCTTTGCCCCTTGACTAG
+      2083      36   100.0          CCTTGACTAG    ....................................    ACCATTAGCA
+==========  ======  ======  ======  ==========    ====================================
+        32      36              29                GTTTTTGTACTCTCAAGATTTAAGTAACTGTACAAC
+
+
+SUMMARY BY SIMILARITY
+
+
+
+Array          Sequence    Position      Length  # Copies  Repeat  Spacer  +  Consensus
+=====  ================  ==========  ==========  ========  ======  ======  =  =========
+    1  EF434469.1 Strep          38        2081        32      36      29  +  GTTTTTGTACTCTCAAGATTTAAGTAACTGTACAAC
+
+
+
+SUMMARY BY POSITION
+
+
+
+>EF434469.1 Streptococcus thermophilus strain DGCC7710 CRISPR1 locus genomic sequence
+
+Array          Sequence    Position      Length  # Copies  Repeat  Spacer    Distance  Consensus
+=====  ================  ==========  ==========  ========  ======  ======  ==========  =========
+    1  EF434469.1 Strep          38        2081        32      36      29              GTTTTTGTACTCTCAAGATTTAAGTAACTGTACAAC
