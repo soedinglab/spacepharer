@@ -2,7 +2,9 @@
 
 SpacePHARER is a modular toolkit for sensitive phage-host interaction identification using CRISPR spacers. SpacePHARER adapts the fast homology search capabilities of [MMseqs2](https://github.com/soedinglab/MMseqs2) to sensitively query short spacer sequences. It introduces a novel approach of aggregating sets of spacer-based hits to discover phage-host matches. SpacePHARER is GPLv3-licensed open source software implemented in C++ and available for Linux and macOS. The software is designed to run efficiently on multiple cores.
 
-SpacePHARER is also available as [Google Colab notebook](https://colab.research.google.com/github/soedinglab/spacepharer/blob/master/examples/SpacePHARER.ipynb).
+SpacePHARER is also available as Google Colab notebook.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/soedinglab/spacepharer/blob/master/examples/SpacePHARER.ipynb)
 
 [Zhang, R., Mirdita, M., Levy Karin, E., Norroy, C., Galiez, C., & Söding, J.  SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. Bioinformatics, doi: 10.1093/bioinformatics/btab222 (2021).](https://doi.org/10.1093/bioinformatics/btab222)
 
@@ -78,10 +80,14 @@ Alternatively, you can use `downloaddb` to download a list of phage genomes. Her
     # Alternatively you can pass a list of URLs to downloadgenome
     spacepharer downloaddb examples/genome_list.tsv targetSetDB tmpFolder
 
-The `easy-predict` workflow directly returns a tab-separated (`.tsv`) file containing phage-host predictions from (multiple) FASTA or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
+The `easy-predict` workflow directly returns a tab-separated (`.tsv`) file containing phage-host predictions from (multiple) FASTA files
 
     spacepharer easy-predict examples/*.fas targetSetDB predictions.tsv tmpFolder
 
+ or supported CRISPR array files (CRT/MinCED, PILER-CR or CRISPRDetect) queries.
+ 
+    spacepharer easy-predict examples/crisprdetect_test examples/pilercr_test targetSetDB predictions.tsv tmpFolder
+ 
 ### Creating databases
 
 Before search, query or target sequences contained in FASTA files need to be converted to database format by calling `createsetdb`. This command first creates a sequence DB, then extracts and translates all putative protein fragments (ORFs), and finally generates associated metadata. For spacer sequences, setting the parameter `--extractorf-spacer 1` is important to properly extract putative protein fragments from the spacers, which are usually a short partial ORF, not necessarily in frame.
