@@ -35,6 +35,7 @@ public:
     PARAMETER(PARAM_REVERSE_SETDB)
     PARAMETER(PARAM_EXTRACTORF_SPACER)
     PARAMETER(PARAM_FDR_CUTOFF)
+    PARAMETER(PARAM_REPORT_FDR)
     PARAMETER(PARAM_TAX_FDR_CUTOFF)
     PARAMETER(PARAM_FORMAT_TYPE)
     PARAMETER(PARAM_REPORT_PAM)
@@ -51,6 +52,7 @@ public:
     int extractorfsSpacer;
     int reverseSetDb;
     float fdrCutoff;
+    int reportFdr;
     float taxFdrCutoff;
     int formatType;
     int reportPam;
@@ -66,6 +68,7 @@ private:
         PARAM_REVERSE_SETDB(PARAM_REVERSE_SETDB_ID,"--reverse-setdb", "Create reversed setdb", "Create additional setDB with reversed fragments to compute under null [0,1]", typeid(int), (void *) &reverseSetDb, "^[0-1]{1}$"),
         PARAM_EXTRACTORF_SPACER(PARAM_EXTRACTORF_SPACER_ID,"--extractorf-spacer", "Extract orfs from spacers", "change parameter settings for extractorfs when createsetdb for spacer db [0,1]", typeid(int), (void *) &extractorfsSpacer, "^[0-1]{1}$"),
         PARAM_FDR_CUTOFF(PARAM_FDR_CUTOFF_ID,"--fdr", "FDR cutoff", "FDR cutoff for filtering matches [0.0, 1.0]", typeid(float), (void *) &fdrCutoff, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+        PARAM_REPORT_FDR(PARAM_REPORT_FDR_ID,"--report-fdr", "Report FDR", "Report FDR of matches", typeid(int), (void *) &reportFdr, "^[0-1]{1}$"),
         PARAM_TAX_FDR_CUTOFF(PARAM_TAX_FDR_CUTOFF_ID,"--tax-fdr", "Taxonomy FDR cutoff", "FDR cutoff for taxonomy report [0.0, 1.0]", typeid(float), (void *) &taxFdrCutoff, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
         PARAM_FORMAT_TYPE(PARAM_FORMAT_TYPE_ID,"--fmt", "Output format", "0: short (only matches)\n1: long (matches and hits)\n2: long with nucleotide alignment", typeid(int), (void *) &formatType, "^[0-2]{1}$"),
         PARAM_REPORT_PAM(PARAM_REPORT_PAM_ID,"--report-pam", "Report PAM", "Report protospacer adjacent motifs up and downstream of hits", typeid(int), (void *) &reportPam, "^[0-1]{1}$"),
@@ -83,11 +86,13 @@ private:
         downloaddb.push_back(&PARAM_V);
 
         filtermatchbyfdr.push_back(&PARAM_FDR_CUTOFF);
+        filtermatchbyfdr.push_back(&PARAM_REPORT_FDR);
         filtermatchbyfdr.push_back(&PARAM_COMPRESSED);
         filtermatchbyfdr.push_back(&PARAM_THREADS);
         filtermatchbyfdr.push_back(&PARAM_V);
 
         summarizeresults.push_back(&PARAM_FORMAT_TYPE);
+        summarizeresults.push_back(&PARAM_REPORT_FDR);
         summarizeresults.push_back(&PARAM_LCA_RANKS);
         summarizeresults.push_back(&PARAM_TAXON_ADD_LINEAGE);
         summarizeresults.push_back(&PARAM_COMPRESSED);
@@ -150,6 +155,7 @@ private:
         extractorfsSpacer = 0;
         reverseSetDb = 1;
         fdrCutoff = 0.05;
+        reportFdr = 0;
         taxFdrCutoff = 0.02;
         formatType = 1;
         reportPam = 1;

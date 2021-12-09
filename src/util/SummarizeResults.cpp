@@ -46,6 +46,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
         std::string cScore;
         cScore.reserve(255);
 
+        std::string fdr;
+        fdr.reserve(255);
+
         std::string buffer;
         buffer.reserve(1024 * 1024);
 
@@ -87,6 +90,9 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                     // call before getWordsOfLine or entry is overwritten
                     if (lineCount == 0) {
                         cScore.assign(entry[1], entry[2] - entry[1]);
+                        if(par.reportFdr){
+                            fdr.assign(entry[3], entry[4] - entry[3]);
+                        }
                     }
 
                     columns = Util::getWordsOfLine(alnCurrent, entry, 255);
@@ -103,7 +109,11 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                         buffer.append(entry[3], entry[4] - entry[3] - 1);
                         buffer.append("\t");
                         buffer.append(cScore);
-                        //buffer.append("\t");
+                        if(par.reportFdr){
+                            buffer.append(fdr);
+                            buffer.append("\t");
+                        }
+                        
                         if (t != NULL) {
                             taxId = Util::fast_atoi<TaxID>(entry[12]);
                         }

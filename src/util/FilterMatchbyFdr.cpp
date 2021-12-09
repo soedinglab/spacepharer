@@ -58,6 +58,8 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
     negScoreDb.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
     double threshold = 0;
+    std::vector<double> fdrList;
+    std::vector<double> uniqueScoreList;
     if (negScoreDb.getSize() > 0) {
         progress.reset(negScoreDb.getSize());
         std::vector<double> negToSort;
@@ -93,7 +95,7 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
         SORT_PARALLEL(negToSort.rbegin(), negToSort.rend());
 
         //cumsum for TP+FP(pos_counter) and FP(neg_counter) and x = FP/nNeg, y = (TP + FP)/nPos
-        std::vector<double> uniqueScoreList;
+
         std::vector<double> x;
         std::vector<double> y;
         size_t cnt = 0;
@@ -152,9 +154,14 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
             }
         }
 
-        if (i < 2) {
+
+        if (i < 2){
+            if(par.fdrCutoff < 1){
+                Debug(Debug::WARNING) << "Combined score list too short. Using threshold " << threshold << "\n";
+            } else {
+                Debug(Debug::WARNING) << "FDR cutoff is set to 1. Printing all matches. \n";
+            }
             threshold = posToSort.back();
-            Debug(Debug::WARNING) << "Combined score list too short. Using threshold " << threshold << "\n";
         } else {
             size_t j = idxList[i-2];
             double TPFP = y[j];
@@ -172,8 +179,38 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
             Debug(Debug::INFO) << "Combined score threshold is " << threshold << " with FDR of " << par.fdrCutoff << ".\n";
             Debug(Debug::INFO) <<  y[j]* posToSort.size() << " matches passed combined score threshold.\n";
         }
+
+
+        if(par.reportFdr){
+            for (size_t j = 0; j < idxList[0]; j++){
+                fdrList.push_back(0.0);
+            }
+            for(size_t i = 0; i < idxList.size()-1; i++){
+                double TPFP = y[idxList[i]];
+                double FP = x[idxList[i]]* pi0;
+                for(size_t j = idxList[i]; j < idxList[i+1]; j++){
+                    if (std::isinf(slopeList[i])){
+                        fdrList.push_back(x[idxList[i]]* pi0 /y[idxList[i]]);
+                    } else {
+                        TPFP += (x[j] - x[j-1]) * slopeList[i];
+                        FP += (x[j] - x[j-1]) * pi0;
+                        fdrList.push_back(FP / TPFP);
+                    }
+                }
+            }
+        }
     } else {
-        Debug(Debug::WARNING) << "Combined score list of control set is empty\n";
+        Debug(Debug::WARNING) << "Combined score list of control set is empty. Printing all matches\n";
+        if(par.reportFdr){
+            for(size_t i = 0; i < posToSort.size();i++){
+                double s = DBL_MIN;
+                if(s < posToSort[i]){
+                    uniqueScoreList.push_back(posToSort[i]);
+                    fdrList.push_back(0.0);
+                    s = posToSort[i];
+                }
+            }
+        }
         threshold = posToSort.back();
     }
     negScoreDb.close();
@@ -202,10 +239,17 @@ int filtermatchbyfdr(int argc, const char **argv, const Command& command) {
                     EXIT(EXIT_FAILURE);
                 }
                 double score = strtod(entry[1], NULL);
-                const char* start = data;
+                //const char* start = data;
                 data = Util::skipLine(data);
                 if(score >= threshold) {
-                    buffer.append(start, data - start);
+                    buffer.append(entry[0], entry[3] - entry[0]);
+                    if(par.reportFdr){
+                        buffer.append("\t");
+                        std::vector<double>::iterator it = std::find(uniqueScoreList.begin(),uniqueScoreList.end(), score);
+                        int idx = std::distance(uniqueScoreList.begin(), it);
+                        buffer.append(SSTR(fdrList[idx]));
+                    }
+                    buffer.append("\n");
                 }
             }    
             writer.writeData(buffer.c_str(), buffer.length(), posScoreDb.getDbKey(id), thread_idx);
