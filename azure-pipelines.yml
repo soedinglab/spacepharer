@@ -156,7 +156,7 @@ jobs:
     displayName: Upload Artifacts
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     pool:
-      vmImage: 'Ubuntu-16.04'
+      vmImage: 'Ubuntu-latest'
     dependsOn:
       - build_macos_1015
       - build_ubuntu_1804
