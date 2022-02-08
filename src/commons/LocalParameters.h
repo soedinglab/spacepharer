@@ -164,7 +164,7 @@ private:
         restrictRanksMode = 1;
         rankMinSeqIds = "0.86,0.84,0.82,0.80,0.78,0.76,0.74,0.72";
         
-        citations.emplace(CITATION_SPACEPHARER, "Zhang R, Mirdita M, Levy Karin E, Norroy C, Galiez C, and Soding J: SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. (2020)");
+        citations.emplace(CITATION_SPACEPHARER, "Zhang R, Mirdita M, Levy Karin E, Norroy C, Galiez C, & Söding J  SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. Bioinformatics, 37(19), 3364–3366 (2021)");
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};
