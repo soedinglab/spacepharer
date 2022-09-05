@@ -76,6 +76,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
 
     Debug::Progress progress;
     size_t key = 0;
+    bool hasResult =false;
     for (size_t i = 0; i < par.filenames.size(); ++i) {
         std::string &file = par.filenames[i];
         std::string filename = FileUtil::baseName(file);
@@ -108,6 +109,11 @@ int parsespacer(int argc, const char **argv, const Command& command) {
             EXIT(EXIT_FAILURE);
         }
         char *data = (char *) input.getData();
+        if ( *data == 0){
+            Debug(Debug::INFO) << "Detected input file " << file << " is empty.\n";
+        } else {
+            hasResult=true;
+        }
         while (*data != '\0') {
             // pointer to the beginning of any line
 
@@ -335,6 +341,10 @@ int parsespacer(int argc, const char **argv, const Command& command) {
         }
         input.close();
         next:;
+    }
+    if(!hasResult){
+        Debug(Debug::ERROR) << "No spacer sequence was extracted! \n";
+        EXIT(EXIT_FAILURE);
     }
     fclose(lookup);
     fclose(source);
