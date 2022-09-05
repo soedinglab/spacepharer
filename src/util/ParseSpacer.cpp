@@ -109,11 +109,6 @@ int parsespacer(int argc, const char **argv, const Command& command) {
             EXIT(EXIT_FAILURE);
         }
         char *data = (char *) input.getData();
-        if ( *data == 0){
-            Debug(Debug::INFO) << "Detected input file " << file << " is empty.\n";
-        } else {
-            hasResult=true;
-        }
         while (*data != '\0') {
             // pointer to the beginning of any line
 
@@ -126,6 +121,7 @@ int parsespacer(int argc, const char **argv, const Command& command) {
             if (entry == 0) {
                 type = detectFileType(data);
                 Debug(Debug::INFO) << "Detected input file " << file << " is of type " << formatNames[type] << "\n";
+                hasResult = true;
                 if (type == CRT) {
                     arrayHeader = getCurrentLine(data, 11);
                     accession = Util::parseFastaHeader(arrayHeader.c_str());
