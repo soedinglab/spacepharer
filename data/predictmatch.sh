@@ -230,22 +230,65 @@ if [ -e "${QUERY}_set_mapping" ]; then
 fi
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
-    rmdir "${TMP_PATH}/search"
+    rm -rf "${TMP_PATH}/search"
+    rm -rf "${TMP_PATH}/search_rev"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/nucl_result"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/prot_result"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/cScore"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/nucl_result_rev"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/prot_result_rev"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result_rev"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_rev"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged_rev"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/cScore_rev"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/match"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_truncated"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_offset"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aln"
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aln_merge"
     if [ -n "$REPORT_PAM" ]; then 
+        # shellcheck disable=SC2086
         "$MMSEQS" rmdb "${TMP_PATH}/aln_merge_pam"
+    fi
+    if [ -e "${TARGET}_nucl_orf_mapping" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/aggregate_lca"
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/lca"
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/orf_to_spacer"
+    fi
+    if [ -e "${QUERY}_set_mapping" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/match_swap"
+        if [ -n "${RESTRICT_RANKS}" ]; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rmdb "${TMP_PATH}/lca_per_targetset"
+        fi
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/match_swap"
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/match_tax"
     fi
     rm -f "${TMP_PATH}/predictmatch.sh"
 fi
