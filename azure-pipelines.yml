@@ -7,10 +7,10 @@ variables:
     regression: 1
 
 jobs:
-  - job: build_ubuntu_1804
-    displayName: Ubuntu 1804
+  - job: build_ubuntu_2004
+    displayName: Ubuntu 2004
     pool:
-      vmImage: 'Ubuntu-18.04'
+      vmImage: 'Ubuntu-20.04'
     timeoutInMinutes: 120
     strategy:
       matrix:
@@ -129,15 +129,13 @@ jobs:
           targetPath: $(Build.SourcesDirectory)/build/src/spacepharer
           artifactName: spacepharer-linux-$(SIMD)
 
-  - job: build_macos_1015
-    displayName: macOS 1015
+  - job: build_macos_11
+    displayName: macOS 11
     pool:
-      vmImage: 'macos-10.15'
+      vmImage: 'macos-11'
     steps:
       - checkout: self
-      - script: |
-          sudo xcode-select -s "/Applications/Xcode_12.2.app"
-        displayName: Use Xcode 12.2
+        submodules: true
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build spacepharer
@@ -158,8 +156,8 @@ jobs:
     pool:
       vmImage: 'Ubuntu-latest'
     dependsOn:
-      - build_macos_1015
-      - build_ubuntu_1804
+      - build_macos_11
+      - build_ubuntu_2004
       - build_ubuntu_cross_2004
     steps:
       - script: |
