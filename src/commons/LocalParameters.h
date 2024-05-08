@@ -30,6 +30,7 @@ public:
     std::vector<MMseqsParameter*> reverseseqbycodon;
     std::vector<MMseqsParameter*> findpam;
     std::vector<MMseqsParameter*> restrictranks;
+    std::vector<MMseqsParameter*> parsespacer;
 
     PARAMETER(PARAM_REVERSE_FRAGMENTS)
     PARAMETER(PARAM_REVERSE_SETDB)
@@ -43,6 +44,8 @@ public:
     PARAMETER(PARAM_PERFORM_NUCLALN)
     PARAMETER(PARAM_RESTRICT_RANKS_MODE)
     PARAMETER(PARAM_RANK_MIN_SEQ_IDS)
+    PARAMETER(PARAM_FILE_INCLUDE)
+    PARAMETER(PARAM_FILE_EXCLUDE)
 
     static const int FORMAT_TYPE_SHORT = 0;
     static const int FORMAT_TYPE_LONG = 1;
@@ -60,6 +63,8 @@ public:
     int flankingSeqLen;
     int restrictRanksMode;
     std::string rankMinSeqIds;
+    std::string fileInclude;
+    std::string fileExclude;
     
 private:
     LocalParameters() : 
@@ -75,7 +80,9 @@ private:
         PARAM_FLANKING_SEQ_LEN(PARAM_FLANKING_SEQ_LEN_ID,"--flanking-seq-len", "Flanking sequence length", "Length of protospacer flanking sequence to extract for possible PAMs scanning", typeid(int), (void *) &flankingSeqLen, "^[0-9]{1}[0-9]*$"),
         PARAM_PERFORM_NUCLALN(PARAM_PERFORM_NUCLALN_ID,"--perform-nucl-aln", "Perform nucl-nucl alignment", "0: perform only 6-frame translated search, 1:perform additional nucl-nucl alignment to the hits reported in 6-frame translated search, and update the E-value", typeid(int), (void *) &performNuclAln, "^[0-1]{1}$"),
         PARAM_RESTRICT_RANKS_MODE(PARAM_RESTRICT_RANKS_MODE_ID, "--restrict-ranks-mode", "Rank restriction mode", "0: disabled, 1: restrict taxonomic rank on target prediction by sequence identity", typeid(int), (void *) &restrictRanksMode, "^[0-1]{1}$"),
-        PARAM_RANK_MIN_SEQ_IDS(PARAM_RANK_MIN_SEQ_IDS_ID, "--rank-min-seq-ids", "Rank restriction seq.ids.", "Comma-separated sequence identity thresholds to restrict ranks to:\nspecies, genus, family, order, class, phylum, kingdom, superkingdom", typeid(std::string), (void *) &rankMinSeqIds, "")
+        PARAM_RANK_MIN_SEQ_IDS(PARAM_RANK_MIN_SEQ_IDS_ID, "--rank-min-seq-ids", "Rank restriction seq.ids.", "Comma-separated sequence identity thresholds to restrict ranks to:\nspecies, genus, family, order, class, phylum, kingdom, superkingdom", typeid(std::string), (void *) &rankMinSeqIds, ""),
+        PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
+        PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$")
     {
         PARAM_ADD_ORF_STOP.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
@@ -127,6 +134,12 @@ private:
         restrictranks.push_back(&PARAM_THREADS);
         restrictranks.push_back(&PARAM_V);
 
+        parsespacer.push_back(&PARAM_FILE_INCLUDE);
+        parsespacer.push_back(&PARAM_FILE_EXCLUDE);
+        parsespacer.push_back(&PARAM_COMPRESSED);
+        parsespacer.push_back(&PARAM_THREADS);
+        parsespacer.push_back(&PARAM_V);
+
         createsetdbworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
         createsetdbworkflow.push_back(&PARAM_NCBI_TAX_DUMP);
         createsetdbworkflow.push_back(&PARAM_REVERSE_FRAGMENTS);
@@ -148,6 +161,7 @@ private:
 
         easypredictmatchworkflow.push_back(&PARAM_TAX_MAPPING_FILE);
         easypredictmatchworkflow.push_back(&PARAM_NCBI_TAX_DUMP);
+        easypredictmatchworkflow = combineList(easypredictmatchworkflow, parsespacer);
         easypredictmatchworkflow = combineList(easypredictmatchworkflow, predictmatchworkflow);
 
         // default value 0 means no reverse of AA fragments
@@ -163,8 +177,10 @@ private:
         flankingSeqLen = 10;
         restrictRanksMode = 1;
         rankMinSeqIds = "0.86,0.84,0.82,0.80,0.78,0.76,0.74,0.72";
+        fileInclude = ".*";
+        fileExclude = "^$";
         
-        citations.emplace(CITATION_SPACEPHARER, "Zhang R, Mirdita M, Levy Karin E, Norroy C, Galiez C, & Söding J  SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. Bioinformatics, 37(19), 3364–3366 (2021)");
+        citations.emplace(CITATION_SPACEPHARER, "Zhang R, Mirdita M, Levy Karin E, Norroy C, Galiez C, & Söding J  SpacePHARER: Sensitive identification of phages from CRISPR spacers in prokaryotic hosts. Bioinformatics, 37(19), 3364-3366 (2021)");
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};

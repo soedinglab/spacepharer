@@ -11,6 +11,8 @@ const char* show_extended_help = "1";
 const char* show_bash_info = NULL;
 bool hide_base_commands = true;
 
+std::vector<int> FlatfileAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_DIRECTORY};
+
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<Command> commands = {
         {"easy-predict",             easypredict,           &localPar.easypredictmatchworkflow, COMMAND_EASY,
@@ -18,16 +20,16 @@ std::vector<Command> commands = {
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
                 "<i:spacerFile1[.txt]> ... <i:spacerFileN[.txt]> <i:targetDB> <o:output[.tsv]> <tmpDir>",
-                CITATION_SPACEPHARER, {{"spacerFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfile},
+                CITATION_SPACEPHARER, {{"spacerFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &FlatfileAndFolder},
                                        {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
                                        {"result", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile},
                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
-        {"parsespacer",             parsespacer,            &localPar.threadsandcompression,    COMMAND_MAIN,
+        {"parsespacer",             parsespacer,            &localPar.parsespacer,              COMMAND_MAIN,
                 "Parse spacer files (PILER-CR, CRISPRDetect and CRT/MinCED) and create sequence database",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpibpc.mpg.de>",
-                "<i:spacerFile1[.txt]> ... <i:spacerFileN[.txt]> <o:spacerDB>",
-                CITATION_SPACEPHARER, {{"spacerFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfile},
+                "<i:spacerFile1[.txt]> ... <i:spacerFileN[.txt]>|<directory>|<listOfSpacerFiles.tsv> <o:spacerDB>",
+                CITATION_SPACEPHARER, {{"spacerFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &FlatfileAndFolder},
                                        {"spacerDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb}}},
         {"downloaddb",              downloaddb,             &localPar.downloaddb,               COMMAND_MAIN,
                 "Download spacers or phage genomes and create sequence database",
